@@ -117,6 +117,8 @@ VS2013(Windows)
 
 7. Double-click the QSanguosha.exe and have fun!
 
+**Tips: "windeployqt QSanguosha.exe" command is better.**
+
 Mac OS X
 ----------
 
