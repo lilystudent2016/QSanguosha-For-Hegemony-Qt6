@@ -77,6 +77,9 @@ public:
     // property getters/setters
     int getDoubleMaxHp() const;
     QString getKingdom() const;
+	bool isDoubleKingdoms() const;
+    QString getSubordinateKingdom() const;
+    QStringList getKingdoms() const;
     bool isMale() const;
     bool isFemale() const;
     bool isNeuter() const;
@@ -1092,6 +1095,18 @@ public:
 
     bool cardIsAvailable(const Player *player) const{
         return $self->Card::isAvailable(player);
+    }
+	
+	void setTag(const char *key, QVariant &value) {
+        $self->tag[key] = value;
+    }
+
+    QVariant getTag(const char *key) {
+        return $self->tag[key];
+    }
+
+    void removeTag(const char *tag_name) {
+        $self->tag.remove(tag_name);
     }
 };
 

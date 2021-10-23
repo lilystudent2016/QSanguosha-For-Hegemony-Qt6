@@ -50,13 +50,13 @@ function SmartAI:shouldUseRende()
 		end
 	end
 
-	local keepNum = 1
+	local keepNum = 2
 	if self.player:getMark("rende") == 0 then
-		if self.player:getHandcardNum() == 3 then
+		if self.player:getHandcardNum() == 2 then
 			keepNum = 0
 		end
 		if self.player:getHandcardNum() > 3 then
-			keepNum = 3
+			keepNum = self.player:getHandcardNum() - 2
 		end
 	end
 	if self.player:hasSkill("kongcheng") then
@@ -69,8 +69,8 @@ function SmartAI:shouldUseRende()
 	if self.player:getHandcardNum() > keepNum  then
 		return true
 	end
-	if self.player:getMark("rende") ~= 0 and self.player:getMark("rende") < 3
-		and (3 - self.player:getMark("rende")) >=  (self.player:getHandcardNum() - keepNum) then
+	if self.player:getMark("rende") ~= 0 and self.player:getMark("rende") < 2
+		and (2 - self.player:getMark("rende")) >=  (self.player:getHandcardNum() - keepNum) then
 		return true
 	end
 
@@ -148,13 +148,225 @@ sgs.ai_use_priority.RendeCard = 8.2
 sgs.ai_card_intention.RendeCard = function(self, card, from, tos)
 	local to = tos[1]
 	local intention = -70
-	if to:hasShownSkill("kongcheng") and to:isKongcheng() then
-		intention = 30
-	end
 	sgs.updateIntention(from, to, intention)
 end
 
 sgs.dynamic_value.benefit.RendeCard = true
+
+sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理，但是不用使用杀？
+	global_room:writeToConsole("仁德选择:"..self.player:objectName().." :"..choices)
+	choices = choices:split("+")
+	if table.contains(choices, "peach") and self.player:getHp() < 3 then
+		return "peach"
+	end
+	if table.contains(choices, "fire_slash") or table.contains(choices, "thunder_slash") or table.contains(choices, "slash") then
+		local clone_slashes = {}
+		if table.contains(choices, "fire_slash") then
+			local fslash = sgs.cloneCard("fire_slash")
+			table.insert(clone_slashes,fslash)
+		end
+		if table.contains(choices, "thunder_slash") then
+			local tslash = sgs.cloneCard("thunder_slash")
+			table.insert(clone_slashes,tslash)
+		end
+		if table.contains(choices, "slash") then
+			local nslash = sgs.cloneCard("slash")
+			table.insert(clone_slashes,nslash)
+		end
+		if self.enemies then
+			self:sort(self.enemies, "defenseSlash")
+			for _, slash in ipairs(clone_slashes) do
+				for _, enemy in ipairs(self.enemies) do
+					if self:isWeak(enemy) and self.player:canSlash(enemy, slash, true) and not self:slashProhibit(slash, enemy)
+						and self:slashIsEffective(slash, enemy) and sgs.isGoodTarget(enemy, self.enemies, self)
+						and not (self.player:hasFlag("slashTargetFix") and not enemy:hasFlag("SlashAssignee")) then
+							self.rende_slashtarget = enemy--可能会无限制距离？
+							return slash:objectName()
+					end
+				end
+			end
+		end
+	end
+	if table.contains(choices, "analeptic") and self:getCardsNum("Slash") > 0 then
+		local slashes = self:getCards("Slash")
+		self:sortByUseValue(slashes)
+		if self.enemies then
+			self:sort(self.enemies, "defenseSlash")
+			for _, slash in ipairs(slashes) do
+				for _, enemy in ipairs(self.enemies) do
+					if self:isWeak(enemy) and not self.player:canSlash(enemy, slash, true) and not self:slashProhibit(slash, enemy)
+						and self:slashIsEffective(slash, enemy) and sgs.isGoodTarget(enemy, self.enemies, self)
+						and not (self.player:hasFlag("slashTargetFix") and not enemy:hasFlag("SlashAssignee")) then
+							local use = { to = sgs.SPlayerList() }
+							use.card = slash
+							use.to:append(enemy)
+							if self:shouldUseAnaleptic(enemy, use) then
+								return "analeptic"
+							end
+					end
+				end
+			end	
+		end
+	end
+	if table.contains(choices, "peach") then--找不到杀目标
+		return "peach"
+	end
+	return choices[1]
+end
+
+sgs.ai_skill_use["@@rende_slash"] = function(self, prompt, method)
+	local card_name = prompt:split(":")[4]
+	global_room:writeToConsole("仁德杀:"..prompt.." 杀:"..card_name)
+	if not card_name or not self.rende_slashtarget then return "." end
+	local card = sgs.Sanguosha:cloneCard(card_name)
+	card:setSkillName("_rende")
+	local str = card:toString()
+	str = str .. "->" .. self.rende_slashtarget:objectName()
+	return str
+end
+
+--复制身份未修改
+--[[
+local tenyearrende_skill = {}
+tenyearrende_skill.name = "tenyearrende"
+table.insert(sgs.ai_skills, tenyearrende_skill)
+tenyearrende_skill.getTurnUseCard = function(self)
+	if self.player:isKongcheng() then return end
+	return sgs.Card_Parse("@TenyearRendeCard=.")
+end
+
+sgs.ai_skill_use_func.TenyearRendeCard = function(card, use, self)
+    local others = self.room:getOtherPlayers(self.player)
+    local friends, enemies, unknowns = {}, {}, {}
+    local arrange = {}
+    arrange["count"] = 0
+    for _,p in sgs.qlist(others) do
+        if p:getMark("tenyearrendetarget-PlayClear") <= 0 then
+            arrange[p:objectName()] = {}
+            if self:isFriend(p) then
+                table.insert(friends, p)
+            elseif self:isEnemy(p) then
+                table.insert(enemies, p)
+            else
+                table.insert(unknowns, p)
+            end
+        end
+    end
+    local new_friends = {}
+    for _,friend in ipairs(friends) do
+        local exclude = false
+        if self:needKongcheng(friend, true) or self:willSkipPlayPhase(friend) then
+            exclude = true
+            if self:hasSkills("keji|qiaobian|shensu", friend) then
+                exclude = false
+            elseif friend:getHp() - friend:getHandcardNum() >= 3 then
+                exclude = false
+            elseif friend:isLord() and self:isWeak(friend) and self:getEnemyNumBySeat(self.player, friend) >= 1 then
+                exclude = false
+            end
+        end
+        if not exclude and not hasManjuanEffect(friend) and self:objectiveLevel(friend) <= -2 then
+            table.insert(new_friends, friend)
+        end
+    end
+    friends = new_friends
+    local overflow = self:getOverflow()
+    if overflow <= 0 and #friends == 0 then
+        return 
+    end
+    local handcards = self.player:getHandcards()
+    handcards = sgs.QList2Table(handcards)
+    self:sortByUseValue(handcards)
+    while true do
+        if #handcards == 0 then
+            break
+        end
+        local target, to_give, group = OlRendeArrange(self, handcards, friends, enemies, unknowns, arrange, false)
+        if target and to_give and group then
+            table.insert(arrange[target:objectName()], to_give)
+            arrange["count"] = arrange["count"] + 1
+            handcards = self:resetCards(handcards, to_give)
+        else
+            break
+        end
+    end
+    local max_count, max_name = 0, nil
+    for name, cards in pairs(arrange) do
+        if type(cards) == "table" then
+            local count = #cards
+            if count > max_count then
+                max_count = count
+                max_name = name
+            end
+        end
+    end
+    if max_count == 0 or not max_name then
+        return 
+    end
+    local max_target = nil
+    for _,p in sgs.qlist(others) do
+        if p:objectName() == max_name then
+            max_target = p
+            break
+        end
+    end
+    if max_target and type(arrange[max_name]) == "table" and #arrange[max_name] > 0 then
+        local to_use = {}
+        for _,c in ipairs(arrange[max_name]) do
+            table.insert(to_use, c:getEffectiveId())
+        end
+        local card_str = "@TenyearRendeCard="..table.concat(to_use, "+")
+        local acard = sgs.Card_Parse(card_str)
+        assert(acard)
+        use.card = acard
+        if use.to then
+            use.to:append(max_target)
+        end
+    end
+end
+
+sgs.ai_use_value.TenyearRendeCard = sgs.ai_use_value.RendeCard
+sgs.ai_use_priority.TenyearRendeCard = sgs.ai_use_priority.RendeCard
+sgs.ai_card_intention.TenyearRendeCard = sgs.ai_card_intention.RendeCard
+sgs.dynamic_value.benefit.TenyearRendeCard = true
+
+sgs.ai_skill_askforag.tenyearrende = function(self, card_ids)
+	local cards = {}
+	for _, id in ipairs(card_ids) do
+		local card = sgs.Sanguosha:getEngineCard(id)
+		if card:isKindOf("Analeptic") and self:getCardsNum("Slash") == 0 then continue end  --这里应该判断会不会使用【杀】，偷懒一下
+		if not card:targetFixed() then
+			local dummy_use = { isDummy = true, to = sgs.SPlayerList(), current_targets = {} }
+			self:useCardByClassName(card, dummy_use)
+			if dummy_use.card and dummy_use.to:length() > 0 then
+				table.insert(cards, card)
+			end
+		else
+			table.insert(cards, card)
+		end
+	end
+	if #cards > 0 then
+		self:sortByUseValue(cards)
+		return cards[1]:getEffectiveId()
+	end
+	for _, id in ipairs(card_ids) do
+		local card = sgs.Sanguosha:getEngineCard(id)
+		if card:isKindOf("Analeptic") then return id end
+	end
+	return card_ids[1]
+end
+
+sgs.ai_skill_invoke.tenyearrende = true
+
+sgs.ai_skill_use["@@tenyearrende"] = function(self, prompt, method)
+	local name = prompt:split(":")[2]
+	if not name then return "." end
+	local card = sgs.Sanguosha:cloneCard(name)
+	card:setSkillName("_tenyearrende")
+	return card:toString()
+end
+]]--
+
 
 --关羽
 sgs.ai_view_as.wusheng = function(card, player, card_place)
@@ -182,7 +394,7 @@ wusheng_skill.getTurnUseCard = function(self, inclusive)
 	end
 
 	local disCrossbow = false
-	if self:getCardsNum("Slash") < 2 or self.player:hasSkill("paoxiao") then disCrossbow = true end
+	if self:getCardsNum("Slash") < 2 or self.player:hasSkill("paoxiao|paoxiao_xh") or (self.player:hasSkill("baolie") and self.player:getHp() < 3) then disCrossbow = true end
 
 	local hecards = self.player:getCards("he")
 	for _, id in sgs.qlist(self.player:getHandPile()) do
@@ -192,6 +404,7 @@ wusheng_skill.getTurnUseCard = function(self, inclusive)
 	for _, card in sgs.qlist(hecards) do
 		if (self.player:getLord() and self.player:getLord():hasShownSkill("shouyue") or card:isRed()) and not card:isKindOf("Slash")
 			and ((not isCard("Peach", card, self.player) and not isCard("ExNihilo", card, self.player)) or useAll)
+			and not isCard("BefriendAttacking", card, self.player) and not isCard("AllianceFeast", card, self.player)
 			and (not isCard("Crossbow", card, self.player) or disCrossbow ) then
 			local suit = card:getSuitString()
 			local number = card:getNumberString()
@@ -256,7 +469,17 @@ sgs.paoxiao_keep_value = {
 	ExNihilo = 4.7
 }
 
-sgs.ai_skill_choice["paoxiaoVsCrossbow"] = "Crossbow"
+--sgs.ai_skill_choice["paoxiaoVsCrossbow"] = "Crossbow"
+
+--诸葛亮
+sgs.ai_skill_invoke.kongcheng = true
+
+sgs.ai_skill_invoke.guanxing = function(self, data)
+	if not self:willShowForDefence() and not self:willShowForAttack() and self.player:getJudgingArea():isEmpty() then
+		return false
+	end
+	return true
+end
 
 --赵云
 local longdan_skill = {}
@@ -303,16 +526,17 @@ sgs.ai_view_as.longdan = function(card, player, card_place)
 	end
 end
 
-sgs.ai_skill_playerchosen["#longdan-slash"] = sgs.ai_skill_playerchosen.damage--"longdan-damage"
---无法发动？？
-sgs.ai_skill_playerchosen["#longdan-jink"] = function(self, targets)--"longdan-recover"
+sgs.ai_skill_playerchosen["longdan_damage"] = sgs.ai_skill_playerchosen.damage
+
+sgs.ai_skill_playerchosen["longdan_recover"] = function(self, targets)
+	targets = sgs.QList2Table(targets)
 	self:sort(targets, "hp")
-	for _,p in sgs.qlist(targets) do
+	for _,p in ipairs(targets) do
 		if self:isFriendWith(p) then
 			return p
 		end
 	end
-	for _,p in sgs.qlist(targets) do
+	for _,p in ipairs(targets) do
 		if self:isFriend(p) then
 			return p
 		end
@@ -371,6 +595,51 @@ sgs.ai_skill_choice.tieqi = function(self, choices, data)
 	return "deputy_general"
 end
 
+sgs.ai_skill_cardask["@tieji-discard"] = function(self, data, pattern, target, target2, arg, arg2)
+	--global_room:writeToConsole("铁骑判定弃牌")
+	if not arg or self.player:isKongcheng() or self.player:isCardLimited(sgs.cloneCard("jink"), sgs.Card_MethodResponse) then
+		return "."
+	end
+	local discard
+	local cards = self.player:getCards("he")
+	cards=sgs.QList2Table(cards)
+	self:sortByKeepValue(cards)
+	if self.player:hasTreasure("WoodenOx") and self.player:getTreasure():getSuitString() == arg and not self.player:getPile("wooden_ox"):isEmpty() then
+		for _,id in sgs.qlist(self.player:getPile("wooden_ox")) do
+			if sgs.Sanguosha:getCard(id):isKindOf("Peach") or (sgs.Sanguosha:getCard(id):isKindOf("Analeptic") and self.player:getHp() == 1) then
+				table.removeOne(cards,self.player:getTreasure())
+				break
+			end
+		end
+	end
+	if self:needToThrowArmor() and self.player:getArmor():getSuitString() == arg then
+		discard = self.player:getArmor()
+	end
+	if not discard then
+		for _,c in ipairs(cards) do
+			if c:getSuitString() == arg and not discard and not (c:isKindOf("Peach") or (self.player:getHp() == 1 and c:isKindOf("Analeptic"))) then
+				if (not c:isKindOf("Jink") and self:getCardsNum("Jink") > 0) or (c:isKindOf("Jink") and self:getCardsNum("Jink") > 1) then
+					discard = c
+				end
+				if not c:isKindOf("EightDiagram") and self.player:getArmor() and self.player:getArmor():isKindOf("EightDiagram") then
+					discard = c
+				end
+				if self.player:hasSkill("bazhen") then
+					discard = c
+				end
+			end
+		end
+	end
+	if discard then
+		return "$" .. discard:getEffectiveId()
+	end
+	return "."
+end
+
+function sgs.ai_cardneed.tieqi(to, card, self)
+	return card:isKindOf("Slash") or card:isKindOf("Analeptic")
+end
+
 --黄月英
 sgs.ai_skill_invoke.jizhi = function(self, data)
 	if not ( self:willShowForAttack() or self:willShowForDefence() or self:getCardsNum("TrickCard") > 1 ) then return false end
@@ -381,7 +650,7 @@ function sgs.ai_cardneed.jizhi(to, card)
 	return card:getTypeId() == sgs.Card_TypeTrick
 end
 
-sgs.jizhi_keep_value = {
+sgs.jizhi_keep_value = {--新锦囊未加入
 	Peach       = 6,
 	Analeptic   = 5.9,
 	Jink        = 5.8,
@@ -413,6 +682,15 @@ function SmartAI:canLiegong(to, from)
 	return false
 end
 
+function sgs.ai_cardneed.liegong(to, card, self)
+	local has_weapon = to:getWeapon() and sgs.weapon_range[to:getWeapon():getClassName()] >=3
+	if not has_weapon then
+		return card:isKindOf("Slash") or card:isKindOf("Analeptic")
+	else
+		return card:isKindOf("Weapon") and sgs.weapon_range[card:getClassName()] >=3
+	end
+end
+
 --魏延
 sgs.ai_skill_invoke.kuanggu = function(self, data)
 	if not self:willShowForAttack() and not self.player:hasSkills("tieqi|paoxiao|liegong|qianxi")  then
@@ -422,7 +700,8 @@ sgs.ai_skill_invoke.kuanggu = function(self, data)
 end
 
 function sgs.ai_cardneed.kuanggu(to, card, self)
-	if card:isKindOf("OffensiveHorse") and not (to:getOffensiveHorse() or getKnownCard(to, self.player, "OffensiveHorse", false) > 0) then
+	if (card:isKindOf("OffensiveHorse") or card:isKindOf("SixDragons"))
+	and not (to:getOffensiveHorse() or getKnownCard(to, self.player, "OffensiveHorse", false) > 0) then
 		return true
 	end
 	if card:isKindOf("Crossbow") then
@@ -438,7 +717,9 @@ sgs.ai_skill_choice.kuanggu = function(self, choices)
 end
 
 sgs.kuanggu_keep_value = {
-	Crossbow = 6
+	Crossbow = 6,
+	SixDragons = 6,
+	OffensiveHorse = 6
 }
 
 --庞统
@@ -497,6 +778,9 @@ sgs.ai_cardneed.lianhuan = function(to, card)
 end
 
 sgs.ai_skill_invoke.niepan = function(self, data)
+	if self.player:getMark("command5_effect") > 0 then
+		return false
+	end
 	local dying = data:toDying()
 	local peaches = 1 - dying.who:getHp()
 	return self:getCardsNum("Peach") + self:getCardsNum("Analeptic") < peaches
@@ -797,11 +1081,18 @@ sgs.ai_skill_invoke.zaiqi = function(self, data)
 	return self.player:getLostHp() >= lostHp
 end
 
+--祝融
+sgs.ai_skill_invoke.juxiang = function(self, data)
+	if not self:willShowForDefence() and not self:willShowForAttack() then
+		return false
+	end
+	return true
+end
+
 sgs.ai_cardneed.lieren = function(to, card, self)
 	return isCard("Slash", card, to) and getKnownCard(to, self.player, "Slash", true) == 0
 end
 
---祝融
 sgs.ai_skill_invoke.lieren = function(self, data)
 	local damage = data:toDamage()
 	if not damage.to then return end
@@ -845,7 +1136,8 @@ sgs.ai_skill_invoke.shenzhi = function(self, data)
 	if self:getCardsNum("Peach") > 0 then return false end
 	if self.player:getHandcardNum() >= 5 then return false end
 	if self.player:getHandcardNum() == 3 and self.player:getHp() == 1 then return true end
-	if self.player:getHandcardNum() >= 3 and not self.player:containsTrick("indulgence") then return false end
+	if self.player:getHandcardNum() >= 3 and not self:willSkipPlayPhase() then return false end
+	--(not self.player:containsTrick("indulgence") or self:getCardsNum("Nullification") > 0) 
 	if self.player:getHandcardNum() >= self.player:getHp() and self.player:isWounded() then return true end
 	return false
 end
@@ -860,20 +1152,3 @@ sgs.ai_skill_invoke.huoshou = function(self, data)
 	end
 	return true
 end
-
-sgs.ai_skill_invoke.juxiang = function(self, data)
-	if not self:willShowForDefence() and not self:willShowForAttack() then
-		return false
-	end
-	return true
-end
-
-sgs.ai_skill_invoke.kongcheng = true
-
-sgs.ai_skill_invoke.guanxing = function(self, data)
-	if not self:willShowForDefence() and not self:willShowForAttack() and self.player:getJudgingArea():isEmpty() then
-		return false
-	end
-	return true
-end
-

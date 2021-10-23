@@ -95,16 +95,25 @@ fan_skill.getTurnUseCard = function(self)
 	return fireslash
 end
 
-function sgs.ai_weapon_value.Fan(self, enemy)
+function sgs.ai_weapon_value.Fan(self, enemy,player)
 	if enemy and enemy:hasArmorEffect("Vine") then return 6 end
+	if player:hasShownSkills("liegong|liegong_xh") then return 3.1 end
 end
 
 function sgs.ai_armor_value.Vine(player, self)
 	if self:needKongcheng(player) and player:getHandcardNum() == 1 then
 		return player:hasShownSkill("kongcheng") and 5 or 3.8
 	end
-	if self.player:hasSkills(sgs.lose_equip_skill) then return 3.8 end
-	if not self:damageIsEffective(player, sgs.DamageStruct_Fire) then return 6 end
+	if self.player:objectName() == player:objectName() and self.player:hasSkills(sgs.lose_equip_skill) then return 3.8 end
+	--if not self:damageIsEffective(player, sgs.DamageStruct_Fire) then return 6 end--建议改为相关技能，否则装备太平会换成藤甲
+
+	local lp = player:getLastAlive()
+	while (player:isFriendWith(lp) and lp:objectName() ~= player:objectName()) do
+		lp = lp:getLastAlive()--找到队列的上家
+	end
+	if not self:isFriend(player,lp) and (lp:hasShownSkills("qice|yigui") or getKnownCard(lp, player, "BurningCamps") > 0) then--上家有奇策、役鬼,火烧
+		return -3
+	end
 
 	local fslash = sgs.cloneCard("fire_slash")
 	local tslash = sgs.cloneCard("thunder_slash")
@@ -112,24 +121,41 @@ function sgs.ai_armor_value.Vine(player, self)
 
 	for _, enemy in ipairs(self:getEnemies(player)) do
 		if enemy:hasShownSkill("jgbiantian") then return -2 end
-		if (enemy:canSlash(player) and enemy:hasWeapon("Fan")) or enemy:hasShownSkill("huoji") then return -2 end
+		if (enemy:canSlash(player) and enemy:hasWeapon("Fan")) or enemy:hasShownSkills("huoji|midao") then return -2 end
 		if getKnownCard(enemy, player, "FireSlash", true) >= 1 or getKnownCard(enemy, player, "FireAttack", true) >= 1 or
-			getKnownCard(enemy, player, "Fan") >= 1 then return -2 end
+			getKnownCard(enemy, player, "Fan") >= 1 then
+				return -2
+		end
+		if not self:isFriend(player,lp) and getKnownCard(enemy, player, "BurningCamps") > 0 then--敌方可能合纵连横火烧
+			return -2
+		end
+	end
+	for _, p in sgs.qlist(self.room:getOtherPlayers(player)) do
+		if p:hasShownSkill("luanji") and p:getHandcardNum() > 3 then return 4.2 end
 	end
 
-	if (#self.enemies < 3 and sgs.turncount > 2) or player:getHp() <= 2 then return 5 end
+	if (#self.enemies < 3 and sgs.turncount > 2) or player:getHp() <= 2 then return 3 end--条件现在是否还适用？
 	return 1
 end
 
-function SmartAI:shouldUseAnaleptic(target, card_use)
+function SmartAI:shouldUseAnaleptic(target, card_use)--为何有马超兄弟对暗将带白银用酒杀的情况？？
+	if self:evaluateKingdom(target) == "unknown" then return false end
 
 	if target:hasArmorEffect("SilverLion") and not self.player:hasWeapon("QinggangSword") then return false end
-	if self:evaluateKingdom(target) == "unknown" then return end
+	if target:hasArmorEffect("Breastplate") and target:getHp() <= 2 and not self.player:hasWeapon("QinggangSword") then
+		return false
+	end
 
 	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
 		if p:hasShownSkill("qianhuan") and not p:getPile("sorcery"):isEmpty() and p:getKingdom() == target:getKingdom() and card_use.to:length() <= 1 then
 			return false
 		end
+	end
+	if (hasBuquEffect(target) or hasNiepanEffect(target)) and target:getHp() == 1 then
+		return false
+	end
+	if target:hasShownSkill("gongqing") and self.player:getAttackRange() < 3 then
+		return false
 	end
 
 	if target:hasShownSkill("xiangle") then
@@ -140,11 +166,17 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 		if basicnum < 3 then return false end
 	end
 
-	if target:hasArmorEffect("PeaceSpell") and card_use.card and card_use.card:isKindOf("NatureSlash") then return false end
+	if card_use.card then
+		if target:hasArmorEffect("PeaceSpell") and card_use.card and card_use.card:isKindOf("NatureSlash") then return false end
+
+		local noresponse = card_use.card:getTag("NoResponse"):toStringList()--新增卡牌无法响应
+		if noresponse and (table.contains(noresponse,target:objectName()) or table.contains(noresponse,"_ALL_PLAYERS")) then
+			return true
+		end
+	end
 
 	local hcard = target:getHandcardNum()
-	if self.player:hasSkill("liegong") and self.player:getPhase() == sgs.Player_Play and (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then return true end
-	if self.player:hasSkill("tieqi") then return true end
+	if self.player:hasSkill("liegong") and not (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then return false end
 
 	if self.player:hasWeapon("Axe") and self.player:getCards("he"):length() > 4 then return true end
 
@@ -152,6 +184,8 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 		if getKnownCard(target, player, "Jink", true, "he") >= 2 then return false end
 		return getCardsNum("Jink", target, self.player) < 2
 	end
+
+	if self.player:hasSkills(sgs.force_slash_skill) then return true end
 
 	if getKnownCard(target, self.player, "Jink", true, "he") >= 1 and not (self:getOverflow() > 0 and self:getCardsNum("Analeptic") > 1) then return false end
 	return self:getCardsNum("Analeptic") > 1 or getCardsNum("Jink", target, self.player) < 1 or sgs.card_lack[target:objectName()]["Jink"] == 1 or self:getOverflow() > 0
@@ -522,6 +556,9 @@ sgs.ai_skill_cardask["@fire-attack"] = function(self, data, pattern, target)
 				if (self:isWeak(target) and not self:isWeak()) or target:getHp() == 1
 						or self:isGoodChainTarget(target) or target:hasArmorEffect("Vine") then
 					needKeepPeach = false
+				end
+				if self.player:getHp() == 1 and not (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") > 1) then
+					needKeepPeach = true
 				end
 				if not needKeepPeach then
 					card = acard

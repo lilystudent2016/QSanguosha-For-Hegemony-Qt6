@@ -481,21 +481,26 @@ end
 local invoke_qianhuan = function(self, use)
 	if (use.from and self:isFriend(use.from)) then return false end
 	if use.to:isEmpty() then return false end
-	if use.card:isKindOf("Peach") then return false end
+	if use.card:isKindOf("Peach") or use.card:isKindOf("Analeptic") then return false end
 	if use.card:isKindOf("Lightning") then return end
 	local to = use.to:first()
 	if use.card:isKindOf("Slash") and not self:slashIsEffective(use.card, to, use.from) then return end
 	if use.card:isKindOf("TrickCard") and not self:hasTrickEffective(use.card, to, use.from) then return end
 	if self.player:getPile("sorcery"):length() == 1 then
-		if use.card:isKindOf("Slash") or use.card:isKindOf("Duel") or use.card:isKindOf("FireAttack") or use.card:isKindOf("BurningCamps")
-			or use.card:isKindOf("ArcheryAttack") or use.card:isKindOf("Drowning") or use.card:isKindOf("SavageAssault") then
+		if use.card:isKindOf("Slash") or use.card:isKindOf("Duel")  or use.card:isKindOf("BurningCamps")
+			or use.card:isKindOf("ArcheryAttack")  or use.card:isKindOf("SavageAssault")
+			or (use.card:isKindOf("FireAttack") and to:getHp() == 1)
+			or (use.card:isKindOf("Drowning") and to:getEquips():length() > 1) then
 			return true
 		end
-		if use.card:isKindOf("KnownBoth") or use.card:isKindOf("Dismantlement") or use.card:isKindOf("Indulgence") or use.card:isKindOf("SupplyShortage") then
-			--@todo
+		if (use.card:isKindOf("Indulgence") and self:getOverflow(to) > 1)
+		or (use.card:isKindOf("SupplyShortage") and to:getHandcardNum() < 2) then--乐、兵
+			return true
+		end
+		if (use.card:isKindOf("Snatch") or use.card:isKindOf("Dismantlement")) then--拆顺暂时不处理
 			return false
 		end
-		self.room:writeToConsole("invoke_qianhuan ? " .. use.card:getClassName())
+		--self.room:writeToConsole("invoke_qianhuan ? " .. use.card:getClassName())
 		return false
 	end
 	if to and to:objectName() == self.player:objectName() then
@@ -518,14 +523,14 @@ end
 local function will_discard_zhendu(self)
 	local current = self.room:getCurrent()
 	local need_damage = self:getDamagedEffects(current, self.player) or self:needToLoseHp(current, self.player)
-	if self:isFriend(current) and not self.player:hasSkill("congjian") then
+	if self:isFriend(current) and not self.player:hasSkill("congjian") and not current:hasSkill("congjian") then
 		if current:getMark("drank") > 0 and not need_damage then return -1 end
 		if (getKnownCard(current, self.player, "Slash") > 0 or (getCardsNum("Slash", current, self.player) >= 1 and current:getHandcardNum() >= 2))
 			and (not self:damageIsEffective(current, nil, self.player) or current:getHp() > 2 or (getCardsNum("Peach", current, self.player) > 1 and not self:isWeak(current))) then
 			local slash = sgs.cloneCard("slash")
 			local trend = 3
 			if current:hasWeapon("Axe") then trend = trend - 1
-			elseif self:hasSkill("liegong|tieqi|wushuang|niaoxiang", current) then trend = trend - 0.4 end
+			elseif self:hasSkill(sgs.force_slash_skill, current) then trend = trend - 0.4 end
 			for _, enemy in ipairs(self.enemies) do
 				if ((enemy:getHp() < 3 and enemy:getHandcardNum() < 3) or (enemy:getHandcardNum() < 2)) and current:canSlash(enemy) and not self:slashProhibit(slash, enemy, current)
 					and self:slashIsEffective(slash, enemy, current) and sgs.isGoodTarget(enemy, self.enemies, self, true) then
@@ -538,7 +543,7 @@ local function will_discard_zhendu(self)
 		if self.player:hasSkill("congjian") and not current:hasArmorEffect("SilverLion")  then--张绣配合，无白银狮子
 			if current:getHp() <= 2 then
 				return 1
-			elseif self.player:getMark("GlobalBattleRoyalMode")  then--鏖战或出牌阶段手牌小于4
+			elseif self.player:getMark("GlobalBattleRoyalMode") then--鏖战或出牌阶段手牌小于4
 				return 2.5
 			elseif current:getHandcardNum() < 4 then
 				return 3.5
@@ -574,28 +579,28 @@ sgs.ai_skill_invoke.jizhao = sgs.ai_skill_invoke.niepan
 
 sgs.ai_skill_invoke.zhangwu = true
 
+--飞龙夺凤
 sgs.weapon_range.DragonPhoenix = 2
 sgs.ai_use_priority.DragonPhoenix = 2.400
 function sgs.ai_weapon_value.DragonPhoenix(self, enemy, player)
-	local lordliubei = nil
-	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-		if p:hasShownSkill("zhangwu") then
-			lordliubei = p
-			break
-		end
-	end
-	if lordliubei and player:getWeapon() and not self:hasSkill("xiaoji", player) then
+	local lord_liubei = sgs.findPlayerByShownSkillName("zhangwu")
+	if lord_liubei and player:getWeapon() and not self:hasSkills(sgs.lose_equip_skill, player) then
 		return -10
 	end
-	if enemy and enemy:getHp() <= 1 and (sgs.card_lack[enemy:objectName()]["Jink"] == 1 or getCardsNum("Jink", enemy, self.player) == 0) then
-		return 4.1
+	if enemy and enemy:getHp() <= 2 and enemy:getHandcardNum() <= 2 then--效果修改
+		--(sgs.card_lack[enemy:objectName()]["Jink"] == 1 or getCardsNum("Jink", enemy, self.player) == 0)
+		return 4.5
 	end
+	return 2.5
 end
 
 function sgs.ai_slash_weaponfilter.DragonPhoenix(self, to, player)
 	if player:distanceTo(to) > math.max(sgs.weapon_range.DragonPhoenix, player:getAttackRange()) then return end
+--[[
 	return getCardsNum("Peach", to, self.player) + getCardsNum("Jink", to, self.player) < 1
 		and (sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) == 0)
+]]
+	return to:getHandcardNum() <= 2
 end
 
 --[[新飞龙夺凤技能修改

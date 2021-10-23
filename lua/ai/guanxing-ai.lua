@@ -513,11 +513,13 @@ local function WuXin(self, cards)
 		end
 	end
 
-	self:sortByUseValue(bottom)
+	--self:sortByUseValue(bottom)顺序反了
 
 	while #bottom ~= 0 do
 		table.insert(up, table.remove(bottom))
 	end
+
+	--ShowGuanxingResult(self, up, bottom)
 
 	up = getBackToId(self, up)
 	return up, {}

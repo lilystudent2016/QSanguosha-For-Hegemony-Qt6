@@ -17,6 +17,7 @@
 
   Mogara
 *********************************************************************]]
+--李典
 sgs.ai_skill_invoke.xunxun = function(self, data)
 	if not (self:willShowForDefence() or self:willShowForAttack()) then
 		return false
@@ -49,6 +50,7 @@ function sgs.ai_skill_invoke.wangxi(self, data)
 		else
 			if not (target:getPhase() ~= sgs.Player_NotActive and (target:hasShownSkills(sgs.Active_cardneed_skill) or target:hasWeapon("Crossbow")))
 				and not (target:getPhase() == sgs.Player_NotActive and target:hasShownSkills(sgs.notActive_cardneed_skill))
+				and not target:hasShownSkill("fudi")--需要更新技能
 				or self:needKongcheng(target) then
 				return true
 			end
@@ -73,6 +75,11 @@ sgs.ai_choicemade_filter.skillInvoke.wangxi = function(self, player, promptlist)
 	end
 end
 
+function sgs.ai_cardneed.wangxi(to, card)
+	return card:isKindOf("AOE")
+end
+
+--臧霸
 function sgs.ai_skill_invoke.hengjiang(self, data)
 	if not self:willShowForMasochism() then return false end
 	local target = data:toPlayer()
@@ -95,6 +102,7 @@ sgs.ai_choicemade_filter.skillInvoke.hengjiang = function(self, player, promptli
 	end
 end
 
+--马岱
 sgs.ai_skill_invoke.qianxi = function(self, data)
 	if not self:willShowForAttack() then
 		return false
@@ -155,6 +163,7 @@ end
 
 sgs.ai_playerchosen_intention.qianxi = 80
 
+--糜夫人
 sgs.ai_skill_invoke.guixiu = true
 
 local cunsi_skill = {}
@@ -175,8 +184,9 @@ sgs.ai_skill_use_func.CunsiCard = function(card, use, self)
 	end
 
 	local to
+	self:sort(self.friends_noself, "hp", true)
 	for _, friend in ipairs(self.friends_noself) do
-		if sgs.ai_explicit[friend:objectName()] == self.player:getKingdom() and ( self:isWeak(friend) or self.player:getLostHp() > 0 )then
+		if friend:hasShownGeneral1() and sgs.ai_explicit[friend:objectName()] == self.player:getKingdom() and ( self:isWeak(friend) or self.player:getLostHp() > 0 )then
 			to = friend
 			break
 		end
@@ -199,6 +209,14 @@ sgs.ai_skill_choice.yongjue = function(self)
 	return "yes"
 end
 
+--孙策
+sgs.ai_skill_invoke.jiang = function(self, data)
+	if not self:willShowForAttack() and not self:willShowForDefence() then
+		return false
+	end
+	return true
+end
+
 sgs.ai_cardneed.jiang = function(to, card, self)
 	return isCard("Duel", card, to) or (isCard("Slash", card, to) and card:isRed())
 end
@@ -207,12 +225,16 @@ sgs.ai_suit_priority.jiang = function(self, card)
 	return (card:isKindOf("Slash") or card:isKindOf("Duel")) and "diamond|heart|club|spade" or "club|spade|diamond|heart"
 end
 
+--[[似乎源码没有data信息
 sgs.ai_skill_invoke.yingyang = function(self, data)
 	local pindian = data:toPindian()
 	local f_num, t_num = pindian.from_number, pindian.to_number
 	if math.abs(f_num - t_num) <= 3 then return true end
 	return false
 end
+]]
+
+sgs.ai_skill_invoke.yingyang = true
 
 sgs.ai_skill_choice.yingyang = function(self, choices, data)
 	local pindian = data:toPindian()
@@ -269,6 +291,7 @@ sgs.ai_skill_playerchosen.yinghun_sunce = sgs.ai_skill_playerchosen.yinghun_sunj
 sgs.ai_playerchosen_intention.yinghun_sunce = sgs.ai_playerchosen_intention.yinghun_sunjian
 sgs.ai_choicemade_filter.skillChoice.yinghun_sunce = sgs.ai_choicemade_filter.skillChoice.yinghun_sunjian
 
+--陈武＆董袭
 local duanxie_skill = {}
 duanxie_skill.name = "duanxie"
 table.insert(sgs.ai_skills, duanxie_skill)
@@ -339,12 +362,7 @@ sgs.ai_skill_exchange.fenming = function(self)
 	return result
 end
 
-sgs.ai_skill_invoke.jiang = function(self, data)
-	if not self:willShowForAttack() and not self:willShowForDefence() then
-		return false
-	end
-	return true
-end
+--董卓
 --[[
 sgs.ai_skill_invoke.hengzheng = function(self, data)
 	local value = 0
@@ -401,7 +419,7 @@ sgs.ai_skill_invoke.hengzheng = function(self, data)
 						value = value + 2 / p:getHandcardNum()
 					end
 				elseif p:getHandcardNum() == 0 then
-					if p:getEquips() == 1 and self:needToThrowArmor(p) then
+					if p:getEquips():length() == 1 and self:needToThrowArmor(p) then
 						value = value - 1
 					end
 					if p:hasShownSkills(sgs.lose_equip_skill) then
@@ -422,7 +440,7 @@ sgs.ai_skill_invoke.hengzheng = function(self, data)
 	end
 	return false
 end
-	
+
 sgs.ai_skill_choice.benghuai = function(self, choices, data)
 	for _, friend in ipairs(self.friends) do
 		if friend:hasShownSkill("tianxiang") and (self.player:getHp() >= 3 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") > 0 and self.player:getHp() > 1)) then
@@ -448,6 +466,7 @@ sgs.ai_skill_choice.benghuai = function(self, choices, data)
 	end
 end
 
+--张任
 sgs.ai_skill_invoke.chuanxin = function(self, data)
 	local damage = data:toDamage()
 
@@ -462,6 +481,7 @@ end
 
 sgs.ai_skill_choice.chuanxin = "discard"
 
+--君·张角
 sgs.ai_skill_invoke.wuxin = true
 
 local wendao_skill = {}
@@ -493,7 +513,9 @@ wendao_skill.getTurnUseCard = function(self)
 				if owner:hasArmorEffect("PeaceSpell") then
 					if (owner:objectName() == self.player:objectName()) then
 						if (not self.player:hasSkill("hongfa")) or (self.player:getPile("heavenly_army"):isEmpty()) then
-							if self.player:getHp() <= 1 then return nil end
+							if self.player:getHp() == 2 and self:getCardsNum("Peach") == 0 then --太平效果修改
+								return nil
+							end
 						end
 					else
 						if (self.player:isFriendWith(owner)) then
@@ -512,10 +534,12 @@ wendao_skill.getTurnUseCard = function(self)
 				table.insert(cards_copy, c)
 			end
 			for _, c in ipairs(cards_copy) do
-				if c:objectName() == "PeaceSpell" then
-					return sgs.Card_Parse("@WendaoCard=" .. c:getEffectiveId() .. "&wendao")
+				if c:objectName() == "PeaceSpell" then--君角技能修改
+					table.removeOne(cards, c)
 				end
-				if (not c:isRed()) or isCard("Peach", c, self.player) then table.removeOne(cards, c) end
+				if (not c:isRed()) or isCard("Peach", c, self.player) then
+					table.removeOne(cards, c)
+				end
 			end
 			if #cards == 0 then return nil end
 			return sgs.Card_Parse("@WendaoCard=" .. cards[1]:getEffectiveId() .. "&wendao")
@@ -570,26 +594,29 @@ sgs.ai_cardsview.huangjinsymbol = function(self, class_name, player)
 	if not zj or zj:getPile("heavenly_army"):isEmpty() or not self.player:willBeFriendWith(zj) then return end
 	local ints = zj:getPile("heavenly_army")
 	local card_str = {}
-	local PeaceSpell, DragonPhoenix
+	local PeaceSpell, lord_equip
 	for _, int in sgs.qlist(ints) do
 		local card = sgs.Sanguosha:getCard(int)
 		local suit = card:getSuitString()
 		local number = card:getNumberString()
 		local id = card:getEffectiveId()
-		if card:objectName() == "PeaceSpell" then
+		if card:isKindOf("PeaceSpell") then
 			PeaceSpell = string.format("slash:huangjinsymbol[%s:%s]=%d&", suit, number, id)
-		elseif card:objectName() == "DragonPhoenix" then
-			DragonPhoenix = string.format("slash:huangjinsymbol[%s:%s]=%d&", suit, number, id)
+		elseif card:isKindOf("DragonPhoenix") or card:isKindOf("LuminousPearl") or card:isKindOf("SixDragons") then
+			lord_equip = string.format("slash:huangjinsymbol[%s:%s]=%d&", suit, number, id)
 		else
 			table.insert(card_str, string.format("slash:huangjinsymbol[%s:%s]=%d&", suit, number, id))
 		end
 	end
 	if PeaceSpell then table.insert(card_str, 1, PeaceSpell) end
-	if DragonPhoenix then table.insert(card_str, DragonPhoenix) end
+	if lord_equip then table.insert(card_str, lord_equip) end
 	return card_str
 end
 
+sgs.ai_skill_invoke.huangjinsymbol = true
+
 sgs.ai_skill_exchange["huangjinsymbol"] = function(self,pattern,max_num,min_num,expand_pile)
+	global_room:writeToConsole("君角防止体力流失")
 	local ints = sgs.QList2Table(self.player:getPile("heavenly_army"))
 	local int = getHongfaCard(ints)
 	if int then
@@ -620,6 +647,7 @@ sgs.ai_skill_exchange["hongfa2"] = function(self,pattern,max_num,min_num,expand_
 end
 ]]
 
+--太平要术
 sgs.ai_slash_prohibit.PeaceSpell = function(self, from, enemy, card)
 	if from:hasShownSkill("zhiman") then return false end
 	if enemy:hasArmorEffect("PeaceSpell") and card:isKindOf("NatureSlash") and not IgnoreArmor(from, enemy) and not from:hasWeapon("IceSword") then return true end
@@ -628,12 +656,27 @@ end
 
 function sgs.ai_armor_value.PeaceSpell(player, self)
 	if player:hasShownSkills("hongfa+wendao") then return 1000 end
+--[[太平效果修改
 	if getCardsNum("Peach", player, player) + getCardsNum("Analeptic", player, player) == 0 and player:getHp() == 1 then
 		if player:hasArmorEffect("PeaceSpell") then return 99
 		else return -99
 		end
 	end
-	return 3.5
+]]
+	--进攻缺牌需要摸2怎么写？条件：目标1血，能使用杀等。如果能知道上一个杀目标就好写了
+	local v = 4.5
+	for _, p in ipairs(self:getFriendsNoself(player)) do
+		if player:isFriendWith(p) then
+			v = v + 0.5
+		end
+	end
+	if self:getOverflow(player) > 0 then
+		v = v + 0.5
+	end
+	if player:getMark("GlobalBattleRoyalMode") > 0 and player:hasArmorEffect("PeaceSpell") and player:getHp() > 1 then--鏖战别失去体力
+		v = v + 1.5
+	end
+	return v
 end
 
 sgs.ai_use_priority.PeaceSpell = 0.75
