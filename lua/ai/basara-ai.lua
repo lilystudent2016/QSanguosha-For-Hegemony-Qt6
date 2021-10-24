@@ -70,7 +70,97 @@ sgs.ai_skill_choice.heg_nullification = function(self, choice, data)
 	return "all"
 end
 
-sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--技能触发顺序，旧的亮将已失效
+sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--技能触发顺序
+	local skillTrigger = false
+	local skillnames = choices:split("+")
+	table.removeOne(skillnames, "GameRule_AskForGeneralShowHead")
+	table.removeOne(skillnames, "GameRule_AskForGeneralShowDeputy")
+	table.removeOne(skillnames, "cancel")
+	if #skillnames ~= 0 then
+		skillTrigger = true
+	end
+
+	if skillTrigger then
+		if string.find(choices, "shicai") then--卖血技能先恃才弃牌
+			local damage = data:toDamage()
+			if damage.damage > 1 then
+				if string.find(choices, "qianhuan") then
+					return "qianhuan"
+				end
+				return "shicai"
+			end
+		end
+		if string.find(choices, "wanggui") and not self.player:hasShownAllGenerals() then--华韵打伤害或摸牌
+			if #self.enemies > 0 then--选择触发时的self是自己吗？
+				self:sort(self.enemies, "hp")
+				for _, p in ipairs(self.enemies) do
+					if self:isWeak(p) then
+						global_room:writeToConsole("望归优先")
+						return "wanggui"
+					end
+				end
+			end
+		end
+		if string.find(choices, "jieming") then return "jieming" end--先发动节命
+		if string.find(choices, "zhiyu") then return "zhiyu" end--先发动智愚亮牌
+		if string.find(choices, "wangxi") and string.find(choices, "fankui") then
+			local from = data:toDamage().from
+			if from and from:isNude() then return "wangxi" end
+		end
+		if table.contains(skillnames, "fankui") and table.contains(skillnames, "ganglie") then return "fankui" end
+		if string.find(choices, "wangxi") and table.contains(skillnames, "ganglie") then return "wangxi" end
+		if string.find(choices, "luoshen") and string.find(choices, "guanxing") then return "guanxing" end
+		if string.find(choices, "wangxi") and string.find(choices, "fangzhu") then return "fangzhu" end
+		if string.find(choices, "qianxi") and sgs.ai_skill_invoke.qianxi(sgs.ais[self.player:objectName()]) then return "qianxi" end
+
+		if table.contains(skillnames, "tiandu") then
+			local judge = data:toJudge()
+			if judge.card:isKindOf("Peach") or judge.card:isKindOf("Analeptic") then
+				return "tiandu"
+			end
+		end
+		if table.contains(skillnames, "yiji") then return "yiji" end
+		if table.contains(skillnames, "haoshi") then return "haoshi" end
+		if string.find(choices, "zisui") then--公孙渊摸牌，可能就配合和张辽会触发
+			return "zisui"
+		end
+
+		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到
+		or string.find(choices, "tieqi_xh") or string.find(choices, "liegong_xh")
+		or string.find(choices, "jianchu") then
+			global_room:writeToConsole("杀技能多目标选择:" .. skillnames[1])
+			return skillnames[1]--铁骑、烈弓多目标选择
+		end
+
+		if string.find(choices, "keshou") and string.find(choices, "tianxiang") then--恪守、天香
+			return "keshou"
+		end
+
+		local except = {}
+		for _, skillname in ipairs(skillnames) do
+			local invoke = self:askForSkillInvoke(skillname, data)
+			if invoke == true then
+				return skillname
+			elseif invoke == false then
+				table.insert(except, skillname)
+			end
+		end
+		if string.find(choices, "cancel") and not canShowHead and not canShowDeputy and not self.player:hasShownOneGeneral() then
+			return "cancel"
+		end
+		table.removeTable(skillnames, except)
+
+		if #skillnames > 0 then return skillnames[math.random(1, #skillnames)] end
+	end
+
+	return skillnames[math.random(1, #skillnames)]
+end
+
+sgs.ai_skill_choice["GameRule:TurnStart"] = function(self, choices, data)--旧的亮将已失效
+	--[[
+	local canShowHead = string.find(choices, "GameRule_AskForGeneralShowHead")
+	local canShowDeputy = string.find(choices, "GameRule_AskForGeneralShowDeputy")
+	local choice = sgs.ai_skill_choice["GameRule:TriggerOrder"](self, choices, data)]]
 	local canShowHead = string.find(choices, "GameRule_AskForGeneralShowHead")
 	local canShowDeputy = string.find(choices, "GameRule_AskForGeneralShowDeputy")
 
@@ -229,93 +319,15 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		end
 	end
 
-	local skillTrigger = false
-	local skillnames = choices:split("+")
-	table.removeOne(skillnames, "GameRule_AskForGeneralShowHead")
-	table.removeOne(skillnames, "GameRule_AskForGeneralShowDeputy")
-	table.removeOne(skillnames, "cancel")
-	if #skillnames ~= 0 then
-		skillTrigger = true
-	end
+	--if choice == "cancel" then
+		local showRate2 = math.random()
 
-	if skillTrigger then
-		if string.find(choices, "shicai") then--卖血技能先恃才弃牌
-			local damage = data:toDamage()
-			if damage.damage > 1 then
-				if string.find(choices, "qianhuan") then
-					return "qianhuan"
-				end
-				return "shicai"
-			end
-		end
-		if string.find(choices, "jieming") then return "jieming" end--先发动节命
-		if string.find(choices, "zhiyu") then return "zhiyu" end--先发动智愚亮牌
-		if string.find(choices, "wangxi") and string.find(choices, "fankui") then
-			local from = data:toDamage().from
-			if from and from:isNude() then return "wangxi" end
-		end
-		if table.contains(skillnames, "fankui") and table.contains(skillnames, "ganglie") then return "fankui" end
-		if string.find(choices, "wangxi") and table.contains(skillnames, "ganglie") then return "wangxi" end
-		if string.find(choices, "luoshen") and string.find(choices, "guanxing") then return "guanxing" end
-		if string.find(choices, "wangxi") and string.find(choices, "fangzhu") then return "fangzhu" end
-		if string.find(choices, "qianxi") and sgs.ai_skill_invoke.qianxi(sgs.ais[self.player:objectName()]) then return "qianxi" end
-
-		if table.contains(skillnames, "tiandu") then
-			local judge = data:toJudge()
-			if judge.card:isKindOf("Peach") or judge.card:isKindOf("Analeptic") then
-				return "tiandu"
-			end
-		end
-		if table.contains(skillnames, "yiji") then return "yiji" end
-		if table.contains(skillnames, "haoshi") then return "haoshi" end
-		if string.find(choices, "zisui") then--公孙渊摸牌，可能就配合和张辽会触发
-			return "zisui"
-		end
-
-		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到
-		or string.find(choices, "tieqi_xh") or string.find(choices, "liegong_xh")
-		or string.find(choices, "jianchu") then
-			global_room:writeToConsole("杀技能多目标选择:" .. skillnames[1])
-			return skillnames[1]--铁骑、烈弓多目标选择
-		end
-
-		if string.find(choices, "keshou") and string.find(choices, "tianxiang") then--恪守、天香
-			return "keshou"
-		end
-
-		local except = {}
-		for _, skillname in ipairs(skillnames) do
-			local invoke = self:askForSkillInvoke(skillname, data)
-			if invoke == true then
-				return skillname
-			elseif invoke == false then
-				table.insert(except, skillname)
-			end
-		end
-		if string.find(choices, "cancel") and not canShowHead and not canShowDeputy and not self.player:hasShownOneGeneral() then
-			return "cancel"
-		end
-		table.removeTable(skillnames, except)
-
-		if #skillnames > 0 then return skillnames[math.random(1, #skillnames)] end
-	end
-
-	return "cancel"
-end
-
-sgs.ai_skill_choice["GameRule:TurnStart"] = function(self, choices, data)
-	local canShowHead = string.find(choices, "GameRule_AskForGeneralShowHead")
-	local canShowDeputy = string.find(choices, "GameRule_AskForGeneralShowDeputy")
-	local choice = sgs.ai_skill_choice["GameRule:TriggerOrder"](self, choices, data)
-	if choice == "cancel" then
-		local showRate = math.random()
-
-		if canShowHead and showRate > 0.8 then
+		if canShowHead and showRate2 > 0.8 then
 			if self.player:isDuanchang() then return "GameRule_AskForGeneralShowHead" end
 			for _, p in ipairs(self.enemies) do
 				if p:hasShownSkills("mingshi|huoshui") then return "GameRule_AskForGeneralShowHead" end
 			end
-		elseif canShowDeputy and showRate > 0.8 then
+		elseif canShowDeputy and showRate2 > 0.8 then
 			if self.player:isDuanchang() then return "GameRule_AskForGeneralShowDeputy" end
 			for _, p in ipairs(self.enemies) do
 				if p:hasShownSkills("mingshi|huoshui") then return "GameRule_AskForGeneralShowDeputy" end
@@ -324,18 +336,19 @@ sgs.ai_skill_choice["GameRule:TurnStart"] = function(self, choices, data)
 		if not self.player:hasShownOneGeneral() then
 			--local gameProcess = sgs.gameProcess():split(">>") self.player:getKingdom() == gameProcess[1]
 			if string.find(sgs.gameProcess(), self.player:getKingdom() .. ">>") and (self.player:getLord() or sgs.shown_kingdom[self.player:getKingdom()] < self.player:aliveCount() / 2) then
-				if canShowHead and showRate > 0.6 then return "GameRule_AskForGeneralShowHead"
-				elseif canShowDeputy and showRate > 0.6 then return "GameRule_AskForGeneralShowDeputy" end
+				if canShowHead and showRate2 > 0.6 then return "GameRule_AskForGeneralShowHead"
+				elseif canShowDeputy and showRate2 > 0.6 then return "GameRule_AskForGeneralShowDeputy" end
 			end
 		end
-	end
-	return choice
+	--end
+	--return choice
+	return  "cancel"
 end
 
 sgs.ai_skill_choice["armorskill"] = function(self, choice, data)
 	local choices = choice:split("+")
 	for _, name in ipairs(choices) do
-		skill_names = name:split(":")
+		local skill_names = name:split(":")
 		if #skill_names == 2 then
 			if self:askForSkillInvoke(skill_names[2], data) then return name end
 		end

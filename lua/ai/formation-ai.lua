@@ -70,19 +70,26 @@ sgs.ai_view_as.jixi = function(card, player, card_place)
 	end
 end
 
-local getZiliangCard = function(self, damage)
-	if not (damage.to:getPhase() == sgs.Player_NotActive and self:needKongcheng(damage.to, true)) then
+local getZiliangCard = function(self, target)
+	if not (target:getPhase() == sgs.Player_NotActive and self:needKongcheng(target, true)) then
 		local ids = sgs.QList2Table(self.player:getPile("field"))
 		local cards = {}
 		for _, id in ipairs(ids) do table.insert(cards, sgs.Sanguosha:getCard(id)) end
-		for _, card in ipairs(cards) do
-			if card:isKindOf("Peach") or card:isKindOf("Analeptic") then return card:getEffectiveId() end
+		if target:getPhase() == sgs.Player_NotActive and self:isWeak(target) then
+			for _, card in ipairs(cards) do
+				if card:isKindOf("Peach") or card:isKindOf("Analeptic") then
+					return card:getEffectiveId()
+				end
+			end
+			for _, card in ipairs(cards) do
+				if card:isKindOf("Jink") then return card:getEffectiveId() end
+			end
+			self:sortByKeepValue(cards, true)
+			return cards[1]:getEffectiveId()
+		else--配合钟会找连弩？
+			self:sortByUseValue(cards)
+			return cards[1]:getEffectiveId()
 		end
-		for _, card in ipairs(cards) do
-			if card:isKindOf("Jink") then return card:getEffectiveId() end
-		end
-		self:sortByKeepValue(cards, true)
-		return cards[1]:getEffectiveId()
 	else
 		return nil
 	end
@@ -90,7 +97,8 @@ end
 
 sgs.ai_skill_use["@@ziliang"] = function(self)
 	local damage = self.player:getTag("ziliang_aidata"):toDamage()
-	local id = getZiliangCard(self, damage)
+	local target = damage.to
+	local id = getZiliangCard(self, target)
 	if id then
 		return "@ZiliangCard=" .. tostring(id) .. "&ziliang"
 	end

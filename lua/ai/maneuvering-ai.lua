@@ -392,7 +392,7 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 		end
 		if self:cantbeHurt(target, from, damage) then newvalue = newvalue - 100 end
 		if damage + (dmg or 0) >= target:getHp() then
-			if self:isFriend(target) or self:isFriend(from) then newvalue = newvalue - sgs.getReward(to) end
+			if self:isFriend(target) or self:isFriend(from) then newvalue = newvalue - self:getReward(to) end
 			if self:isFriend(from) and self:isFriend(target) and not punish and getCardsNum("Peach", from, self.player) + getCardsNum("Peach", target, self.player) == 0 then
 				punish = true
 				newvalue = newvalue - from:getCardCount(true)

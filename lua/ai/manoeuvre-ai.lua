@@ -59,7 +59,7 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       end
       if current:canSlash(self.player, nil, true) and self.player:hasSkills(sgs.masochism_skill) and table.contains(choices,"head") then
         local skills = (sgs.masochism_skill):split("|")
-        table.removeOne(skills,"xibing")
+        table.removeOne(skills,"wanggui")
         for _, skill in ipairs(skills) do
           if self.player:inHeadSkills(skill) then
             return "head"
@@ -74,7 +74,12 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       end
     else
       if table.contains(choices,"head") then
-        local skills = (sgs.priority_skill):split("|")
+        local skills = (sgs.priority_skill):split("|")--需要判定君主技能等
+        table.removeOne(skills,"jianan")
+        table.removeOne(skills,"shouyue")
+        table.removeOne(skills,"jiahe")
+        table.removeOne(skills,"hongfa")
+        table.removeOne(skills,"buqu")
         for _, skill in ipairs(skills) do
           if current:inHeadSkills(skill) then
             return "head"

@@ -76,8 +76,12 @@ sgs.ai_choicemade_filter.skillInvoke.wangxi = function(self, player, promptlist)
 end
 
 function sgs.ai_cardneed.wangxi(to, card)
-	return card:isKindOf("AOE")
+	return card:isKindOf("AOE") or card:isKindOf("Crossbow")
 end
+
+sgs.wangxi_keep_value = {
+	Crossbow = 6
+}
 
 --臧霸
 function sgs.ai_skill_invoke.hengjiang(self, data)

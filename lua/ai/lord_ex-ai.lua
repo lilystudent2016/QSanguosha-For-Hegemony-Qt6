@@ -188,7 +188,7 @@ sgs.ai_skill_exchange["midao"] = function(self,pattern,max_num,min_num,expand_pi
   end
   local cards = self.player:getCards("h")-- 获得所有手牌
   cards=sgs.QList2Table(cards) -- 将列表转换为表
-  self:sortByUseValue(cards)
+  self:sortByUseValue(cards,true)
   return cards[1]:getEffectiveId()
 end
 
@@ -263,7 +263,7 @@ sgs.ai_skill_playerchosen.wenji = function(self, targets)
   if not self.player:isNude() then
     local cards = self.player:getCards("he")
     cards = sgs.QList2Table(cards)
-    self:sortByUseValue(cards)
+    self:sortByUseValue(cards,true)
     if cards[1]:isKindOf("Peach") then
       give_peach = true
     end
@@ -1317,12 +1317,12 @@ sgs.ai_skill_cardask["@daming"] = function(self, data, pattern, target, target2)
 	return "."
 end
 
---ai铁索连环是defence筛选
+--ai铁索连环是defence筛选，是否考虑尽可能多摸牌？
 sgs.ai_skill_playerchosen["daming_chain"] = function(self, targets)
   local target_list = sgs.QList2Table(targets)
   self:sort(target_list, "hp")
 	for _,p in ipairs(target_list) do
-		if not self:isFriend(p) and self:isGoodChainTarget(p, self.player, sgs.DamageStruct_Thunder) then
+		if not self:isFriend(p) and self:isGoodChainTarget(p, self.player, sgs.DamageStruct_Thunder) then--似乎是无效判定
 				return p
 		end
 	end

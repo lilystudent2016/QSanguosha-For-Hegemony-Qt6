@@ -491,27 +491,32 @@ function SmartAI:objectiveLevel(player)
 			else
 				return 5
 			end
-		else return self:getOverflow() > 0 and 4 or 0
+		elseif selfIsCareerist then
+			return 5
+		else
+			return self:getOverflow() > 0 and 4 or 0
 		end
 	elseif string.find(gameProcess, ">") then
 		local kingdom = gameProcess:split(">")[1]
 		if string.find(gameProcess, ">>>") then
-			if self_kingdom == kingdom and not selfIsCareerist then
+			if string.find(gameProcess, self_kingdom..">>>") and not selfIsCareerist then--self_kingdom == kingdom
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player)
 					and (player_kingdom_evaluate == self_kingdom or string.find(player_kingdom_evaluate, self_kingdom)) then return 0
 				elseif player_kingdom_evaluate == "unknown" and sgs.turncount <= 0 then return 0
 				else return 5
 				end
+			elseif selfIsCareerist and string.find(gameProcess, "careerist>>") then
+				return 5
 			else
-				if player_kingdom_explicit == kingdom then return 5
-				elseif player_kingdom_evaluate == kingdom then return 5
+				if string.find(gameProcess, player_kingdom_explicit..">>>") then return 5--player_kingdom_explicit == kingdom
+				elseif string.find(gameProcess, player_kingdom_evaluate..">>>") then return 5--player_kingdom_evaluate == kingdom
 				elseif player_kingdom_evaluate == "unknown" then return 0
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return -1
 				else return 3
 				end
 			end
 		elseif string.find(gameProcess, ">>") then
-			if self_kingdom == kingdom and not selfIsCareerist then
+			if string.find(gameProcess, self_kingdom..">>") and not selfIsCareerist then
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player) then
 					if player_kingdom_evaluate == self_kingdom then return -1
 					elseif string.find(player_kingdom_evaluate, self_kingdom) then return 0
@@ -519,14 +524,16 @@ function SmartAI:objectiveLevel(player)
 					end
 				end
 				return 5
+			elseif selfIsCareerist and string.find(gameProcess, "careerist>") then
+				return 5
 			else
-				if player_kingdom_explicit == kingdom or player_kingdom_evaluate == kingdom then return 5
+				if string.find(gameProcess, player_kingdom_explicit..">>") or string.find(gameProcess, player_kingdom_evaluate..">>") then return 5
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return 0
 				else return 3
 				end
 			end
 		else
-			if self_kingdom == kingdom and not selfIsCareerist then
+			if string.find(gameProcess, self_kingdom..">") and not selfIsCareerist then
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player) then
 					if player_kingdom_evaluate == self_kingdom then return -1
 					elseif string.find(player_kingdom_evaluate, self_kingdom) then return 0
@@ -534,13 +541,15 @@ function SmartAI:objectiveLevel(player)
 					end
 				end
 				return 5
+			elseif selfIsCareerist and string.find(gameProcess, "careerist>") then
+				return 5
 			else
 				local isWeakPlayer = player:getHp() == 1 and not player:hasShownSkill("duanchang") and self:isWeak(player)
 										and (player:isKongcheng() or sgs.card_lack[player:objectName()] == 1 and player:getHandcardNum() <= 1)
-										and (sgs.getReward(player) >= 2 or self.player:aliveCount() <= 4)
-				if player_kingdom_explicit == kingdom or isWeakPlayer then return 5
-				elseif player_kingdom_evaluate == kingdom then return 3
-				elseif player_kingdom_explicit == "careerist" then return 0
+										and (self:getReward(player) >= 2 or self.player:aliveCount() <= 4)
+				if string.find(gameProcess, player_kingdom_explicit..">") or isWeakPlayer then return 5
+				elseif string.find(gameProcess, player_kingdom_evaluate..">")then return 3
+				elseif player_kingdom_explicit == "careerist" and not player:getActualGeneral1():getKingdom() == "careerist" then return 0
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return 0
 				else return 1
 				end
@@ -685,8 +694,8 @@ function sgs.gameProcess(update)
 		end
 	end
 	process = process .. kingdoms[#kingdoms]
-	if not string.find(process, ">") then
-		process = "==="
+	if not string.find(process, ">") or (not string.find(process, ">>") and sgs.turncount <= 1) then
+		process = "==="--第一回合或均势
 	end
 
 	sgs.ai_process = process
@@ -1540,7 +1549,7 @@ function SmartAI:getUseValue(card)
 		if not self:getSameEquip(card) then v = 6.7 end
 		if self.weaponUsed and card:isKindOf("Weapon") then v = 2 end
 		if self.player:hasSkills("qiangxi") and card:isKindOf("Weapon") then v = 2 end
-		if self.player:hasSkills("kurou|kuanggu|paiyi") and card:isKindOf("Crossbow") then return 9 end
+		if self.player:hasSkills("kurou|kuanggu|wangxi|paiyi") and card:isKindOf("Crossbow") then return 9 end
 		if self.player:hasSkills("bazhen|jgyizhong") and card:isKindOf("Armor") then v = 2 end
 
 		local lvfan = sgs.findPlayerByShownSkillName("diaodu")
@@ -1788,7 +1797,7 @@ function SmartAI:cardNeed(card)
 	if card:isKindOf("Analeptic") then
 		if self.player:getHp() < 2 then return 10 end
 	end
-	if card:isKindOf("Crossbow") and self.player:hasSkills("luoshen|kurou|keji|wusheng|kuanggu") then return 20 end
+	if card:isKindOf("Crossbow") and self.player:hasSkills("luoshen|kurou|keji|wusheng|kuanggu|wangxi") then return 20 end
 	if card:isKindOf("Axe") and self.player:hasSkill("luoyi") then return 15 end
 	if card:isKindOf("Weapon") and (not self.player:getWeapon()) and (self:getCardsNum("Slash") > 1) then return 6 end
 	if card:isKindOf("Nullification") and self:getCardsNum("Nullification") == 0 then
@@ -2626,9 +2635,15 @@ function SmartAI:askForMoveCards(upcards, downcards, reason, pattern, min_num, m
 	return {}, {}
 end
 
-sgs.ai_skill_discard.gamerule = function(self, discard_num)--加一个self的挟天子判定？
+sgs.ai_skill_discard.gamerule = function(self, discard_num)
 	local cards = sgs.QList2Table(self.player:getHandcards())
-	self:sortByKeepValue(cards)
+	if self.threaten_emperor_nextturn then--挟天子连续回合
+		global_room:writeToConsole("挟天子连续回合弃牌")
+		self:sortByUseValue(cards,true)
+		self.threaten_emperor_nextturn = nil
+	else
+		self:sortByKeepValue(cards)
+	end
 	local to_discard = {}
 	for _, card in ipairs(cards) do
 		if not self.player:isCardLimited(card, sgs.Card_MethodDiscard, true) then
@@ -5081,7 +5096,7 @@ function SmartAI:getAoeValue(card)
 					else
 						kills = kills + 1
 						if wansha and (sgs.card_lack[to:objectName()]["Peach"] == 1 or getCardsNum("Peach", to, self.player) == 0) then
-							value = value - sgs.getReward(to) * 10
+							value = value - self:getReward(to) * 10
 						end
 					end
 				end
@@ -5166,7 +5181,7 @@ function SmartAI:getAoeValue(card)
 						else
 							kills = kills + 1
 							if wansha and (sgs.card_lack[to:objectName()]["Peach"] == 1 or getCardsNum("Peach", to, self.player) == 0) then
-								value = value - sgs.getReward(to) * 10
+								value = value - self:getReward(to) * 10
 							end
 						end
 					end
@@ -5222,8 +5237,11 @@ function SmartAI:getAoeValue(card)
 		if kills == enemies then return 998 end
 	end
 
+	local xuyou = sgs.findPlayerByShownSkillName("chenglve")
+	local aoedraw = xuyou and attacker:isFriendWith(xuyou)
+
 	if isEffective_F == 0 and isEffective_E == 0 then
-		if attacker:hasShownSkills("jizhi|shicai") or attacker:getActualGeneral1():getKingdom() == "careerist" then
+		if attacker:hasShownSkill("jizhi") or aoedraw then
 			return 10
 		else
 			return -100
@@ -5232,7 +5250,7 @@ function SmartAI:getAoeValue(card)
 		return -100
 	end
 
-	if attacker:hasShownSkills("jizhi|shicai") or attacker:getActualGeneral1():getKingdom() == "careerist" then
+	if attacker:hasShownSkill("jizhi") or aoedraw or attacker:getActualGeneral1():getKingdom() == "careerist" then
 		good = good + 10
 	end
 	if attacker:hasShownSkill("luanji") then good = good + 5 * isEffective_E end
@@ -6619,9 +6637,10 @@ function SmartAI:willShowForMasochism()
 	return true
 end
 
-function sgs.getReward(player)
+function SmartAI:getReward(player)
+	if self.player:getRole() == "careerist" then return 3 end
+	if not sgs.isAnjiang(player) and player:getRole() == "careerist" then return 1 end
 	local x = 1
-	if not sgs.isAnjiang(player) and player:getRole() == "careerist" then return 3 end
 	for _, p in sgs.qlist(global_room:getOtherPlayers(player)) do
 		if p:isFriendWith(player) then x = x + 1 end
 	end

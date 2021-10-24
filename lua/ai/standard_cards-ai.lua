@@ -464,7 +464,7 @@ function SmartAI:useCardSlash(card, use)
 	end
 
 	local function canAppendTarget(target)
-		--[[旧技能
+	--[[旧技能
 		if not self:isWeak(target) and self:hasSkill("keji") and not self.player:hasFlag("KejiSlashInPlayPhase") and self:getOverflow() > 2
 			and self:getCardsNum("Crossbow", "he") == 0 then return end
 		if self.player:hasSkill("qingnang") and not self.player:hasUsed("QingnangCard") and self:isWeak() and self.player:getHandcardNum() <= 2
@@ -494,16 +494,21 @@ function SmartAI:useCardSlash(card, use)
 			end
 		end
 	end
-	
+
 	local targets = {}
 	local forbidden = {}
 	self:sort(self.enemies, "defenseSlash")
 	for _, enemy in ipairs(self.enemies) do
 		if not self:slashProhibit(card, enemy) and sgs.isGoodTarget(enemy, self.enemies, self, true) then
-			if not self:getDamagedEffects(enemy, self.player, true) then table.insert(targets, enemy) else table.insert(forbidden, enemy) end
+			if not self:getDamagedEffects(enemy, self.player, true) then
+				table.insert(targets, enemy)
+			else
+				table.insert(forbidden, enemy)
+			end
 		end
 	end
 	if #targets == 0 and #forbidden > 0 then targets = forbidden end
+	local canSlashTargets = {}
 
 	for _, target in ipairs(targets) do
 		local canliuli = false
@@ -512,11 +517,12 @@ function SmartAI:useCardSlash(card, use)
 		end
 		if (not use.current_targets or not table.contains(use.current_targets, target:objectName()))
 			and (self.player:canSlash(target, card, not no_distance, rangefix)
-			or (use.isDummy and self.predictedRange and self.player:distanceTo(target, rangefix) <= self.predictedRange))
+				or (use.isDummy and self.predictedRange and self.player:distanceTo(target, rangefix) <= self.predictedRange))
 			and self:objectiveLevel(target) > 3
-			and not canliuli
+			and not canliuli then
+		--[[旧克己
 			and not (not self:isWeak(target) and #self.enemies > 1 and #self.friends > 1 and self.player:hasSkill("keji")
-			and self:getOverflow() > 0 and not self:hasCrossbowEffect()) then
+			and self:getOverflow() > 0 and not self:hasCrossbowEffect()) ]]
 
 			if target:getHp() > 1 and target:hasShownSkill("jianxiong") and self.player:hasWeapon("Spear") and card:getSkillName() == "Spear" then
 				local ids, isGood = card:getSubcards(), true
@@ -572,10 +578,37 @@ function SmartAI:useCardSlash(card, use)
 				end
 			end
 
+			if self.player:hasSkill("duanbing") then--需要额外筛选目标的技能
+				table.insert(canSlashTargets, target)
+				continue
+			end
+
 			if use.to and canAppendTarget(target) then
 				use.to:append(target)
 			end
-			if not use.to or self.slash_targets <= use.to:length() then	return
+			if not use.to or self.slash_targets <= use.to:length() then
+				return
+			end
+		end
+	end
+
+	if self.player:hasSkill("duanbing") and #canSlashTargets > 0 then
+		for _, target in ipairs(canSlashTargets) do
+			if self.player:distanceTo(target) > 1 then--短兵先选远的目标
+				if use.to and canAppendTarget(target) then
+					use.to:append(target)
+				end
+				if not use.to or self.slash_targets <= use.to:length() then
+					return
+				end
+			end
+		end
+		for _, target in ipairs(canSlashTargets) do
+			if use.to and canAppendTarget(target) then
+				use.to:append(target)
+			end
+			if not use.to or self.slash_targets <= use.to:length() then
+				return
 			end
 		end
 	end
@@ -585,10 +618,11 @@ function SmartAI:useCardSlash(card, use)
 			and not self:slashProhibit(card, friend) and not self:hasHeavySlashDamage(self.player, card, friend)
 			and (self:getDamagedEffects(friend, self.player) or self:needToLoseHp(friend, self.player, true, true))
 			and (self.player:canSlash(friend, card, not no_distance, rangefix)
-			or (use.isDummy and self.predictedRange and self.player:distanceTo(friend, rangefix) <= self.predictedRange)) then
+				or (use.isDummy and self.predictedRange and self.player:distanceTo(friend, rangefix) <= self.predictedRange)) then
 			use.card = card
 			if use.to and canAppendTarget(friend) then use.to:append(friend) end
-			if not use.to or self.slash_targets <= use.to:length() then	return
+			if not use.to or self.slash_targets <= use.to:length() then
+				return
 			end
 		end
 	end
@@ -2956,7 +2990,7 @@ sgs.dynamic_value.lucky_chance.Lightning = true
 
 sgs.ai_keep_value.Lightning = -1
 
-sgs.ai_skill_askforag.amazing_grace = function(self, card_ids)
+sgs.ai_skill_askforag.amazing_grace = function(self, card_ids)--更新火烧等重要卡牌
 
 	local NextPlayerCanUse, NextPlayerisEnemy
 	local NextPlayer = self.player:getNextAlive()
@@ -3247,7 +3281,9 @@ sgs.ai_skill_askforag.amazing_grace = function(self, card_ids)
 		end
 
 		if halberd then
---@todo
+			if self.player:hasSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie") then
+				return halberd
+			end
 		end
 
 		if gudingdao then
@@ -3613,7 +3649,7 @@ function sgs.ai_slash_weaponfilter.Triblade(self, to, player)
 	return sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) == 0
 end
 function sgs.ai_weapon_value.Triblade(self, enemy, player)
-	if not enemy then return 1 end
+	if not enemy or #self:getEnemies(player) == 1 then return 1 end
 	if enemy and player:getHandcardNum() > 2 then return math.min(3.8, player:getHandcardNum() - 1) end
 end
 

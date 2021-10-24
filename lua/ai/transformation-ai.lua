@@ -116,7 +116,7 @@ qice_skill.getTurnUseCard = function(self)
 	cards = sgs.QList2Table(cards)
 	for _,card in ipairs(cards) do
 		if card:canRecast() then return end
-		if card:isKindOf("Peach") then--有实体卡桃
+		if card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
 			has_peach = true
 		end
 		if card:isAvailable(self.player) then
@@ -201,6 +201,20 @@ qice_skill.getTurnUseCard = function(self)
 		end
 	end
 
+	if not has_peach and table.contains(available_tricks,"burning_camps") then
+		local np = self.player:getNextAlive()--鏖战等情况
+		local can_burn = self:isEnemy(np) and np:getFormation():length() == #self.enemies
+		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
+		self:useCardBurningCamps(sgs.cloneCard("burning_camps"), dummyuse)
+		if dummyuse.card and can_burn then
+			if self.qicenum["burning_camps"] and self.qicenum["burning_camps"] == handcardnum then
+				sgs.ai_use_priority.QiceCard = 1.5
+			end
+			global_room:writeToConsole("奇策火烧1")
+			return sgs.Card_Parse(str .. "burning_camps")
+		end
+	end
+
 	if (table.contains(available_tricks,"archery_attack") or table.contains(available_tricks,"savage_assault")) then--万剑、南蛮
 		local clonea = sgs.cloneCard("archery_attack")
 		local clones = sgs.cloneCard("savage_assault")
@@ -262,7 +276,7 @@ qice_skill.getTurnUseCard = function(self)
 				burn_weak = burn_weak + 1
 			end
 		end
-		if burn_weak > 1 or burn_weak == #self.enemies then--能否包含鏖战的情况？
+		if burn_weak > 1 or burn_weak == #self.enemies then
 			can_burn = true
 		end
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
@@ -271,7 +285,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["burning_camps"] and self.qicenum["burning_camps"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 1.5
 			end
-			global_room:writeToConsole("奇策火烧")
+			global_room:writeToConsole("奇策火烧2")
 			return sgs.Card_Parse(str .. "burning_camps")
 		end
 	end
@@ -1159,13 +1173,12 @@ sgs.ai_choicemade_filter.skillInvoke.zhiman = function(self, player, promptlist)
 end
 
 sgs.ai_skill_choice.zhiman = function(self, choices)
-	global_room:writeToConsole("制蛮命令变更")
+	global_room:writeToConsole("制蛮命令变更")--变更只能一次，所以能有使用卡牌结构的目标判定就好了
 	return "yes"
 end
 
 sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
 	global_room:writeToConsole("制蛮变更选择")
-	
 	local importantsklii = {"xuanhuo", "paoxiao", "kuanggu", "tieqi", "shengxi",  "jili"}
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do

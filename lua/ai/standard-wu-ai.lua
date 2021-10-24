@@ -2346,86 +2346,85 @@ fenxun_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.FenxunCard = function(card, use, self)
-	local shouldUse = true
+	local shouldUse = false
 	local slashCard
 	local dummy_use = { isDummy = true, to = sgs.SPlayerList() }
 	for _, slash in ipairs(self:getCards("Slash")) do
 		dummy_use.to = sgs.SPlayerList()
 		dummy_use.card = nil
 		self:useCardSlash(slash, dummy_use)
-		if dummy_use.to:length() > 1 then
-			local x = 0
-			for _, to in sgs.qlist(dummy_use.to) do
-				if self.player:distanceTo(to) > 1 then x = x + 1 end
-			end
-			if x <= 1 then shouldUse = false end
+		if self:slashIsAvailable(self.player, slash) and dummy_use.to:length() < #self.enemies
+		and dummy_use.to:length() <= 1 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_ExtraTarget, self.player, slash) then
+			shouldUse = true
 			slashCard = slash
-			break
 		end
 	end
 
-	if self:needToThrowArmor() then
-		use.card = sgs.Card_Parse("@FenxunCard=" .. self.player:getArmor():getId() .. "&fenxun")
-		if use.to then
-			if not dummy_use.to:isEmpty() then
-				use.to:append(dummy_use.to:first())
-			else use.to:append(self.room:getOtherPlayers(self.player):first())
-			end
-			return
-		end
-	else
-		if #self.enemies == 0 then return end
-		if not self:slashIsAvailable() then return end
-		if not shouldUse then return end
-		if not slashCard then return end
-		if dummy_use.to:isEmpty() then return end
-		local cards = {}
-		for _, c in sgs.qlist(self.player:getCards("he")) do
-			if c:getEffectiveId() ~= slashCard:getEffectiveId() then table.insert(cards, c) end
-		end
-		self:sortByKeepValue(cards)
+	if #self.enemies == 0 then return end
+	if not self:slashIsAvailable() then return end
+	if not shouldUse then return end
+	if not slashCard then return end
 
-		local card_id
+	local cards = {}
+	for _, c in sgs.qlist(self.player:getCards("he")) do
+		if c:getEffectiveId() ~= slashCard:getEffectiveId() then table.insert(cards, c) end
+	end
+	self:sortByUseValue(cards,true)
+	local card_id
+	if self:needToThrowArmor() then
+		card_id = self.player:getArmor():getId()
+	end
+	if not card_id then
 		for _, c in ipairs(cards) do
 			if c:isKindOf("Lightning") and not isCard("Peach", c, self.player) and not self:willUseLightning(c) then
 				card_id = c:getEffectiveId()
 				break
 			end
 		end
-
-		if not card_id then
-			for _, c in ipairs(cards) do
-				if not isCard("Peach", c, self.player)
-					and (c:isKindOf("AmazingGrace") or c:isKindOf("GodSalvation") and not self:willUseGodSalvation(c)) then
-					card_id = c:getEffectiveId()
-					break
-				end
+	end
+	if not card_id then
+		for _, c in ipairs(cards) do
+			if not isCard("Peach", c, self.player)
+				and (c:isKindOf("AmazingGrace") or c:isKindOf("GodSalvation") and not self:willUseGodSalvation(c)) then
+				card_id = c:getEffectiveId()
+				break
 			end
 		end
+	end
+	if not card_id then
+		local isWeak
+		for _, to in sgs.qlist(dummy_use.to) do
+			if self:isWeak(to) and to:getHp() <= 1 then isWeak = true break end
+		end
 
-		if not card_id then
-			local isWeak
-			for _, to in sgs.qlist(dummy_use.to) do
-				if self:isWeak(to) and to:getHp() <= 1 then isWeak = true break end
-			end
-
-			for _, c in ipairs(cards) do
-				if (not isCard("Peach", c, self.player) or self:getCardsNum("Peach") > 1)
-					and (not isCard("Jink", c, self.player) or self:getCardsNum("Jink") > 1 or isWeak)
-					and not (self.player:getWeapon() and self.player:getWeapon():getEffectiveId() == c:getEffectiveId())
-					and not (self.player:getOffensiveHorse() and self.player:getOffensiveHorse():getEffectiveId() == c:getEffectiveId()) then
-					card_id = c:getEffectiveId()
-				end
+		for _, c in ipairs(cards) do
+			if (not isCard("Peach", c, self.player) or self:getCardsNum("Peach") > 1)
+				and (not isCard("Jink", c, self.player) or self:getCardsNum("Jink") > 1 or isWeak)
+				and not (self.player:getWeapon() and self.player:getWeapon():getEffectiveId() == c:getEffectiveId())
+				and not (self.player:getOffensiveHorse() and self.player:getOffensiveHorse():getEffectiveId() == c:getEffectiveId()) then
+				card_id = c:getEffectiveId()
 			end
 		end
-		if card_id then
-			use.card = sgs.Card_Parse("@FenxunCard=" .. card_id .. "&fenxun")
-			if use.to then
-				for _, to in sgs.qlist(dummy_use.to) do
-					if self.player:distanceTo(to) > 1 then use.to:append(to) break end
-				end
-				if use.to:isEmpty() then use.to:append(dummy_use.to:first()) end
+	end
+
+	local target
+	self:sort(self.enemies, "defense")
+	if dummy_use.to:isEmpty() then
+		target = self.enemies[1]
+	end
+	for _, enemy in ipairs(self.enemies) do
+		if not target and not dummy_use.to:contains(enemy) then
+			if self.player:distanceTo(enemy) > 1 and not self:slashProhibit(slashCard, enemy) and sgs.isGoodTarget(enemy, self.enemies, self, true) then
+				target = enemy
+				break
 			end
+		end
+	end
+
+	if card_id and target then
+		use.card = sgs.Card_Parse("@FenxunCard=" .. card_id .. "&fenxun")
+		if use.to then
+			use.to:append(target)
 		end
 	end
 end

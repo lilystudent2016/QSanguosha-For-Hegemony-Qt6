@@ -59,7 +59,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			table.insert(cards, c)
 		end
 	end
---[[
+--[[咆哮等不给杀？
 	if self.player:getMark("GlobalBattleRoyalMode") > 0 then
 		for _, card in ipairs(cards) do
 			if card:isKindOf("BurningCamps") or card:isKindOf("Analeptic") or card:isKindOf("Breastplate") then--鏖战火烧联营、酒和护心镜不能给
@@ -716,13 +716,13 @@ function SmartAI:useCardFightTogether(card, use)
 
 	--@todo: consider hongfa
 
-	local big_kingdoms = self.player:getBigKingdoms("AI")
+	local big_kingdoms = self.player:getBigKingdoms("AI")--无法判定暴露野心后野心家同势力的情况，需要新方法
 	local bigs, smalls = {}, {}
-	local isBig, isSmall
+	local isBig, isSmall = false, false
 	for _, p in sgs.qlist(self.room:getAllPlayers()) do
 		if self:hasTrickEffective(card, p, self.player) then
 			if #big_kingdoms == 1 and big_kingdoms[1]:startsWith("sgs") then
-				if table.contains(big_kingdoms, p:getKingdom()) then
+				if table.contains(big_kingdoms, p:objectName()) then
 					table.insert(bigs, p)
 					if p:objectName() == self.player:objectName() then isBig = true end
 				else
@@ -775,6 +775,8 @@ function SmartAI:useCardFightTogether(card, use)
 							v_big = v_big + 2
 						else v_big = v_big + 1 end
 					end
+				else
+					v_big = v_big + 0.5
 				end
 			end
 		elseif table.contains(choices, "small") then
@@ -791,6 +793,8 @@ function SmartAI:useCardFightTogether(card, use)
 							v_small = v_small + 2
 						else v_small = v_small + 1 end
 					end
+				else
+					v_small = v_small + 0.5
 				end
 			end
 		end
@@ -1085,14 +1089,16 @@ end
 sgs.ai_skill_cardask["@threaten_emperor"] = function(self)
 	if self.player:isKongcheng() then return "." end
 	local cards = sgs.QList2Table(self.player:getCards("h"))
-	self:sortByKeepValue(cards)
+	self:sortByUseValue(cards,true)
 	if self.player:getHandcardNum() > 1 then
 		for _, card in ipairs(cards) do
 			if not card:isKindOf("threaten_emperor") then--如果可以连着挟天子
+				self.threaten_emperor_nextturn = true
 				return card:getEffectiveId()
 			end
 		end
 	end
+	self.threaten_emperor_nextturn = true
 	return cards[1]:getEffectiveId()
 end
 
@@ -1175,7 +1181,7 @@ sgs.ai_skill_choice.imperial_order = function(self, choices, data)
 		end
 		return "show_head"
 	end
-	
+
 	if self.player:getPhase() ~= sgs.Player_NotActive then return "show_head" end
 	if self:needToLoseHp() then return "losehp" end
 	if not self.player:isWounded() and self.player:getCards("he"):length() > 6 then return "losehp" end

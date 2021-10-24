@@ -130,7 +130,7 @@ sgs.ai_skill_use_func.FengyingCard = function(card, use, self)
     end
   end
   if draw_count > 3 or self.player:getHp() == 1 then
-    use.card = card--似乎无法判定不弃牌使用挟天子更优的情况
+    use.card = card--不弃牌使用挟天子更优的情况估计得在挟天子弃牌的ai里写，需要data判定card:getSkillName()才行
   end
 end
 
