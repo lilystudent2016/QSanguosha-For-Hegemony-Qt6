@@ -281,6 +281,9 @@ sgs.ai_skill_choice.drowning = function(self, choices, data)
 	if #chained > 0 then dangerous = true end
 
 	if not self:damageIsEffective(self.player, sgs.DamageStruct_Thunder, effect.from) then return "damage" end
+
+	if dangerous then return "throw" end--危险和多装备的详细判断？
+
 	if (self:needToLoseHp(self.player, effect.from) or self:getDamagedEffects(self.player, effect.from)) and not dangerous then return "damage" end
 
 	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
@@ -290,25 +293,24 @@ sgs.ai_skill_choice.drowning = function(self, choices, data)
 			end
 		end
 	end
-	if self.player:getHp() == 1 and not self.player:hasArmorEffect("Breastplate") then return "throw" end
-
-	if dangerous then return "throw" end
+	if self.player:getHp() == 1 and not self.player:hasArmorEffect("Breastplate") then return "throw" end--有桃？
 
 	if self.player:hasSkills(sgs.lose_equip_skill) and self.player:getEquips():length() == 1 then
 		return "throw"
 	end
 
 	local value = 0
-	for _, equip in sgs.qlist(self.player:getEquips()) do
+	for _, equip in sgs.qlist(self.player:getEquips()) do--直接用保留值重写？
 		if equip:isKindOf("Weapon") then value = value + (self:evaluateWeapon(equip) / 2)
 		elseif equip:isKindOf("Armor") then
 			value = value + self:evaluateArmor(equip)
 			if self:needToThrowArmor() then value = value - 5
 			elseif equip:isKindOf("Breastplate") and self.player:getHp() <= 1 then value = value + 99
-			elseif equip:isKindOf("PeaceSpell") then value = value - 2
+			elseif equip:isKindOf("PeaceSpell") then value = value + 99
 			end
 		elseif equip:isKindOf("OffensiveHorse") then value = value + 2.5
 		elseif equip:isKindOf("DefensiveHorse") then value = value + 5
+		elseif equip:isKindOf("SixDragons") then value = value + 5.5
 		end
 	end
 	if value < 8 then return "throw" else return "damage" end
@@ -690,7 +692,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 			end
 		end
 	end
-]]--调虎离山现在不能摸牌，可以增加调开敌方队友进行击杀的情况
+]]--调虎离山现在不能摸牌，可以增加调开敌方队友进行击杀，和xuyou、huangyueying的情况
 end
 
 sgs.ai_nullification.LureTiger = function(self, card, from, to, positive)
@@ -1093,12 +1095,10 @@ sgs.ai_skill_cardask["@threaten_emperor"] = function(self)
 	if self.player:getHandcardNum() > 1 then
 		for _, card in ipairs(cards) do
 			if not card:isKindOf("threaten_emperor") then--如果可以连着挟天子
-				self.threaten_emperor_nextturn = true
 				return card:getEffectiveId()
 			end
 		end
 	end
-	self.threaten_emperor_nextturn = true
 	return cards[1]:getEffectiveId()
 end
 

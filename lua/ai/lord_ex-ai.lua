@@ -846,6 +846,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
 		  for _, enemy in ipairs(self.enemies) do
 			  if self:isWeak(enemy)
 				and not self:hasSkills(sgs.masochism_skill, enemy)
+        and not enemy:hasSkill("jijiu")
 				and self:damageIsEffective(enemy, nil, self.player)
 				and not (self:getDamagedEffects(enemy, self.player) or self:needToLoseHp(enemy))
 				and enemy:getHandcardNum() + self.player:getPile("power_pile"):length() - 1 > self.player:getHandcardNum() then
@@ -1163,7 +1164,7 @@ sgs.ai_skill_invoke.baolie = function(self, data)
     return false
   end
   --非常粗糙的条件？
-	return self:getCardsNum("Slash") > 2 or self:getCardsNum("Jink") > 2
+	return self:getCardsNum("Slash") > 2 or self:getCardsNum("Jink") > 1
 end
 
 function sgs.ai_cardneed.baolie(to, card, self)

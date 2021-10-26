@@ -292,7 +292,7 @@ sgs.ai_skill_choice["jianglve"] = function(self, choices, data)--ai势力召唤
   if table.contains(choices,"show_head_general") then
     return "show_head_general"
   end
-  return choices[1]--不亮将的可以加上敌友标记？
+  return choices[1]--不亮将的可以加上敌友标记？王平回合开始明置？
 end
 
 --法正
@@ -311,16 +311,14 @@ sgs.ai_skill_exchange["_enyuan"] = function(self,pattern,max_num,min_num,expand_
   cards=sgs.QList2Table(cards) -- 将列表转换为表
   self:sortByUseValue(cards, true) -- 按使用价值从小到大排序
   if cards[1]:isKindOf("Peach") then
-    --[[
     local fazheng = sgs.findPlayerByShownSkillName("enyuan")
     if self:isFriend(fazheng) then
-      return cards[1]:getId()
-    end
-    ]]--
-    local kingdom = self.player:getKingdom()
-    if kingdom == "shu" then
       return {cards[1]:getId()}
     end
+    --[[local kingdom = self.player:getKingdom()
+    if kingdom == "shu" then
+      return {cards[1]:getId()}
+    end]]--
     return {}
   end
   return {cards[1]:getId()}
@@ -382,7 +380,7 @@ local function getSlashtarget(self)
   return nil
 end
 
---是否发动眩惑，顺带小判定
+--是否发动眩惑，顺带小判定。可能得判断技能选择，再判断是否发动才不会有bug
 local function shouldUseXuanhuo(self)
   local xuanhuoskill = {"wusheng", "paoxiao", "longdan", "tieqi", "liegong", "kuanggu"}
   for _, p in sgs.qlist(self.room:getAlivePlayers()) do
@@ -395,11 +393,22 @@ local function shouldUseXuanhuo(self)
   if #xuanhuoskill == 0 then--不太常见的没有技能可选
     return false
   end
+  local xuanhuochoices = table.concat(xuanhuoskill,"+")
+  local choice = sgs.ai_skill_choice.xuanhuo(self, xuanhuochoices)
+  self.room:writeToConsole(self.player:objectName().."眩惑预选技能:"..sgs.Sanguosha:translate(choice))
 
-  --如何去除没有连弩或咆哮却选武圣等情况
+  --如何去除没有连弩或咆哮却选武圣，牌少又断杀等情况
+  if self:getCardsNum("Slash") == 0 then
+    if (choice == "wusheng" or choice == "longdan") and self:getOverflow() > 1 then
+      self.need_xuanhuo_slash = true
+      return true
+    else
+      self.room:writeToConsole(self.player:objectName()..":眩惑无转换杀技能")
+      return false
+    end
+  end
 
-  if self:getCardsNum("Slash") == 1 and not table.contains(xuanhuoskill,"tieqi")
-  and not table.contains(xuanhuoskill,"liegong") and not table.contains(xuanhuoskill,"kuanggu") then
+  if self:getCardsNum("Slash") == 1 and (choice == "wusheng" or choice == "longdan") then
     self.room:writeToConsole(self.player:objectName()..":眩惑无进攻技能")
     return false
   end
@@ -429,15 +438,18 @@ local function shouldUseXuanhuo(self)
   end
 
   if not target then--无杀目标或无杀
-    --assert(target)
     self.room:writeToConsole(self.player:objectName()..":眩惑无杀目标")
     return false
   end
   assert(target)
 
+  if self.player:hasSkills("tieqi|liegong|qianxi")
+  and (choice == "liegong" or (choice == "tieqi" and not target:hasShownSkill("tianxiang"))) then
+    return false
+  end
+
   if self.player:getMark("@strategy") >= 1 or self.player:getHandcardNum() > 4
-   or (self.player:getHandcardNum() > 3 and self.player:getCards("e"):length() > 0) then
-    --self.player:speak("符合眩惑条件")
+   or (self.player:getHandcardNum() > 3 and self.player:getCards("e"):length() > 0) then--多余手牌需要弃置时？
     self.room:writeToConsole(self.player:objectName()..":眩惑符合条件")
     return true
   end
@@ -463,7 +475,7 @@ end
 sgs.ai_skill_use_func.XuanhuoAttachCard= function(card, use, self)
   sgs.ai_use_priority.XuanhuoAttachCard = 5
   --self.room:writeToConsole("发动眩惑:"..self.player:objectName())
-  sgs.debugFunc(self.player, 2)
+  --sgs.debugFunc(self.player, 2)
   self.player:speak("发动眩惑")
   if self.player:getMark("@strategy") >= 1 then--在王平限定技发动前
     sgs.ai_use_priority.XuanhuoAttachCard = sgs.ai_use_priority.JianglveCard + 0.1
@@ -481,6 +493,9 @@ sgs.ai_skill_use_func.XuanhuoAttachCard= function(card, use, self)
     if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) then
       sgs.ai_use_priority.XuanhuoAttachCard = 9.6--勇决杀的优先调整到9.5
     end
+  end
+  if self.player:getActualGeneral1():getKingdom() == "careerist" then
+    sgs.ai_use_priority.XuanhuoAttachCard = 20--野心家
   end
 	use.card = card
   return
@@ -530,11 +545,11 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   local lord_longdan = false
   local can_longdan = false
 
-  if self.need_liegong_distance then
-    return "liegong"--或需要眩惑君刘备烈弓距离
+  if self.need_liegong_distance then--需要眩惑君刘备烈弓距离
+    return "liegong"
   end
-  if self.need_kuanggu_AOE then
-    return "kuanggu"--或需要眩惑狂骨AOE
+  if self.need_kuanggu_AOE then--需要眩惑狂骨AOE
+    return "kuanggu"
   end
 
   if not has_longdan and table.contains(choices,"longdan") and self:getCardsNum("Jink") >= 1 then--龙胆可以杀队友进行回复或伤害，不需要target，虽然ai目前不会
@@ -542,7 +557,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     can_longdan = true
   end
 
-  sgs.debugFunc(self.player, 2)
+  --Func(self.player, 2)
   local target = getSlashtarget(self)--中间给牌弃牌，可能失去武器或杀导致无返回目标。好像还有目标找错的情况？
   if not target then
     self.room:writeToConsole(self.player:objectName()..":！！眩惑选择无杀目标或无杀！！")
@@ -593,6 +608,14 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     end
   end
 
+  if self.need_xuanhuo_slash == true then--需要眩惑转化杀
+    if lord_longdan or can_longdan then
+      return "longdan"
+    end
+    if can_wusheng then
+      return "wusheng"
+    end
+  end
 
   --已有双技能的情况
   if has_kuanggu and (has_tieqi or has_liegong or has_qianxi) then--魏延和马超兄弟/黄忠
@@ -649,7 +672,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
       return "tieqi"
     elseif has_Crossbow and can_liegong then
       return "liegong"
-    elseif has_Crossbow and not can_liegong then
+    elseif has_Crossbow and can_tieqi then
       return "tieqi"
     elseif can_paoxiao then
       return "paoxiao"
@@ -704,6 +727,8 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
       elseif lord_longdan then
         return "longdan"
       end
+    elseif can_paoxiao then--咆哮
+      return "paoxiao"
     elseif self.player:getHp() <=2 then
       if need_tieqi then
         return "tieqi"
@@ -712,8 +737,6 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
       elseif can_tieqi then--烈弓再找不到目标
         return "tieqi"
       end
-    elseif can_paoxiao then--咆哮
-      return "paoxiao"
     end
   end
 
@@ -737,6 +760,9 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   end
   if lord_longdan then
     return "longdan"
+  end
+  if can_kuanggu then
+    return "kuanggu"
   end
   if can_wusheng then
     return "wusheng"
@@ -1079,26 +1105,34 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
     end
   end
 
+  local function canKeshouDiscard(card)
+    if (card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0)
+    or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
+      return false
+    end
+    return true
+  end
+
     local cards = self.player:getHandcards() -- 获得所有手牌
     cards=sgs.QList2Table(cards) -- 将列表转换为表
     local keshou_cards = {}
-    if self.player:getHandcardNum() == 2  then--两张手牌的情况，一血酒没考虑。。
-      if cards[1]:sameColorWith(cards[2]) and not cards[1]:isKindOf("Peach") and not cards[2]:isKindOf("Peach") then
+    if self.player:getHandcardNum() == 2  then--两张手牌的情况
+      if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
         table.insert(keshou_cards, cards[1]:getId())
         table.insert(keshou_cards, cards[2]:getId())
         return "$" .. table.concat(keshou_cards, "+")
       end
     else--三张及以上手牌
       self:sortByKeepValue(cards) -- 按保留值排序
-      if cards[1]:sameColorWith(cards[2]) and not cards[1]:isKindOf("Peach") and not cards[2]:isKindOf("Peach") then
+      if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
         table.insert(keshou_cards, cards[1]:getId())
         table.insert(keshou_cards, cards[2]:getId())
         return "$" .. table.concat(keshou_cards, "+")
-      elseif cards[1]:sameColorWith(cards[3]) and not cards[1]:isKindOf("Peach") and not cards[3]:isKindOf("Peach") then
+      elseif cards[1]:sameColorWith(cards[3]) and canKeshouDiscard(cards[1])and canKeshouDiscard(cards[3]) then
         table.insert(keshou_cards, cards[1]:getId())
         table.insert(keshou_cards, cards[3]:getId())
         return "$" .. table.concat(keshou_cards, "+")
-      elseif cards[2]:sameColorWith(cards[3]) and not cards[2]:isKindOf("Peach") and not cards[3]:isKindOf("Peach") then
+      elseif cards[2]:sameColorWith(cards[3]) and canKeshouDiscard(cards[2]) and canKeshouDiscard(cards[3]) then
         table.insert(keshou_cards, cards[2]:getId())
         table.insert(keshou_cards, cards[3]:getId())
         return "$" .. table.concat(keshou_cards, "+")

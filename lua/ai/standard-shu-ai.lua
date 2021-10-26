@@ -526,7 +526,14 @@ sgs.ai_view_as.longdan = function(card, player, card_place)
 	end
 end
 
-sgs.ai_skill_playerchosen["longdan_damage"] = sgs.ai_skill_playerchosen.damage
+sgs.ai_skill_playerchosen["longdan_damage"] = function(self, targets)
+	local target =  sgs.ai_skill_playerchosen.damage(self, targets)
+	if self:isFriend(target) then
+		return {}
+	end
+	return target
+end
+
 
 sgs.ai_skill_playerchosen["longdan_recover"] = function(self, targets)
 	targets = sgs.QList2Table(targets)

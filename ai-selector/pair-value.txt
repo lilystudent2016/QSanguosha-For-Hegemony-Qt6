@@ -104,7 +104,7 @@ huatuo xuyou									23 22
 yuji xuyou										23 22
 new_zuoci xuyou									24 23
 zhangxiu hetaihou								25 24
-zhangjiao zhangxiu								21 20
+zhangjiao zhangxiu								20 20
 huangzu	mateng									22 21
 huangzu	panfeng									21 20
 huangzu	zhangxiu								23 23

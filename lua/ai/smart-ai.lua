@@ -174,7 +174,7 @@ function setInitialTables()
 	sgs.need_kongcheng = 	"kongcheng"
 	sgs.save_skill = 		"jijiu|aocai"
 	sgs.exclusive_skill = 	"duanchang|buqu"
-	sgs.drawpeach_skill =	"tuxi|qiaobian|daoshu"
+	sgs.drawpeach_skill =	"tuxi|qiaobian|daoshu|huaiyi|jinfa"
 	sgs.recover_skill =		"rende|kuanggu|zaiqi|jieyin|qingnang|shenzhi|buqu|buyi"
 	sgs.Active_cardneed_skill =		"paoxiao|tianyi|shuangxiong|jizhi|guose|duanliang|qixi|qingnang|luoyi|jieyin|zhiheng|rende|luanji|qiaobian|lirang"
 	sgs.notActive_cardneed_skill =	"kanpo|guicai|guidao|beige|xiaoguo|liuli|tianxiang|jijiu"
@@ -928,7 +928,11 @@ function sgs.updateIntention(from, to, intention)
 			elseif intention < 0 then
 				sendLog = true
 				sgs.outputKingdomValues(from, intention)
-				sgs.ai_loyalty[to:getKingdom()][from:objectName()] = sgs.ai_loyalty[to:getKingdom()][from:objectName()] - intention
+				local kingdom = to:getKingdom()
+				if kingdom == "god" then
+					kingdom = "careerist"
+				end
+				sgs.ai_loyalty[kingdom][from:objectName()] = sgs.ai_loyalty[kingdom][from:objectName()] - intention
 			end
 		elseif to:getMark(string.format("KnownBoth_%s_%s", from:objectName(), to:objectName())) > 0 and sgs.isAnjiang(to) then
 			if sgs.isAnjiang(from) then
@@ -1157,12 +1161,12 @@ function sgs.getDefense(player)--似乎是嘲讽值
 		end
 	end
 	if not pair then
-		if name1 == "anjiang" or player:isDuanchang(true) then
+		if name1 == "anjiang" or player:isDuanchang(true) or not sgs.general_value[name1] then
 			defense = defense + 2.5
 		elseif sgs.general_value[name1] then
 			defense = defense + sgs.general_value[name1]*0.5
 		end
-		if name2 == "anjiang" or player:isDuanchang(false) then
+		if name2 == "anjiang" or player:isDuanchang(false) or not sgs.general_value[name2] then
 			defense = defense + 2.5
 		elseif sgs.general_value[name2] then
 			defense = defense + sgs.general_value[name2]*0.5
@@ -1458,7 +1462,7 @@ function SmartAI:writeKeepValue(card)
 		if i > 0 then value_number = value_number / i end
 		newvalue = maxvalue + value_suit + value_number
 		if not card:isKindOf(mostvaluable_class) then   newvalue = newvalue + 0.1 end
-		if card:isKindOf("ThreatenEmperor") and sgs.isBigKingdom(self.player, "AI") then maxvalue = maxvalue + 3 end
+		if card:isKindOf("ThreatenEmperor") then maxvalue = maxvalue + (sgs.isBigKingdom(self.player, "AI") and 3 or -3) end
 		newvalue = self:adjustKeepValue(card, newvalue)
 		return newvalue
 	else
@@ -1544,6 +1548,14 @@ function SmartAI:getUseValue(card)
 		if self.player:hasEquip(card) then
 			if card:isKindOf("OffensiveHorse") and self.player:getAttackRange() > 2 then return 5.5 end
 			if card:isKindOf("DefensiveHorse") and self:hasEightDiagramEffect() then return 5.5 end
+			if card:isKindOf("WoodenOx") then
+				local value = 4
+				for _, id in sgs.qlist(self.player:getHandPile()) do
+					local c = sgs.Sanguosha:getCard(id)
+					value = value + (self:getUseValue(c) or 0)--可否递归？
+				end
+				return value
+			end
 			return 9
 		end
 		if not self:getSameEquip(card) then v = 6.7 end
@@ -1573,7 +1585,7 @@ function SmartAI:getUseValue(card)
 		if card:getSkillName() == "shuangxiong" then v = 6 end
 		if card:isKindOf("Duel") then v = v + self:getCardsNum("Slash") * 2 end
 		if self.player:hasSkill("jizhi") then v = v + 4 end
-		if card:isKindOf("ThreatenEmperor") and sgs.isBigKingdom(self.player, "AI") then v = v + 6 end
+		if card:isKindOf("ThreatenEmperor") then v = v + (sgs.isBigKingdom(self.player, "AI") and 6 or -6) end
 	end
 
 	if self.player:hasSkills(sgs.need_kongcheng) then
@@ -1715,9 +1727,9 @@ function SmartAI:getDynamicUsePriority(card)
 			and self:getSameEquip(card) and self:getSameEquip(card):isBlack() then
 				return 3.3
 			end
-		if self.player:hasSkills(sgs.lose_equip_skill) then value = value + 12 end
+		if self.player:hasSkills(sgs.lose_equip_skill) then value = value + 12 end--重复装备时应比烽火优先度低
 		local lvfan = sgs.findPlayerByShownSkillName("diaodu")
-		if lvfan and self.player:isFriendWith(lvfan) then value = value + 5 end--重复装备时应比烽火优先度低
+		if lvfan and self.player:isFriendWith(lvfan) and not self.player:hasSkills(sgs.lose_equip_skill) then value = value + 5 end
 
 		if card:isKindOf("Weapon") and self.player:getPhase() == sgs.Player_Play and #self.enemies > 0 then
 			self:sort(self.enemies)
@@ -2637,10 +2649,9 @@ end
 
 sgs.ai_skill_discard.gamerule = function(self, discard_num)
 	local cards = sgs.QList2Table(self.player:getHandcards())
-	if self.threaten_emperor_nextturn then--挟天子连续回合
+	if self.player:getMark("ThreatenEmperorExtraTurn") > 0 then--挟天子连续回合，失效？？
 		global_room:writeToConsole("挟天子连续回合弃牌")
 		self:sortByUseValue(cards,true)
-		self.threaten_emperor_nextturn = nil
 	else
 		self:sortByKeepValue(cards)
 	end
@@ -3444,7 +3455,9 @@ function SmartAI:getLeastHandcardNum(player)
 	player = player or self.player
 	local least = 0
 	local jwfy = sgs.findPlayerByShownSkillName("shoucheng")
-	if least < 1 and jwfy and player:isFriendWith(jwfy) then least = 1 end
+	if least < 1 and jwfy and player:isFriendWith(jwfy) and player:getPhase() == sgs.Player_NotActive then
+		least = 1
+	end
 	return least
 end
 
@@ -3796,6 +3809,9 @@ sgs.ai_skill_playerchosen.damage = function(self, targets)
 		if self:isEnemy(target) then return target end
 	end
 	for _, target in ipairs(targetlist) do--没有敌人选不是队友的
+		if not self:isFriend(target) then return target end
+	end
+	for _, target in ipairs(targetlist) do
 		if not self:isFriendWith(target) then return target end
 	end
 	return targetlist[#targetlist]
@@ -5442,7 +5458,7 @@ end
 function SmartAI:useEquipCard(card, use)
 	if not card then global_room:writeToConsole(debug.traceback()) return end
 
-	local lvfan = sgs.findPlayerByShownSkillName("diaodu")--有吕范则类似枭姬使用武器是否合适？
+	local lvfan = sgs.findPlayerByShownSkillName("diaodu")--有吕范则类似枭姬使用武器是否合适？可能得调整优先度。如何先使用装备区的技能卡
 	if (self.player:hasSkills(sgs.lose_equip_skill) or (lvfan and self.player:isFriendWith(lvfan))) and self:evaluateArmor(card) > -5 then
 		local armor = self.player:getArmor()
 		if not self.player:hasSkill("xiaoji") and armor and armor:objectName() == "PeaceSpell" and card:isKindOf("Armor") then
@@ -6638,7 +6654,7 @@ function SmartAI:willShowForMasochism()
 end
 
 function SmartAI:getReward(player)
-	if self.player:getRole() == "careerist" then return 3 end
+	if self.player:getRole() == "careerist" or self.player:getActualGeneral1():getKingdom() == "careerist" then return 3 end
 	if not sgs.isAnjiang(player) and player:getRole() == "careerist" then return 1 end
 	local x = 1
 	for _, p in sgs.qlist(global_room:getOtherPlayers(player)) do

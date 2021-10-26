@@ -782,7 +782,7 @@ end
 
 sgs.ai_skill_cardchosen.jianchu = function(self, who, flags)--其实感觉用默认策略就好了
 	if not who:isNude() then
-		if who:hasEquip() then--直接用狂斧
+		if who:hasEquip() then--直接用狂斧，鏖战对面有弃装备技能时需要单独处理
 			return sgs.ai_skill_cardchosen.kuangfu(self, who, flags)
 		else
 			local cards = who:getCards(flags)
@@ -1209,7 +1209,7 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 			if card_id then return card_id end
 		end
 		local dangerous = self:getDangerousCard(who)
-		if dangerous then
+		if dangerous then--为何不直接return dangerous ??
 			local card = sgs.Sanguosha:getCard(dangerous)
 			if card:isKindOf("Weapon") and who:getWeapon() then return who:getWeapon():getEffectiveId()
 			elseif card:isKindOf("Armor") and who:getArmor() then return who:getArmor():getEffectiveId()

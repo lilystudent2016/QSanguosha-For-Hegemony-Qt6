@@ -578,7 +578,7 @@ function SmartAI:useCardSlash(card, use)
 				end
 			end
 
-			if self.player:hasSkill("duanbing") then--需要额外筛选目标的技能
+			if self.player:hasSkill("duanbing") or (self.player:hasSkills("kuanggu|kuanggu_xh") and self:hasCrossbowEffect()) then--需要额外筛选目标的技能，但是酒怎么处理？
 				table.insert(canSlashTargets, target)
 				continue
 			end
@@ -595,6 +595,27 @@ function SmartAI:useCardSlash(card, use)
 	if self.player:hasSkill("duanbing") and #canSlashTargets > 0 then
 		for _, target in ipairs(canSlashTargets) do
 			if self.player:distanceTo(target) > 1 then--短兵先选远的目标
+				if use.to and canAppendTarget(target) then
+					use.to:append(target)
+				end
+				if not use.to or self.slash_targets <= use.to:length() then
+					return
+				end
+			end
+		end
+		for _, target in ipairs(canSlashTargets) do
+			if use.to and canAppendTarget(target) then
+				use.to:append(target)
+			end
+			if not use.to or self.slash_targets <= use.to:length() then
+				return
+			end
+		end
+	end
+
+	if self.player:hasSkills("kuanggu|kuanggu_xh") and self:hasCrossbowEffect() and #canSlashTargets > 0 then
+		for _, target in ipairs(canSlashTargets) do
+			if self.player:distanceTo(target) < 2 then--狂骨先选距离1的目标，残血回复的情况？
 				if use.to and canAppendTarget(target) then
 					use.to:append(target)
 				end
@@ -892,8 +913,8 @@ function SmartAI:useCardPeach(card, use)
 	local peaches = 0
 	local cards = sgs.QList2Table(self.player:getHandcards())
 
-	for _, card in ipairs(cards) do
-		if isCard("Peach", card, self.player) then peaches = peaches + 1 end
+	for _, c in ipairs(cards) do
+		if isCard("Peach", c, self.player) then peaches = peaches + 1 end
 	end
 
 	if self.player:hasSkill("rende") and self:findFriendsByType(sgs.Friend_Draw) then return end
@@ -928,7 +949,8 @@ function SmartAI:useCardPeach(card, use)
 					or enemy:hasShownSkill("jixi") and enemy:getPile("field"):length() >0 and enemy:distanceTo(self.player) == 1
 					or enemy:hasShownSkill("qixi") and getKnownCard(enemy, self.player, "black", nil, "he") >= 1
 					or getCardsNum("Snatch", enemy, self.player) >= 1 and enemy:distanceTo(self.player) == 1
-					or (enemy:hasShownSkill("tiaoxin") and (self.player:inMyAttackRange(enemy) and self:getCardsNum("Slash") < 1 or not self.player:canSlash(enemy))))
+					or (enemy:hasShownSkills("tiaoxin|baolie") and (self.player:inMyAttackRange(enemy) and self:getCardsNum("Slash") < 1 or not self.player:canSlash(enemy))))
+					or enemy:hasShownSkill("chuli")--旋略怎么考虑呢？
 				then
 			mustusepeach = true
 			break
@@ -939,6 +961,9 @@ function SmartAI:useCardPeach(card, use)
 	local overflow = self:getOverflow() > 0
 	if self.player:hasSkill("buqu") and self.player:getHp() < 1 and maxCards == 0 then
 		use.card = card
+		return
+	end
+	if not mustusepeach and not overflow and self.player:hasSkills("hunshang|yinghun_sunjian") then
 		return
 	end
 

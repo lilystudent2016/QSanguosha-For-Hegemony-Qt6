@@ -98,7 +98,7 @@ hetaihou							7
 dongzhuo							6
 zhangren							6
 lijueguosi							7
-new_zuoci							9
+new_zuoci							10
 yuanshu								7
 zhangxiu							8
 yanbaihu							4

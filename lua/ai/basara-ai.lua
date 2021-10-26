@@ -496,6 +496,13 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	end
 
 	if self.player:getActualGeneral1():getKingdom() == "careerist" then--野心家可以写详细，最后暴露野心等
+		local fazheng = sgs.findPlayerByShownSkillName("xuanhuo")
+		if fazheng and self.player:getActualGeneral2():getKingdom() == fazheng:getKingdom() then
+			if canShowDeputy then
+				return "show_head_general"
+			end
+			return "cancel"
+		end
 		if self:isWeak() and self:willShowForDefence() then
 			return "show_both_generals"
 		end
@@ -671,7 +678,12 @@ sgs.ai_use_priority.CompanionCard= 0.1
 
 --阴阳鱼标记
 sgs.ai_skill_choice.halfmaxhp = function(self, choices)
-	if self.player:getHandcardNum() - self.player:getMaxCards() > 1 then
+	local can_tongdu = false
+	local liuba = sgs.findPlayerByShownSkillName("tongdu")
+	if liuba and self.player:isFriendWith(liuba) then
+		can_tongdu = true
+	end
+	if (self.player:getHandcardNum() - self.player:getMaxCards()) > 1 + (can_tongdu and 3 or 0) then
 		return "yes"
 	end
 	return "no"
@@ -869,6 +881,12 @@ end
 
 sgs.ai_skill_use_func.ShowHeadCard= function(card, use, self)
 	--global_room:writeToConsole("明置主将的武将牌")
+	if self.player:getActualGeneral1():getKingdom() == "careerist" and self.player:hasSkill("xuanhuoattach") and not self.player:hasUsed("XuanhuoAttachCard") then
+		return
+	end
+	if self.player:inHeadSkills("paoxiao") and self:getCardsNum("Slash") == 0 then
+		return
+	end
 	if self:willShowForAttack() or self:willShowForDefence() then
 		use.card = card
 	end
@@ -897,6 +915,9 @@ end
 
 sgs.ai_skill_use_func.ShowDeputyCard= function(card, use, self)
 	--global_room:writeToConsole("明置副将的武将牌")
+	if (self.player:inDeputySkills("paoxiao") or self.player:inDeputySkills("baolie")) and self:getCardsNum("Slash") == 0 then
+		return
+	end
 	if self:willShowForAttack() or self:willShowForDefence() then
 		use.card = card
 	end

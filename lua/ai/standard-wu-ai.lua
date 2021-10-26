@@ -767,12 +767,18 @@ table.insert(sgs.ai_skills, guose_skill)
 guose_skill.getTurnUseCard = function(self, inclusive)
 
 	local cards = self.player:getCards("he")
+	for _, id in sgs.qlist(self.player:getHandPile()) do
+		cards:prepend(sgs.Sanguosha:getCard(id))
+	  end
 	cards=sgs.QList2Table(cards)
 
+--[[修改了木马的使用价值
+	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
+		table.removeOne(cards,self.player:getTreasure())
+	end
+]]
 	local card
-
 	self:sortByUseValue(cards, true)
-
 	local has_weapon, has_armor = false, false
 
 	for _,acard in ipairs(cards)  do
@@ -829,10 +835,10 @@ sgs.ai_suit_priority.guose= "club|spade|heart|diamond"
 sgs.ai_skill_use["@@liuli"] = function(self, prompt, method)
 	local others = self.room:getOtherPlayers(self.player)
 	others = sgs.QList2Table(others)
-	
+
 	local use = self.player:getTag("liuli-use"):toCardUse()
 	local list = self.player:property("liuli_available_targets"):toString():split("+")
-	
+
 	local slash = use.card
     local source = use.from
 
@@ -863,10 +869,21 @@ sgs.ai_skill_use["@@liuli"] = function(self, prompt, method)
 			end
 		end
 
-		local cards = self.player:getCards("e")
-		cards = sgs.QList2Table(cards)
-		self:sortByKeepValue(cards)
-		for _, card in ipairs(cards) do
+		local ecards = self.player:getCards("e")
+		ecards = sgs.QList2Table(ecards)
+		self:sortByKeepValue(ecards)
+		if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
+			local recover_num = 0
+			for _,id in sgs.qlist(self.player:getPile("wooden_ox")) do
+				if sgs.Sanguosha:getCard(id):isKindOf("Peach") or (sgs.Sanguosha:getCard(id):isKindOf("Analeptic") and self.player:getHp() == 1) then
+					recover_num = recover_num + 1
+				end
+			end
+			if self:hasHeavySlashDamage(source, slash, self.player, true) <= recover_num and self:isFriend(who) then
+				table.removeOne(ecards,self.player:getTreasure())
+			end
+		end
+		for _, card in ipairs(ecards) do
 			local range_fix = 0
 			if card:isKindOf("Weapon") then range_fix = range_fix + sgs.weapon_range[card:getClassName()] - self.player:getAttackRange(false) end
 			if card:isKindOf("OffensiveHorse") then range_fix = range_fix + 1 end
@@ -2316,13 +2333,13 @@ end
 
 function getBestHp(player)
 	local arr = {ganlu = 1, yinghun = 2, nosmiji = 1, xueji = 1, baobian = math.max(0, player:getMaxHp() - 3)}
-	if player:hasSkill("hunzi") and player:getMark("hunzi") == 0 then return 2 end
+	--if player:hasSkill("hunzi") and player:getMark("hunzi") == 0 then return 2 end
 	for skill,dec in pairs(arr) do
 		if player:hasSkill(skill) then
 			return math.max( (player:isLord() and 3 or 2) ,player:getMaxHp() - dec)
 		end
 	end
-	if player:hasSkills("quanji+zhonghuizili") and player:getMark("zhonghuizili") == 0 then return (player:getMaxHp() - 1) end
+	--if player:hasSkills("quanji+zhonghuizili") and player:getMark("zhonghuizili") == 0 then return (player:getMaxHp() - 1) end
 	return player:getMaxHp()
 end
 

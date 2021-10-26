@@ -138,8 +138,8 @@ qice_skill.getTurnUseCard = function(self)
 			keepvalue = self:getKeepValue(cards[i]) + keepvalue
 		end
 	end
-	local str = "@QiceCard=" .. id .. ":"--似乎不用子卡，源码有处理
-	sgs.ai_use_priority.QiceCard = 0.05--一般在最后
+	local str = "@QiceCard=" .. id .. ":"
+	sgs.ai_use_priority.QiceCard = 0.05--一般在最后，考虑有挟天子的情况？
 	if handcardnum == 1 then
 		sgs.ai_use_priority.QiceCard = 3
 	end
@@ -1232,17 +1232,18 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
 		if maxhp < p:getHp() then maxhp = p:getHp() end
 	end
-    for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+    for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 		if p:getHp() == maxhp then
 			targets:append(p)
 		end
 	end
+	--[[没必要选自己
 	if self:isWeak() or not not self:needToLoseHp() then
 		targets:removeOne(self.player)
-	end
+	end]]
 	local target
 	if self.player:getMark("zhimantransformUsed") == 0 then--增加优先变将
-		global_room:writeToConsole("散谣优先变更")
+		--global_room:writeToConsole("散谣优先变更")
 		for _, p in sgs.qlist(targets) do
 			if self.player:isFriendWith(p) and not target then
 				local skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
@@ -2283,7 +2284,13 @@ sgs.ai_skill_choice.transform = function(self, generals)
 	end
 ]]
 	generals = generals:split("+")
-	local g1name = self.player:getActualGeneral1Name()--:getActualGeneral1Name()
+	for _, g2name in ipairs(generals) do
+		if not sgs.general_value[g2name] then
+			sgs.general_value[g2name] = 5
+		end
+	end
+
+	local g1name = self.player:getActualGeneral1Name()
 	local choice
 	local pairvalue = 0
 	local pairchoice
@@ -2305,8 +2312,14 @@ sgs.ai_skill_choice.transform = function(self, generals)
 		end
 	end
 	local singlevalue = 0
-	local singlechoice--是否加上残血优先选庞统和周泰？
+	local singlechoice
 	for _, g2name in ipairs(generals) do
+		if self:isWeak() and (g2name == "pangtong" or g2name == "xushu" or g2name == "zhoutai" or g2name == "sunce" or g2name == "lukang") then
+			if sgs.general_value[g2name] and sgs.general_value[g2name] + 2 > singlevalue then
+				singlevalue = sgs.general_value[g2name] + 2
+				singlechoice = g2name--残血优先选庞统和周泰等
+			end
+		end
 		if sgs.general_value[g2name] and sgs.general_value[g2name] > singlevalue then
 			singlevalue = sgs.general_value[g2name]
 			singlechoice = g2name

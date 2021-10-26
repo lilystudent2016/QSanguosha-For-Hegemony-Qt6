@@ -60,6 +60,7 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       if current:canSlash(self.player, nil, true) and self.player:hasSkills(sgs.masochism_skill) and table.contains(choices,"head") then
         local skills = (sgs.masochism_skill):split("|")
         table.removeOne(skills,"wanggui")
+        table.insert(skills,"qingguo")
         for _, skill in ipairs(skills) do
           if self.player:inHeadSkills(skill) then
             return "head"
