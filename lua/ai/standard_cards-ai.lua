@@ -121,22 +121,22 @@ function sgs.getDefenseSlash(player, self)
 		defense = 0
 	end
 
+	if attacker:hasShownSkill("jianchu") and player:hasEquip() then
+		defense = 0
+	end
+
 	local jink = sgs.cloneCard("jink")
 	if player:isCardLimited(jink, sgs.Card_MethodUse) then defense = 0 end
 
-	if player:hasFlag("QianxiTarget") then
-		local red = player:getMark("@qianxi_red") > 0
-		local black = player:getMark("@qianxi_black") > 0
-		if red then
-			if player:hasShownSkill("qingguo") then
-				defense = defense - 1
-			else
-				defense = 0
-			end
-		elseif black then
-			if player:hasShownSkill("qingguo") then
-				defense = defense - 1
-			end
+	if player:getMark("#qianxi+no_suit_red") then
+		if player:hasShownSkill("qingguo") then
+			defense = defense - 0.5
+		else
+			defense = 0
+		end
+	elseif player:getMark("#qianxi+no_suit_black") then
+		if player:hasShownSkill("qingguo") then
+			defense = defense - 1
 		end
 	end
 
@@ -150,26 +150,31 @@ function sgs.getDefenseSlash(player, self)
 	end
 
 	if hasEightDiagram then
-		defense = defense + 1.3
+		defense = defense + (self:hasCrossbowEffect(attacker) and 4 or 1.5)
 		if player:hasShownSkills("qingguo+tiandu") then defense = defense + 10
-		elseif player:hasShownSkill("tiandu") then defense = defense + 0.6 end
+		elseif player:hasShownSkills("tiandu|zhuwei") then defense = defense + 0.5 end
 		if player:hasShownSkill("leiji") then defense = defense + 0.4 end
-		if player:hasShownSkill("hongyan") then defense = defense + 0.2 end
+		if player:hasShownSkills("hongyan|guicai") then defense = defense + 0.3 end
+	end
+	if player:hasArmorEffect("RenwangShield") and not IgnoreArmor(attacker, player) and player:hasShownSkill("jiang") then
+		defense = defense + 1.6
 	end
 
 	if player:hasShownSkill("tuntian") and player:hasShownSkill("jixi") and unknownJink >= 1 then
 		defense = defense + 1.5
 	end
 
-	if attacker then
+	if attacker and not attacker:hasSkills("tieqi|tieqi_xh") then
 		local m = sgs.masochism_skill:split("|")
 		for _, masochism in ipairs(m) do
 			if player:hasShownSkill(masochism) and sgs.isGoodHp(player, self.player) then
 				defense = defense + 1
 			end
 		end
-		if player:hasShownSkill("jieming") then defense = defense + 4 end
-		if player:hasShownSkill("yiji") then defense = defense + 4 end
+		if player:hasShownSkill("fudi") and attacker:getHandcardNum() > 1 and attacker:getHp() + 1 >= player:getHp() then
+			defense = defense + 2
+		end
+		if player:hasShownSkill("yiji") then defense = defense + 1 end
 	end
 
 	if not sgs.isGoodTarget(player, nil, self) then defense = defense + 10 end
@@ -185,7 +190,7 @@ function sgs.getDefenseSlash(player, self)
 		defense = defense - 0.4
 	end
 
-	if player:hasShownSkill("tianxiang") then defense = defense + player:getHandcardNum() * 0.5 end
+	if player:hasShownSkill("tianxiang") then defense = defense + player:getHandcardNum() * 0.8 end
 	local isInPile = function()
 		for _,pile in sgs.list(player:getPileNames())do
 			if pile:startsWith("&") or pile == "wooden_ox" then
@@ -219,7 +224,7 @@ function sgs.getDefenseSlash(player, self)
 
 	if not player:faceUp() then defense = defense - 0.35 end
 
-	if player:containsTrick("indulgence") then defense = defense - 0.15 end
+	if player:containsTrick("indulgence") then defense = defense - 0.25 end
 	if player:containsTrick("supply_shortage") then defense = defense - 0.15 end
 
 	if not hasEightDiagram then

@@ -239,7 +239,7 @@ qice_skill.getTurnUseCard = function(self)
 		end
 		if caocaoAOE or mengdaAOE then
 			if self:hasTrickEffective(use_card,caocao)) and self:getAoeValue(use_card) > -5 then--负5来自身份，是否合适？
-			
+
 			end
 		end]]
 		if not has_peach and self:getAoeValue(clonea) > 0
@@ -540,10 +540,10 @@ xiongsuan_skill.getTurnUseCard = function(self)
 	local cards = self.player:getHandcards()
 	cards = sgs.QList2Table(cards)
 	self:sortByKeepValue(cards)
-	if cards[1]:isKindOf("Peach") then
-		return
-	else
-		return sgs.Card_Parse("@XiongsuanCard=".. cards[1]:getEffectiveId() .."&xiongsuan")
+	for _, acard in ipairs(cards) do
+		if not self:isValuableCard(acard) then
+			return sgs.Card_Parse("@XiongsuanCard=".. acard:getEffectiveId() .."&xiongsuan")
+		end
 	end
 end
 
@@ -1886,7 +1886,7 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 			table.removeOne(choices, "haoshi_flamemap")--复杂情况不考虑
 		end
 	end
-	
+
 	if n > 4 and table.contains(choices, "duoshi_flamemap") then
 		return "duoshi_flamemap"--能选择两项则必选度势
 	end
@@ -1894,7 +1894,7 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 	if n > 4 and table.contains(choices, "haoshi_flamemap") and
 	self.player:getHandcardNum() > 3 and sgs.ai_skill_invoke.haoshi_flamemap(self) then--手牌大于3时触发好施必定有队友
 		return "haoshi_flamemap"--手牌充裕时好施给队友+度势
-	end	
+	end
 
 	if table.contains(choices, "yingzi_flamemap") and table.contains(choices, "haoshi_flamemap")  then
 		if self.player:hasSkills("yingzi_zhouyu|yingzi_sunce") --已有英姿且能好施，0手牌或有目标
@@ -2078,7 +2078,7 @@ duoshi_flamemap_skill.getTurnUseCard = function(self, inclusive)
 
 	if self.player:usedTimes("ViewAsSkill_duoshi_flamemapCard") >= DuoTime or self:getOverflow() < 0 then return end
 	if self.player:usedTimes("ViewAsSkill_duoshi_flamemapCard") >= 4 then return end
-	
+
 	if sgs.turncount <= 1 and #self.friends_noself == 0 and not self:isWeak() and self:getOverflow() <= 0 then return end
 	local cards = self.player:getCards("h")
 	cards = sgs.QList2Table(cards)

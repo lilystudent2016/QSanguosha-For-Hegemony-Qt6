@@ -43,7 +43,7 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 		self:sortByUseValue(zcards, true)
 		for _, zcard in ipairs(zcards) do
 			if not isCard("Peach", zcard, self.player) and (self.player:getOffensiveHorse() or zcard:isKindOf("OffensiveHorse")) and not self.player:isJilei(zcard)
-			and not (zcard:isKindOf("Crossbow") or zcard:isKindOf("Slash")) then--别把杀和连弩弃了
+			and not zcard:isKindOf("Crossbow") and not isCard("Slash", zcard, self.player) then--别把杀和连弩弃了
 				table.insert(unpreferedCards, zcard:getEffectiveId())
 				if #unpreferedCards >= self.player:getMaxHp() and not unlimited then break end
 			end
@@ -735,13 +735,15 @@ end
 
 sgs.ai_card_intention.FanjianCard = 70
 
-sgs.ai_skill_invoke.fanjian_show = function(self, data)
-    if self:getCardsNum("Peach") >= 1 and not self:willSkipPlayPhase() then return false end
-    if self.player:getHandcardNum() <= 3 or self:isWeak() then return true end
+sgs.ai_skill_invoke.fanjian_show = function(self, data)--弃置全部闪时判断是否会被杀？
+    if self:getCardsNum("Peach") >= 1 and self.player:getMark("GlobalBattleRoyalMode") == 0 and not self:willSkipPlayPhase() then return false end
     local suit = self.player:getMark("FanjianSuit")
     local count = 0
     for _, card in sgs.qlist(self.player:getHandcards()) do
         if card:getSuit() == suit then
+			if self.player:getHp() == 1 and (isCard("Peach", card, self.player) or isCard("Analeptic", card, self.player)) then
+				return false
+			end
             count = count + 1
             if self:isValuableCard(card) then count = count + 0.5 end
         end
@@ -757,6 +759,7 @@ sgs.ai_skill_invoke.fanjian_show = function(self, data)
             end
         end
     end
+	if self.player:getHandcardNum() <= 3 or self:isWeak() then return true end
     return count / self.player:getCardCount(true) <= 0.6
 end
 
@@ -1545,7 +1548,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 		end
 	end
 ]]--
-	if card_tianxiang:isKindOf("Peach") then
+	if isCard("Peach", card_tianxiang, self.player) then
 		self.tianxiang_choice = 1
 	else
 		self.tianxiang_choice = 2
@@ -1554,17 +1557,20 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 	self:sort(self.enemies, "hp")
 
 	for _, enemy in ipairs(self.enemies) do
-		if enemy:isAlive() then
+		if enemy:isAlive() and not enemy:isRemoved() then
 			if enemy:getHp() <=2 or enemy:getHandcardNum() <= 2 or self:canAttack(enemy, dmg.from or self.room:getCurrent(), dmg.nature) then
+				if enemy:hasShownSkill("jijiu") and enemy:getHp() <= 2 then
+					self.tianxiang_choice = 2
+				end
 				return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. enemy:objectName()
 			end
 		end
 	end
-	
+
 	if not card_tianxiang:isKindOf("Peach") then
 		for _, friend in ipairs(self.friends_noself) do
 			if (friend:getLostHp() + dmg.damage > 1 and friend:isAlive()) then
-				if friend:getHp() >= 2 and (friend:hasShownSkills("yiji|shuangxiong|zaiqi|jianxiong|fangzhu") or self:needToLoseHp(friend)) then
+				if friend:getHp() >= 2 and (friend:hasShownSkills("shuangxiong|zaiqi|"..sgs.masochism_skill) or self:needToLoseHp(friend)) then
 					self.tianxiang_choice = 1
 					return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
 				elseif hasBuquEffect(friend) then

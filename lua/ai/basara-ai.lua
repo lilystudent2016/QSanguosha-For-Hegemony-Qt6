@@ -881,6 +881,7 @@ end
 
 sgs.ai_skill_use_func.ShowHeadCard= function(card, use, self)
 	--global_room:writeToConsole("明置主将的武将牌")
+	sgs.ai_use_priority.ShowHeadCard = 2--优先度多少合适？
 	if self.player:getActualGeneral1():getKingdom() == "careerist" and self.player:hasSkill("xuanhuoattach") and not self.player:hasUsed("XuanhuoAttachCard") then
 		return
 	end
@@ -888,9 +889,11 @@ sgs.ai_skill_use_func.ShowHeadCard= function(card, use, self)
 		return
 	end
 	if self:willShowForAttack() or self:willShowForDefence() then
+		if self.player:getActualGeneral1():getKingdom() == "careerist" then
+			sgs.ai_use_priority.ShowHeadCard = 5.5
+		end
 		use.card = card
 	end
-	return
 end
 
 --锁定技明置副将的武将牌
@@ -921,5 +924,6 @@ sgs.ai_skill_use_func.ShowDeputyCard= function(card, use, self)
 	if self:willShowForAttack() or self:willShowForDefence() then
 		use.card = card
 	end
-	return
 end
+
+sgs.ai_use_priority.ShowDeputyCard = 2

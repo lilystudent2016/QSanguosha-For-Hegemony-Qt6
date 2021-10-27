@@ -529,6 +529,7 @@ function SmartAI:objectiveLevel(player)
 			else
 				if string.find(gameProcess, player_kingdom_explicit..">>") or string.find(gameProcess, player_kingdom_evaluate..">>") then return 5
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return 0
+				elseif kingdom == "careerist" then return -1
 				else return 3
 				end
 			end
@@ -1585,7 +1586,7 @@ function SmartAI:getUseValue(card)
 		if card:getSkillName() == "shuangxiong" then v = 6 end
 		if card:isKindOf("Duel") then v = v + self:getCardsNum("Slash") * 2 end
 		if self.player:hasSkill("jizhi") then v = v + 4 end
-		if card:isKindOf("ThreatenEmperor") then v = v + (sgs.isBigKingdom(self.player, "AI") and 6 or -6) end
+		if card:isKindOf("ThreatenEmperor") then v = v + (sgs.isBigKingdom(self.player, "AI") and 4 or -4) end
 	end
 
 	if self.player:hasSkills(sgs.need_kongcheng) then

@@ -130,6 +130,9 @@ sgs.ai_skill_use_func.FengyingCard = function(card, use, self)
     end
   end
   if draw_count > 3 or self.player:getHp() == 1 then
+    if self.player:getHandcardNum() == 1 then
+      sgs.ai_use_priority.FengyingCard = 2
+    end
     use.card = card--不弃牌使用挟天子更优的情况估计得在挟天子弃牌的ai里写，需要data判定card:getSkillName()才行
   end
 end
@@ -210,8 +213,6 @@ sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
   end]]--
   return "no"
 end
-
---function SmartAI:commandforenemy(self,command_index,command_from) 让敌人选军令都能用?
 
 
 --王平
@@ -339,7 +340,7 @@ local function getSlashtarget(self)
   end
   --注意正负，距离增大是负修正 math.min(current_range - max_range, 0) self.player:canSlash(enemy, slash, true, range_fix)
   local range_fix = -horse_range
-  if self:getCardsNum("Slash") == 0 then
+  if self:getCardsNum("Slash") == 0 then--想选武圣龙胆怎么办？
     self.room:writeToConsole("getSlashtarget:无杀")
     return nil end
 	local slashes = self:getCards("Slash")
@@ -395,9 +396,13 @@ local function shouldUseXuanhuo(self)
   end
   local xuanhuochoices = table.concat(xuanhuoskill,"+")
   local choice = sgs.ai_skill_choice.xuanhuo(self, xuanhuochoices)
-  self.room:writeToConsole(self.player:objectName().."眩惑预选技能:"..sgs.Sanguosha:translate(choice))
+  self.room:writeToConsole("---眩惑预选技能:"..sgs.Sanguosha:translate(choice).."---")
 
   --如何去除没有连弩或咆哮却选武圣，牌少又断杀等情况
+  if choice ~= "paoxiao" and not self:slashIsAvailable() and self:getOverflow() < 1 then
+    return false
+  end
+
   if self:getCardsNum("Slash") == 0 then
     if (choice == "wusheng" or choice == "longdan") and self:getOverflow() > 1 then
       self.need_xuanhuo_slash = true
@@ -469,7 +474,6 @@ xuanhuoattach_skill.getTurnUseCard = function(self, inclusive)
     --global_room:writeToConsole("眩惑技能卡:" ..self.player:objectName())
 		return sgs.Card_Parse("@XuanhuoAttachCard=" .. cards[2]:getEffectiveId())--给牌弃牌可能把武器或杀给了，导致第二次丢失目标
 	end
-  return
 end
 
 sgs.ai_skill_use_func.XuanhuoAttachCard= function(card, use, self)
@@ -498,7 +502,6 @@ sgs.ai_skill_use_func.XuanhuoAttachCard= function(card, use, self)
     sgs.ai_use_priority.XuanhuoAttachCard = 20--野心家
   end
 	use.card = card
-  return
 end
 
 sgs.ai_card_intention.XuanhuoAttachCard = -90
@@ -575,9 +578,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     can_wusheng = true
   end
   if not has_tieqi and table.contains(choices,"tieqi") then
-    local skills_name = (sgs.masochism_skill .. "|" .. sgs.save_skill .. "|" .. sgs.defense_skill .. "|"
-					.. sgs.wizard_skill):split("|")
-					--[[ .. "|" .. sgs.usefull_skill]]--更新技能名单
+    local skills_name = (sgs.masochism_skill .. "|" .. sgs.save_skill .. "|" .. sgs.defense_skill .. "|" .. sgs.wizard_skill):split("|")
 	  for _, skill_name in ipairs(skills_name) do
 		  local skill = sgs.Sanguosha:getSkill(skill_name)
 		  if target:hasShownSkill(skill_name) and skill and skill:getFrequency() ~= sgs.Skill_Compulsory then
@@ -693,6 +694,8 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
         return "paoxiao"
     elseif target:hasShownSkill("tianxiang") and need_tieqi then
         return "tieqi"
+    elseif can_kuanggu then
+        return "kuanggu"
     end
   end
   if(has_paoxiao or has_Crossbow or has_baolie) then--张飞、夏侯霸
@@ -833,9 +836,7 @@ end
 sgs.ai_suit_priority.wusheng_xh= "club|spade|diamond|heart"
 
 --咆哮
-sgs.ai_skill_invoke.paoxiao_xh = function(self, data)
-	return true
-end
+sgs.ai_skill_invoke.paoxiao_xh = true
 
 --龙胆
 local longdan_xh_skill = {}
@@ -1267,7 +1268,6 @@ sgs.ai_skill_use_func["WeidiCard"] = function(card, use, self)
 			use.to:append(target)
 		end
 	end
-  return
 end
 
 sgs.ai_skill_choice["startcommand_weidi"] = function(self, choices)

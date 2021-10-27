@@ -138,7 +138,7 @@ sgs.ai_skill_playerchosen.qianxi = function(self, targets)
 		end
 	end
 	self:sort(self.enemies, "defenseSlash")
-	
+
 	if #enemies == 1 then
 		return enemies[1]
 	else
@@ -165,7 +165,7 @@ sgs.ai_skill_playerchosen.qianxi = function(self, targets)
 	return sgs.ai_skill_playerchosen.zero_card_as_slash(self, targets)--ai默认函数
 end
 
-sgs.ai_playerchosen_intention.qianxi = 80
+sgs.ai_playerchosen_intention.qianxi = 60
 
 --糜夫人
 sgs.ai_skill_invoke.guixiu = true
@@ -190,7 +190,7 @@ sgs.ai_skill_use_func.CunsiCard = function(card, use, self)
 	local to
 	self:sort(self.friends_noself, "hp", true)
 	for _, friend in ipairs(self.friends_noself) do
-		if friend:hasShownGeneral1() and sgs.ai_explicit[friend:objectName()] == self.player:getKingdom() and ( self:isWeak(friend) or self.player:getLostHp() > 0 )then
+		if friend:hasShownGeneral1() and sgs.ai_explicit[friend:objectName()] == self.player:getKingdom() and self.player:isWounded() then
 			to = friend
 			break
 		end
