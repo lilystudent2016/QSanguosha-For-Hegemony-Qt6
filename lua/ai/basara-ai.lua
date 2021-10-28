@@ -87,6 +87,9 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--æŠ
 				if string.find(choices, "qianhuan") then
 					return "qianhuan"
 				end
+				if string.find(choices, "beige") then
+					return "beige"
+				end
 				return "shicai"
 			end
 		end

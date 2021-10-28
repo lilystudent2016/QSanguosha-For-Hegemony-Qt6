@@ -543,7 +543,6 @@ zaoyun_skill.getTurnUseCard = function(self, inclusive)
     --self.player:speak("zaoyun技能卡:"..self.player:objectName())
     return sgs.Card_Parse("@ZaoyunCard=.&zaoyun")
   end
-  return
 end
 
 sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
@@ -561,7 +560,9 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
   local target
   self:sort(self.enemies, "hp")
   for _, p in ipairs(self.enemies) do
-    if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self.player:distanceTo(p) > 1 and self.player:getHandcardNum() + 1 >= self.player:distanceTo(p) then
+    if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self:damageIsEffective(p, nil, self.player)
+    and not self:getDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
+    and self.player:distanceTo(p) > 1 and self.player:getHandcardNum() + 1 >= self.player:distanceTo(p) then
       local nearest = 6
       if p:getHp() == 1 and self.player:getHandcardNum() > 3 then
         sgs.ai_use_priority.ZaoyunCard = 3.4--AOE后，手牌充裕
@@ -576,7 +577,9 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
   end
   if not target then
     for _, p in ipairs(self.enemies) do
-      if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self.player:distanceTo(p) == 2 and self.player:getHandcardNum() > 1 then
+      if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self:damageIsEffective(p, nil, self.player)
+      and not self:getDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
+      and self.player:distanceTo(p) == 2 and self.player:getHandcardNum() > 1 then
         target = p--没有血少的则攻击距离2的
       end
     end

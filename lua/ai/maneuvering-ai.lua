@@ -713,9 +713,17 @@ end
 
 sgs.ai_cardshow.fire_attack = function(self, requestor)
 	local cards = sgs.QList2Table(self.player:getHandcards())
+	self:sortByKeepValue(cards)
 	if requestor:objectName() == self.player:objectName() then
 		self:sortByUseValue(cards, true)
 		return cards[1]
+	end
+	if requestor:hasShownSkill("hongyan") then
+		for _, card in ipairs(cards) do
+			if card:getSuit() == sgs.Card_Spade then
+				return card
+			end
+		end
 	end
 
 	local priority = { heart = 4, spade = 3, club = 2, diamond = 1 }

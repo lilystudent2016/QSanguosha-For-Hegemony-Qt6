@@ -202,12 +202,15 @@ end
 sgs.ai_skill_choice.yusui = function(self, choices, data)--没有来源的data，暂时用self
   choices = choices:split("+")
   if (self.yusui_target:getHp() - self.player:getHp() > 1) then
+    self.yusui_target = nil
     return "losehp"
   end
   if (self.yusui_target:getHandcardNum() >= self.yusui_target:getMaxHp()) then
+    self.yusui_target = nil
     return "discard"
   end
   if (self.yusui_target:getHp() - self.player:getHp() == 1) then--自己会掉1血
+    self.yusui_target = nil
     return "losehp"
   end
   return choices[math.random(1,#choices)]
@@ -429,7 +432,7 @@ sgs.ai_skill_use_func.WeimengZonghengCard = function(card, use, self)
       end
     end
   end
-  if target  then
+  if target then
     global_room:writeToConsole("危盟纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then

@@ -54,7 +54,7 @@ end
 function sgs.isGoodTarget(player, targets, self, isSlash)
 	if not self then global_room:writeToConsole(debug.traceback()) end
 	-- self = self or sgs.ais[player:objectName()]
-	local arr = { "jieming", "yiji", "fangzhu" }
+	local arr = { "jieming", "yiji", "fangzhu" }--其他卖血技能？
 	local m_skill = false
 	local attacker = global_room:getCurrent()
 
@@ -85,7 +85,7 @@ function sgs.isGoodTarget(player, targets, self, isSlash)
 		return true
 	end
 
-	if m_skill and sgs.isGoodHp(player, self and self.player) then
+	if m_skill and sgs.isGoodHp(player, self and self.player) and not self.player:hasSkills("tieqi|tieqi_xh") then
 		return false
 	else
 		return true
@@ -121,7 +121,7 @@ function sgs.getDefenseSlash(player, self)
 		defense = 0
 	end
 
-	if attacker:hasShownSkill("jianchu") and player:hasEquip() then
+	if attacker:hasShownSkill("jianchu") and (player:hasEquip() or player:getCardCount(true) == 1) then
 		defense = 0
 	end
 
@@ -138,6 +138,18 @@ function sgs.getDefenseSlash(player, self)
 		if player:hasShownSkill("qingguo") then
 			defense = defense - 1
 		end
+	end
+
+	if attacker:hasWeapon("DragonPhoenix") or attacker:hasSkills("tieqi|tieqi_xh") then
+		if player:getCardCount(true) == 1 then
+			defense = 0
+		elseif player:getCardCount(true) <= 3 then
+			defense = defense - 1
+		end
+	end
+
+	if attacker:hasWeapon("Axe") and attacker:getCardCount(true) > 4 then
+		defense = 0
 	end
 
 	defense = defense + math.min(player:getHp() * 0.45, 10)
@@ -160,11 +172,11 @@ function sgs.getDefenseSlash(player, self)
 		defense = defense + 1.6
 	end
 
-	if player:hasShownSkill("tuntian") and player:hasShownSkill("jixi") and unknownJink >= 1 then
+	if player:hasShownSkill("tuntian") and player:hasShownSkill("jixi") and unknownJink >= 1 and not attacker:hasSkills("tieqi|tieqi_xh") then
 		defense = defense + 1.5
 	end
 
-	if attacker and not attacker:hasSkills("tieqi|tieqi_xh") then
+	if not attacker:hasSkills("tieqi|tieqi_xh") then
 		local m = sgs.masochism_skill:split("|")
 		for _, masochism in ipairs(m) do
 			if player:hasShownSkill(masochism) and sgs.isGoodHp(player, self.player) then
@@ -1837,7 +1849,9 @@ sgs.ai_use_value.Nullification = 7.8
 function SmartAI:useCardAmazingGrace(card, use)
 	local value = 1
 	local suf, coeff = 0.8, 0.8
-	if self:needKongcheng() and self.player:getHandcardNum() == 1 or self.player:hasSkill("jizhi") then
+	local xuyou = sgs.findPlayerByShownSkillName("chenglve")
+	local aoedraw = xuyou and self.player:isFriendWith(xuyou)
+	if (self:needKongcheng() and self.player:getHandcardNum() == 1) or self.player:hasSkill("jizhi") or aoedraw then
 		suf = 0.6
 		coeff = 0.6
 	end
@@ -1870,7 +1884,9 @@ function SmartAI:willUseGodSalvation(card)
 		noresponse = true
 	end
 
-	if self.player:hasSkill("jizhi") then good = good + 6 end
+	local xuyou = sgs.findPlayerByShownSkillName("chenglve")
+	local aoedraw = xuyou and self.player:isFriendWith(xuyou)
+	if self.player:hasSkill("jizhi") or aoedraw then good = good + 6 end
 	if (self.player:hasSkill("kongcheng") and self.player:getHandcardNum() == 1) or not self:hasLoseHandcardEffective() then good = good + 5 end
 
 	for _, friend in ipairs(self.friends) do

@@ -1493,7 +1493,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 			break
 		end
 	end
-	
+
 	if not card_tianxiang then return "." end
 	card_id = card_tianxiang:getId()
 
@@ -1573,7 +1573,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 				if friend:getHp() >= 2 and (friend:hasShownSkills("shuangxiong|zaiqi|"..sgs.masochism_skill) or self:needToLoseHp(friend)) then
 					self.tianxiang_choice = 1
 					return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
-				elseif hasBuquEffect(friend) then
+				elseif hasBuquEffect(friend) or friend:isRemoved() then
 					self.tianxiang_choice = 1
 					return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
 				end

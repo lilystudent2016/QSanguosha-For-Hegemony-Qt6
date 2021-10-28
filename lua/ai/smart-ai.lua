@@ -903,7 +903,7 @@ end
 sgs.ai_card_intention["general"] = function(to, level)
 end
 
-function sgs.updateIntention(from, to, intention)
+function sgs.updateIntention(from, to, intention, card)
 	if not from or not to then global_room:writeToConsole(debug.traceback()) end
 	if not intention or type(intention) ~= "number" then global_room:writeToConsole(debug.traceback()) end
 	if intention > 0 then intention = 10 end
@@ -2036,7 +2036,7 @@ sgs.ai_compare_funcs = {
 
 }
 
-function SmartAI:sort(players, key)
+function SmartAI:sort(players, key ,inverse)
 	if type(players) ~= "table" then self.room:writeToConsole(debug.traceback()) end
 	if #players == 0 then return end
 	local func
@@ -2106,10 +2106,14 @@ function SmartAI:sort(players, key)
 
 	if not func then self.room:writeToConsole(debug.traceback()) return end
 
-	function _sort(players)
+	local function _sort(players)
 		table.sort(players, func)
 	end
 	if not pcall(_sort, players) then self.room:writeToConsole(debug.traceback()) end
+
+	if inverse then
+		players = sgs.reverse(players)
+	end
 end
 
 function sgs.updateAlivePlayerRoles()
@@ -2591,7 +2595,14 @@ function SmartAI:askForDiscard(reason, discard_num, min_num, optional, include_e
 	if include_equip and (self.player:getEquips():isEmpty() or not self.player:isJilei(self.player:getEquips():first())) then flag = flag .. "e" end
 	local cards = self.player:getCards(flag)
 	cards = sgs.QList2Table(cards)
-	self:sortByKeepValue(cards)
+	--[[
+	local current = self.room:getCurrent()
+	local in_formation = current:getFormation():contains(self.player)]]
+	if self.player:getPhase() == sgs.Player_Play then--再考虑座次判断，如队列、一路盟军？以逸待劳单独写。。
+		self:sortByUseValue(cards, true)
+	else
+		self:sortByKeepValue(cards)
+	end
 	local to_discard = {}
 
 	local least = min_num
@@ -2733,13 +2744,16 @@ function SmartAI:askForNullification(trick, from, to, positive)
 	if ("snatch|dismantlement"):match(trick:objectName()) and to:isAllNude() then return nil end
 
 	if from then
-		if (trick:isKindOf("Duel") or trick:isKindOf("AOE")) and not self:damageIsEffective(to, sgs.DamageStruct_Normal) then return nil end
+		if (trick:isKindOf("Duel") or trick:isKindOf("AOE")) and not self:damageIsEffective(to, sgs.DamageStruct_Normal, from) then return nil end
 		if trick:isKindOf("FireAttack")
-			and (not self:damageIsEffective(to, sgs.DamageStruct_Fire) or from:getHandcardNum() < 3 or (from:hasShownSkill("hongyan") and to:getHandcardNum() > 3)) then return nil end
+		and (not self:damageIsEffective(to, sgs.DamageStruct_Fire, from) or from:getHandcardNum() < 3 or (from:hasShownSkill("hongyan") and to:getHandcardNum() > 3)) then
+			return nil
+		end
 		if (trick:isKindOf("Duel") or trick:isKindOf("FireAttack") or trick:isKindOf("AOE")) and self:getDamagedEffects(to, from) and self:isFriend(to) then
 			return nil
 		end
 	end
+
 	if (trick:isKindOf("Duel") or trick:isKindOf("FireAttack") or trick:isKindOf("AOE")) and self:needToLoseHp(to, from) and self:isFriend(to) then
 		return nil
 	end
@@ -2759,12 +2773,15 @@ function SmartAI:askForNullification(trick, from, to, positive)
 	end
 
 	if positive then
+		if from and from:objectName() == to:objectName() and self:isFriend(from) then
+			return
+		end
+
 		if from and (trick:isKindOf("FireAttack") or trick:isKindOf("Duel")) and self:cantbeHurt(to, from) and self:isWeak(to) and self:isFriend(to) then
 			return null_card
 		end
 
 		local isEnemyFrom = from and self:isEnemy(from)
-
 		if isEnemyFrom and self.player:hasSkill("kongcheng") and self.player:getHandcardNum() == 1 and self.player:isLastHandCard(null_card) and trick:isKindOf("SingleTargetTrick") then
 			return null_card
 		elseif trick:isKindOf("ExNihilo") then
@@ -2839,8 +2856,8 @@ function SmartAI:askForNullification(trick, from, to, positive)
 			end
 		elseif trick:isKindOf("FireAttack") then
 			if to:isChained() and not(self:isFriend(from) and self:isEnemy(to)) then
-				for _, p in sgs.qlist(self.room:getOtherPlayers(target)) do
-					if self:damageIsEffective(p, sgs.DamageStruct_Fire, from) and self:isFriend(p) and self:isWeak(p) then
+				for _, p in sgs.qlist(self.room:getOtherPlayers(to)) do
+					if p:isChained() and self:damageIsEffective(p, sgs.DamageStruct_Fire, from) and self:isFriend(p) and self:isWeak(p) then
 						return null_card
 					end
 				end
@@ -2934,15 +2951,13 @@ function SmartAI:askForNullification(trick, from, to, positive)
 		elseif trick:isKindOf("GodSalvation") then
 			if self:isEnemy(to) and self:evaluateKingdom(to) ~= "unknown" and self:isWeak(to) then return null_card end
 		end
-
 	else
-
-		if from and from:objectName() == self.player:objectName() then return end
+		if from and from:objectName() == self.player:objectName() then return end--不使自己的锦囊生效？
 
 		if (trick:isKindOf("FireAttack") or trick:isKindOf("Duel")) and self:cantbeHurt(to, from) then
 			if isEnemyFrom then return null_card end
 		end
-		--[[看不懂原版这一段，来源对自己使用锦囊
+		--[[看不懂原版这一段，来源对自己使用锦囊，火攻自己样才能不打无懈？
 		if from and from:objectName() == to:objectName() then
 			if self:isFriend(from) then return null_card else return end
 		end
@@ -2965,7 +2980,6 @@ function SmartAI:askForNullification(trick, from, to, positive)
 			end
 		end
 	end
-	return
 end
 
 function SmartAI:getCardRandomly(who, flags, disable_list)

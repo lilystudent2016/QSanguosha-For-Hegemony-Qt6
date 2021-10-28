@@ -459,7 +459,7 @@ end
 local function WuXin(self, cards)
 	local up, bottom = {}, {}
 	local judged_list = {}
-	local hasJudge = false
+	local has_judged = false
 	local next_player
 	for _, p in sgs.qlist(global_room:getOtherPlayers(self.player)) do
 		if p:faceUp() then next_player = p break end
@@ -512,8 +512,6 @@ local function WuXin(self, cards)
 			end
 		end
 	end
-
-	--self:sortByUseValue(bottom)顺序反了
 
 	while #bottom ~= 0 do
 		table.insert(up, table.remove(bottom))

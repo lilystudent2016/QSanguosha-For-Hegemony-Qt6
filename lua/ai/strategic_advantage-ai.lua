@@ -555,7 +555,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 	players = sgs.PlayerList()
 
 	card = self:getCard("ArcheryAttack")
-	if card and card:isAvailable(self.player) and self:getAoeValue(card) > 0 then
+	if card and card:isAvailable(self.player) and self:getAoeValue(card) > 0 and #self.friends_noself > 0 then
 		self:sort(self.friends_noself, "hp")
 		for _, friend in ipairs(self.friends_noself) do
 			if self:isFriendWith(friend) and LureTiger:targetFilter(players, friend, self.player) and self:hasTrickEffective(LureTiger, friend, self.player) then
@@ -578,7 +578,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 	players = sgs.PlayerList()
 
 	card = self:getCard("SavageAssault")
-	if card and card:isAvailable(self.player) and self:getAoeValue(card) > 0 then
+	if card and card:isAvailable(self.player) and self:getAoeValue(card) > 0 and #self.friends_noself > 0 then
 		self:sort(self.friends_noself, "hp")
 		for _, friend in ipairs(self.friends_noself) do
 			if self:isFriendWith(friend) and LureTiger:targetFilter(players, friend, self.player) and self:aoeIsEffective(LureTiger, friend, self.player) then
@@ -665,7 +665,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 	players = sgs.PlayerList()
 
 	card = self:getCard("GodSalvation")
-	if card and card:isAvailable(self.player) then
+	if card and card:isAvailable(self.player) and #self.enemies > 0 then
 		self:sort(self.enemies, "hp")
 		for _, enemy in ipairs(self.enemies) do
 			if LureTiger:targetFilter(players, enemy, self.player) and self:hasTrickEffective(LureTiger, enemy, self.player) then
@@ -681,18 +681,119 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 	end
 
 	players = sgs.PlayerList()
---[[
-	if self.player:objectName() == self.room:getCurrent():objectName() then
-		for _, player in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-			if LureTiger:targetFilter(players, player, self.player) and self:hasTrickEffective(LureTiger, player, self.player) then
-				sgs.ai_use_priority.LureTiger = 0.3
+
+	local can_slash, can_duel, can_fireattack = false,false,false
+	local slash = self:getCard("Slash")
+	if slash and self:slashIsAvailable(self.player, slash) then
+		can_slash = true
+	end
+	local duel = self:getCard("Duel")
+	if duel and duel:isAvailable(self.player) then
+		can_duel = true
+	end
+	local fire_attack = self:getCard("FireAttack")
+	if fire_attack and fire_attack:isAvailable(self.player) then
+		can_fireattack = true
+	end
+	if (can_slash or can_duel or can_fireattack) and #self.enemies > 1 then--调离敌方队友防救人
+		local enemys_copy = table.copyFrom(self.enemies)
+		self:sort(enemys_copy, "hp")
+		local to
+		for _, p in ipairs(enemys_copy) do
+			if p:getHp() == 1 and ((can_duelc and self:hasTrickEffective(duel, p, self.player)) or (can_fireattack and self:hasTrickEffective(fire_attack, p, self.player))
+				or (can_slash and self.player:canSlash(p, slash, true) and not self:slashProhibit(slash, p)
+				and self:slashIsEffective(slash, p) and sgs.isGoodTarget(p, enemys_copy, self)
+				and not (self.player:hasFlag("slashTargetFix") and not p:hasFlag("SlashAssignee")))) then
+					to = p
+					table.removeOne(enemys_copy, to)
+					break
+			end
+		end
+		if to then
+			if can_slash and self:hasCrossbowEffect() and self:getCardsNum("Slash") > 2 then
+				for _, enemy in ipairs(enemys_copy) do
+					if  (enemy:getHp() == 1 and enemy:getHandcardNum() < 3)
+						and self.player:canSlash(enemy, slash, true) and not self:slashProhibit(slash, enemy)
+						and self:slashIsEffective(slash, enemy) and sgs.isGoodTarget(enemy, enemys_copy, self)
+						and not (self.player:hasFlag("slashTargetFix") and not enemy:hasFlag("SlashAssignee")) then
+							table.removeOne(enemys_copy, enemy)
+					end
+				end
+			end
+			self:sort(enemys_copy, "handcard", true)
+			if #enemys_copy > 0 then
+				for _, enemy in ipairs(enemys_copy) do
+					if LureTiger:targetFilter(players, enemy, self.player) and self:hasTrickEffective(LureTiger, enemy, self.player)
+					and enemy:objectName() ~= to:objectName() and enemy:isFriendWith(to) then
+						players:append(enemy)
+					end
+				end
+				local total_num = 2 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_ExtraTarget, self.player, LureTiger)
+				if players:length() < total_num then
+					for _, enemy in ipairs(enemys_copy) do
+						if LureTiger:targetFilter(players, enemy, self.player) and self:hasTrickEffective(LureTiger, enemy, self.player)
+						and enemy:objectName() ~= to:objectName() and self:isFriend(enemy,to) then
+							players:append(enemy)
+						end
+					end
+				end
+				if players:length() < total_num then
+					for _, enemy in ipairs(enemys_copy) do
+						if LureTiger:targetFilter(players, enemy, self.player) and self:hasTrickEffective(LureTiger, enemy, self.player)
+						and enemy:objectName() ~= to:objectName() then
+							players:append(enemy)
+						end
+					end
+				end
+			end
+			if players:length() > 0 then
+				if can_slash or can_duel then
+					sgs.ai_use_priority.LureTiger = sgs.ai_use_priority.Duel + 0.1
+				end
+				if can_fireattack then
+					sgs.ai_use_priority.LureTiger = sgs.ai_use_priority.FireAttack + 0.1
+				end
 				use.card = LureTiger
-				if use.to then use.to:append(player) end
+				if use.to then use.to = sgs.PlayerList2SPlayerList(players) end
 				return
 			end
 		end
 	end
-]]--调虎离山现在不能摸牌，可以增加调开敌方队友进行击杀，和xuyou、huangyueying的情况
+
+	players = sgs.PlayerList()
+	card = self:getCard("AmazingGrace")
+	if card and card:isAvailable(self.player) and #self.enemies > 0 then
+		self:sort(self.enemies, "handcard")
+		for _, enemy in ipairs(self.enemies) do
+			if LureTiger:targetFilter(players, enemy, self.player) and self:hasTrickEffective(LureTiger, enemy, self.player) then
+				players:append(enemy)
+			end
+		end
+		if players:length() > 0 then
+			sgs.ai_use_priority.LureTiger = sgs.ai_use_priority.AmazingGrace + 0.1
+			use.card = LureTiger
+			if use.to then use.to = sgs.PlayerList2SPlayerList(players) end
+			return
+		end
+	end
+
+	players = sgs.PlayerList()
+	local xuyou = sgs.findPlayerByShownSkillName("chenglve")
+	local aoedraw = xuyou and self.player:isFriendWith(xuyou)
+
+	if self.player:hasShownSkill("jizhi") or aoedraw then
+		for _, player in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+			if LureTiger:targetFilter(players, player, self.player) and self:hasTrickEffective(LureTiger, player, self.player) then
+				players:append(player)
+			end
+		end
+		if (self.player:hasShownSkill("jizhi") and players:length() > 0) or (aoedraw and players:length() > 1) then
+			sgs.ai_use_priority.LureTiger = 0.3
+			use.card = LureTiger
+			if use.to then use.to = sgs.PlayerList2SPlayerList(players) end
+			return
+		end
+	end
 end
 
 sgs.ai_nullification.LureTiger = function(self, card, from, to, positive)

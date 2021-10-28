@@ -458,14 +458,12 @@ sgs.luoyi_keep_value = {
 	FireSlash       = 5.6,
 	Slash           = 5.4,
 	ThunderSlash    = 5.5,
-	Axe             = 5,
+	Axe             = 5.9,
 	Blade           = 4.6,
 	Spear           = 4.9,
 	Fan             = 4.8,
 	KylinBow        = 4.7,
 	Halberd         = 4.9,
-	MoonSpear       = 4.5,
-	SPMoonSpear = 4.5,
 	DefensiveHorse  = 4
 }
 

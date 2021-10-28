@@ -205,7 +205,7 @@ sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理
 							end
 					end
 				end
-			end	
+			end
 		end
 	end
 	if table.contains(choices, "peach") then--找不到杀目标
@@ -222,6 +222,7 @@ sgs.ai_skill_use["@@rende_slash"] = function(self, prompt, method)
 	card:setSkillName("_rende")
 	local str = card:toString()
 	str = str .. "->" .. self.rende_slashtarget:objectName()
+	self.rende_slashtarget = nil
 	return str
 end
 

@@ -549,9 +549,11 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   local can_longdan = false
 
   if self.need_liegong_distance then--需要眩惑君刘备烈弓距离
+    self.need_liegong_distance = nil
     return "liegong"
   end
   if self.need_kuanggu_AOE then--需要眩惑狂骨AOE
+    self.need_kuanggu_AOE = nil
     return "kuanggu"
   end
 
@@ -609,7 +611,8 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     end
   end
 
-  if self.need_xuanhuo_slash == true then--需要眩惑转化杀
+  if self.need_xuanhuo_slash then--需要眩惑转化杀
+    self.need_xuanhuo_slash = nil
     if lord_longdan or can_longdan then
       return "longdan"
     end
