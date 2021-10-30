@@ -50,7 +50,6 @@ function sgs.ai_skill_invoke.wangxi(self, data)
 		else
 			if not (target:getPhase() ~= sgs.Player_NotActive and (target:hasShownSkills(sgs.Active_cardneed_skill) or target:hasWeapon("Crossbow")))
 				and not (target:getPhase() == sgs.Player_NotActive and target:hasShownSkills(sgs.notActive_cardneed_skill))
-				and not target:hasShownSkill("fudi")--需要更新技能
 				or self:needKongcheng(target) then
 				return true
 			end

@@ -812,7 +812,11 @@ end
 sgs.ai_skill_exchange._quanji = function(self,pattern,max_num,min_num,expand_pile)
 	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
-	self:sortByKeepValue(cards)
+  if self.player:getPhase() == sgs.Player_Play then
+		self:sortByUseValue(cards, true)
+	else
+		self:sortByKeepValue(cards)
+	end
   if #cards > 1 and cards[1]:isKindOf("Crossbow")--别放连弩
   and not ((cards[2]:isKindOf("Peach") or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
     return cards[2]:getEffectiveId()
@@ -926,7 +930,7 @@ sgs.ai_skill_invoke.zhaoxin = function(self, data)
   or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
     need_peach = true
   end
-  for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+  for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
     if not p:isKongcheng() then
       if (getKnownCard(p, self.player, "Peach", false, "h") > 0) and p:getHandcardNum() <= self.player:getHandcardNum() then
         known_peach = true
@@ -945,7 +949,7 @@ sgs.ai_skill_invoke.zhaoxin = function(self, data)
   if need_peach and self.player:isWounded() and one_less_num then
     return true
   end
-  if need_peach and self.isWeak() and known_peach then
+  if need_peach and self:isWeak() and known_peach then
     return true
   end
 	return false
@@ -953,10 +957,12 @@ end
 
 sgs.ai_skill_playerchosen["zhaoxin-exchange"] = function(self, targets)
   targets = sgs.QList2Table(targets)
-  self:sort(targets, "handcard", true)
-  for _, p in ipairs(targets) do
-    if getKnownCard(p, self.player, "Peach", false, "h") > 0 and self:isWeak() then
-      return p
+  self:sort(targets, "handcard", true)--去除空城和已换过手牌（已知全部手牌内容）的目标？
+  if self:isWeak() then
+    for _, p in ipairs(targets) do
+      if getKnownCard(p, self.player, "Peach", false, "h") + getKnownCard(p, self.player, "Analeptic", false, "h") > 0 then
+        return p
+      end
     end
   end
 	return targets[1]
@@ -1086,7 +1092,7 @@ sgs.ai_skill_choice["huaiyi"] = function(self, choices, data)
         table.insert(blacks, c)
       end
   end
-  if self.player:getLostHp() < 2 then
+  if self.player:getLostHp() < 2 then--考虑是否会多出玩家数？
     return (#reds > #blacks and "red" or "black")
   else
     return (red_value < black_value and "red" or "black")
@@ -1341,7 +1347,7 @@ sgs.ai_skill_choice.daming = function(self, choices, data)
 	return "peach"
 end
 
-sgs.ai_skill_playerchosen["daming_slash"] = sgs.ai_skill_playerchosen.damage
+sgs.ai_skill_playerchosen["daming_slash"] = sgs.ai_skill_playerchosen.damage--这样无法判断雷杀能否有效
 
 sgs.ai_skill_invoke.xiaoni = function(self, data)
 	if not self:willShowForAttack() then
@@ -1596,7 +1602,7 @@ end
 
 sgs.ai_skill_choice["transform_xishe"] = function(self, choices)
 	global_room:writeToConsole("袭射变更选择")
-	local importantsklii = {"congjian", "jijiu", "qianhuan", "xiongnve", "shicai"}--还有哪些？
+	local importantsklii = {"congjian", "jijiu", "qianhuan", "yigui", "shicai"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
 		if table.contains(importantsklii, skill:objectName()) then--重要技能

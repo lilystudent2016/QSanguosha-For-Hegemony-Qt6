@@ -804,8 +804,8 @@ yigui_skill.name = "yigui"
 table.insert(sgs.ai_skills, yigui_skill)
 yigui_skill.getTurnUseCard = function(self)
 	if not self.player:hasShownSkill("yigui") then return end
+	if self.player:property("Huashens"):toString() == "" then return end
 	local huashens = self.player:property("Huashens"):toString():split("+");
-	if #huashens == 0 then return end
 --[[
 	if (Self->hasFlag("Yigui_" + classname)) return false;
 	QString card_name = Self->tag["yigui"].toString();
@@ -1056,15 +1056,15 @@ yigui_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.YiguiCard = function(card, use, self)
-	use.card = card--部分锦囊需要手选目标
+	use.card = card--部分锦囊需要手选目标，决斗、远交近攻等
 end
 
 sgs.ai_use_priority.YiguiCard = 2.8
 
 function sgs.ai_cardsview.yigui(self, class_name, player)
 	if not player:hasShownSkill("yigui") then return end
+	if player:property("Huashens"):toString() == "" then return end
 	local huashens = player:property("Huashens"):toString():split("+");
-	if #huashens == 0 then return end
 	if class_name == "Peach" or class_name == "Analeptic" then
 		local soul_name
 		local class_string
@@ -1179,7 +1179,7 @@ end
 
 sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
 	global_room:writeToConsole("制蛮变更选择")
-	local importantsklii = {"xuanhuo", "paoxiao", "kuanggu", "tieqi", "shengxi",  "jili"}
+	local importantsklii = {"xuanhuo", "paoxiao", "kuanggu", "tieqi", "jizhi", "shengxi",  "jili", "tongdu"}
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
 		if table.contains(importantsklii, skill:objectName()) then--重要技能
@@ -2175,7 +2175,7 @@ LuminousPearl_skill.getTurnUseCard = function(self)
 	end
 end
 
-sgs.ai_use_priority.LuminousPearl = 7
+sgs.ai_use_priority.LuminousPearl = 5.7
 sgs.ai_keep_value.LuminousPearl = 4.3
 
 

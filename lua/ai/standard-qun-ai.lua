@@ -1256,18 +1256,18 @@ qingcheng_skill.name = "qingcheng"
 table.insert(sgs.ai_skills, qingcheng_skill)
 qingcheng_skill.getTurnUseCard = function(self, inclusive)
 	local equipcard
-	if self:needToThrowArmor() then
+	if self:needToThrowArmor() and self.player:getArmor():isBlack() then
 		equipcard = self.player:getArmor()
 	else
 		for _, card in sgs.qlist(self.player:getHandcards()) do
-			if card:isKindOf("EquipCard") then
+			if card:isKindOf("EquipCard") and card:isBlack() then
 				equipcard = card
 				break
 			end
 		end
 		if not equipcard then
 			for _, card in sgs.qlist(self.player:getCards("he")) do
-				if card:isKindOf("EquipCard") and not card:isKindOf("Armor") and not card:isKindOf("DefensiveHorse") then
+				if card:isKindOf("EquipCard") and card:isBlack() and not card:isKindOf("Armor") and not card:isKindOf("DefensiveHorse") then
 					equipcard = card
 				end
 			end

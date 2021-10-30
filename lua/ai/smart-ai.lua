@@ -157,29 +157,30 @@ function setInitialTables()
 							"shouyue|paoxiao|jizhi|tieqi|kuanggu|jili|xuanhuo|tongdu|" ..
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
 							"hongfa|jijiu|luanji|wansha|jianchu|qianhuan|yigui|fudi|"..
-							"paiyi|suzhi|shilu|huaiyi|shicai|congcha"
+							"paiyi|suzhi|shilu|huaiyi|shicai|congcha|jinfa"
 	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|qianhuan|jianxiong|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin"
-	sgs.defense_skill = "qingguo|longdan|niepan|bazhen|tianxiang|leiji|beige|yicheng|qianhuan|hengjiang|kongcheng|kanpo|xiangle|liuli|qianxun|" ..
-						"tianxiang|duanchang|tuntian|shoucheng|jianxiong|weimu|keshou|aocai"
+	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
+						"tuntian|shoucheng|yicheng|qianhuan|jizhao|hengjiang|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai"
 	sgs.usefull_skill = "tiandu|qiaobian|xingshang|xiaoguo|wusheng|guanxing|qicai|jizhi|kuanggu|lianhuan|huoshou|juxiang|shushen|zhiheng|keji|" ..
 						"duoshi|xiaoji|hongyan|haoshi|guzheng|zhijian|shuangxiong|guidao|guicai|xiongyi|mashu|lirang|yizhi|shengxi|" ..
 						"xunxun|wangxi|yingyang|hunshang|biyue"
 	sgs.drawcard_skill = "yingzi_sunce|yingzi_zhouyu|haoshi|yingzi_flamemap|haoshi_flamemap|shelie|jieyue|congcha|zisui"
 	sgs.attack_skill = "paoxiao|duanliang|quhu|rende|tieqi|liegong|huoji|lieren|qixi|kurou|fanjian|guose|tianyi|dimeng|duanbing|fenxun|qingnang|wushuang|" ..
 						"lijian|luanji|mengjin|kuangfu|huoshui|qingcheng|tiaoxin|shangyi|jiang|chuanxin"
-	sgs.force_slash_skill = "tieqi|tieqi_xh|liegong|liegong_xh|wushuang|qianxi|jianchu"
-	sgs.wizard_skill = 		"guicai|guidao|tiandu"
+	sgs.force_slash_skill = "tieqi|tieqi_xh|liegong|liegong_xh|wushuang|jianchu|qianxi"
+	sgs.wizard_skill = 		"guicai|guidao|tiandu|zhuwei"
 	sgs.wizard_harm_skill = "guicai|guidao"
 	sgs.lose_equip_skill = 	"xiaoji|xuanlue"
 	sgs.need_kongcheng = 	"kongcheng"
-	sgs.save_skill = 		"jijiu|aocai"
+	sgs.save_skill = 		"jijiu|buyi|aocai"
 	sgs.exclusive_skill = 	"duanchang|buqu"
 	sgs.drawpeach_skill =	"tuxi|qiaobian|daoshu|huaiyi|jinfa"
 	sgs.recover_skill =		"rende|kuanggu|zaiqi|jieyin|qingnang|shenzhi|buqu|buyi"
-	sgs.Active_cardneed_skill =		"paoxiao|tianyi|shuangxiong|jizhi|guose|duanliang|qixi|qingnang|luoyi|jieyin|zhiheng|rende|luanji|qiaobian|lirang"
-	sgs.notActive_cardneed_skill =	"kanpo|guicai|guidao|beige|xiaoguo|liuli|tianxiang|jijiu"
+	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|luanji|shuangxiong|lirang|" ..
+									"qice|jili|fengying|fengshix|zaoyun|huaiyi|baolie|lianpian|tongdu|juejue"
+	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|keshou|fudi"
 	sgs.cardneed_skill =  	sgs.Active_cardneed_skill .. "|" .. sgs.notActive_cardneed_skill
-	sgs.use_lion_skill =	"duanliang|qixi|guidao|lijian|zhiheng|fenxun|kurou|qingcheng|diaogui|jinfa|xishe"
+	sgs.use_lion_skill =	"duanliang|guicai|guidao|lijian|qingcheng|zhiheng|qixi|fenxun|kurou|diaogui|quanji|jinfa|xishe"
 	sgs.need_equip_skill = 	"shensu|beige|huyuan|qingcheng|xiaoji|zhijian|diaodu"
 	sgs.judge_reason =		"bazhen|EightDiagram|supply_shortage|indulgence|lightning|leiji|beige|tieqi|luoshen|ganglie|tuntian"
 
@@ -1546,6 +1547,19 @@ function SmartAI:getUseValue(card)
 	if card:getTypeId() == sgs.Card_TypeSkill then
 		return v
 	elseif card:getTypeId() == sgs.Card_TypeEquip then
+		local cardPlace = self.room:getCardPlace(card:getEffectiveId())
+		if cardPlace == sgs.Player_PlaceEquip then
+			if card:isKindOf("Armor") and self:needToThrowArmor() then return -10 end
+			if self.player:hasSkills(sgs.lose_equip_skill) then--使用保留值是否合适？
+				if card:isKindOf("OffensiveHorse") then return -10
+				elseif card:isKindOf("Weapon") then return -9.9
+				elseif card:isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):isEmpty() then return -9.8
+				elseif card:isKindOf("DefensiveHorse") then return -9.7
+				elseif (card:isKindOf("LuminousPearl") or card:isKindOf("JadeSeal")) and self:isWeak() then return -9.6
+				elseif self.player:getPhase() == sgs.Player_Play then return -9.5--回合外别丢防具、玉玺、夜明珠
+				end
+			end
+		end
 		if self.player:hasEquip(card) then
 			if card:isKindOf("OffensiveHorse") and self.player:getAttackRange() > 2 then return 5.5 end
 			if card:isKindOf("DefensiveHorse") and self:hasEightDiagramEffect() then return 5.5 end
@@ -1604,15 +1618,16 @@ function SmartAI:getUsePriority(card)
 	local class_name = card:getClassName()
 	local v = 0
 	if card:isKindOf("EquipCard") then
-		if self.player:hasSkills(sgs.lose_equip_skill) then return 15 end
-		if self.player:hasSkills("kuanggu|kuanggu_xh") and card:isKindOf("OffensiveHorse") and not self.player:getOffensiveHorse() then return 10 end--狂骨-1马
+		if self.player:hasSkills(sgs.lose_equip_skill) then return 10 end
+		if self.player:hasSkills("kuanggu|kuanggu_xh") and (card:isKindOf("OffensiveHorse") or card:isKindOf("SixDragons"))
+		and not self.player:getOffensiveHorse() then return 10 end--狂骨-1马
 		if card:isKindOf("Armor") and not self.player:getArmor() then v = (sgs.ai_use_priority[class_name] or 0) + 5.2
 		elseif card:isKindOf("Weapon") and not self.player:getWeapon() then v = (sgs.ai_use_priority[class_name] or 0) + 3
 		elseif card:isKindOf("DefensiveHorse") and not self.player:getDefensiveHorse() then v = 5.8
 		elseif card:isKindOf("OffensiveHorse") and not self.player:getOffensiveHorse() then v = 5.5
+		elseif card:isKindOf("SixDragons") and not (self.player:getDefensiveHorse() and self.player:getOffensiveHorse()) then v = 5.9
 		elseif card:isKindOf("Treasure") and not self.player:getTreasure() then
-			v = 5.6
-			if card:isKindOf("JadeSeal") then v = v + 0.1 end
+			v = (sgs.ai_use_priority[class_name] or 6)
 		end
 		return v
 	end
@@ -1643,8 +1658,8 @@ function SmartAI:adjustUsePriority(card, v)
 
 	table.insert(suits, "no_suit")
 	if card:isKindOf("Slash") then
-		if card:getSkillName() == "Spear" then v = v - 0.1 end
-		if card:getSkillName() == "aozhan" then v = v - 0.1 end--鏖战，和丈八应该哪个高？
+		if card:getSkillName() == "Spear" then v = v - 0.2 end
+		if card:getSkillName() == "aozhan" then v = v - 0.1 end--鏖战，比丈八先
 		if card:getSkillName() == "longdan" then v = v + 0.1 end--龙胆
 		if card:isRed() then
 			v = v - 0.05
@@ -1728,8 +1743,8 @@ function SmartAI:getDynamicUsePriority(card)
 			and self:getSameEquip(card) and self:getSameEquip(card):isBlack() then
 				return 3.3
 			end
-		if self.player:hasSkills(sgs.lose_equip_skill) then value = value + 12 end--重复装备时应比烽火优先度低
-		local lvfan = sgs.findPlayerByShownSkillName("diaodu")
+		--if self.player:hasSkills(sgs.lose_equip_skill) then value = value + 12 end--重复了
+		local lvfan = sgs.findPlayerByShownSkillName("diaodu")--重复装备时应比烽火优先度20低
 		if lvfan and self.player:isFriendWith(lvfan) and not self.player:hasSkills(sgs.lose_equip_skill) then value = value + 5 end
 
 		if card:isKindOf("Weapon") and self.player:getPhase() == sgs.Player_Play and #self.enemies > 0 then
@@ -1740,6 +1755,8 @@ function SmartAI:getDynamicUsePriority(card)
 			value = value + string.format("%3.2f", v)
 			if inAttackRange then value = value + 0.5 end
 		end
+
+		if card:isKindOf("JadeSeal") and self:getCard("FightTogether") then value = value + 9 end
 	end
 
 	if card:isKindOf("AmazingGrace") then
@@ -1751,7 +1768,7 @@ function SmartAI:getDynamicUsePriority(card)
 			end
 		end
 		value = value + dynamic_value
-	elseif card:isKindOf("ArcheryAttack") and self.player:hasSkill("luanji") then
+	elseif (card:isKindOf("ArcheryAttack") or card:isKindOf("LureTiger")) and self.player:hasSkill("luanji") then
 		value = value + 5.5
 	elseif card:isKindOf("Duel") and self.player:hasSkill("shuangxiong") then
 		value = value + 6.3

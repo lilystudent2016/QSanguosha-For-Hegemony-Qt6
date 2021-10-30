@@ -1410,7 +1410,7 @@ sgs.ai_skill_playerchosen.WoodenOx = function(self, targets)
 end
 
 sgs.ai_playerchosen_intention.WoodenOx = -10
-
+sgs.ai_use_priority.WoodenOx = 5.8
 
 --Blade
 function sgs.ai_slash_weaponfilter.Blade(self, to, player)

@@ -736,7 +736,6 @@ end
 sgs.ai_card_intention.FanjianCard = 70
 
 sgs.ai_skill_invoke.fanjian_show = function(self, data)--弃置全部闪时判断是否会被杀？
-    if self:getCardsNum("Peach") >= 1 and self.player:getMark("GlobalBattleRoyalMode") == 0 and not self:willSkipPlayPhase() then return false end
     local suit = self.player:getMark("FanjianSuit")
     local count = 0
     for _, card in sgs.qlist(self.player:getHandcards()) do
@@ -759,6 +758,8 @@ sgs.ai_skill_invoke.fanjian_show = function(self, data)--弃置全部闪时判�
             end
         end
     end
+	if count <= 1 then return true end
+	if self:getCardsNum("Peach") >= 1 and self.player:getMark("GlobalBattleRoyalMode") == 0 and not self:willSkipPlayPhase() then return false end
 	if self.player:getHandcardNum() <= 3 or self:isWeak() then return true end
     return count / self.player:getCardCount(true) <= 0.6
 end

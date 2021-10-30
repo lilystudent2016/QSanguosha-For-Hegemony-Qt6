@@ -658,7 +658,7 @@ function sgs.ai_cardneed.jizhi(to, card)
 	return card:getTypeId() == sgs.Card_TypeTrick
 end
 
-sgs.jizhi_keep_value = {--新锦囊未加入
+sgs.jizhi_keep_value = {
 	Peach       = 6,
 	Analeptic   = 5.9,
 	Jink        = 5.8,
@@ -666,12 +666,18 @@ sgs.jizhi_keep_value = {--新锦囊未加入
 	Snatch      = 5.7,
 	Dismantlement = 5.6,
 	IronChain   = 5.5,
-	SavageAssault=5.4,
+	SavageAssault = 5.4,
 	Duel        = 5.3,
 	ArcheryAttack = 5.2,
-	AmazingGrace = 5.1,
-	Collateral  = 5,
-	FireAttack  =4.9
+	AmazingGrace = 4.8,
+	GodSalvation = 4.8,
+	Collateral  = 4.9,
+	FireAttack  = 4.9,
+	AwaitExhausted = 5.3,
+	BefriendAttacking = 5.8,
+	FightTogether = 5.6,
+	BurningCamps = 5.6,
+	AllianceFeast = 6
 }
 
 --黄忠
@@ -959,6 +965,9 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 	if #self.friends == 1 then
 		return false
 	end
+	local limit = self.player:getMaxCards()
+	if self.player:isKongcheng() then return false end
+	if self:getCardsNum("Peach") >= limit - 2 and self.player:isWounded() then return false end
 
 	-- First we'll judge whether it's worth skipping the Play Phase
 	local cards = sgs.QList2Table(self.player:getHandcards())
@@ -968,7 +977,12 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 		if card:isKindOf("TrickCard") and self:getUseValue(card) > 3.69 then
 			local dummy_use = { isDummy = true }
 			self:useTrickCard(card, dummy_use)
-			if dummy_use.card then shouldUse = shouldUse + (card:isKindOf("ExNihilo") and 2 or 1) end
+			if dummy_use.card then
+				shouldUse = shouldUse +  1
+				if card:isKindOf("ExNihilo") or card:isKindOf("BefriendAttacking") or card:isKindOf("AllianceFeast") then
+					shouldUse = shouldUse +  1
+				end
+			end
 		end
 		if card:isKindOf("Weapon") then
 			local new_range = sgs.weapon_range[card:getClassName()]
@@ -996,19 +1010,13 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 			end
 		end
 	end
-	if shouldUse >= 2 then return end
-
+	if self.player:hasSkill("shengxi") then
+		shouldUse = shouldUse -  1
+	end
+	if shouldUse >= 2 then return false end
 
 	-- Then we need to find the card to be discarded
-	local limit = self.player:getMaxCards()
-	if self.player:isKongcheng() then return false end
-	if self:getCardsNum("Peach") >= limit - 2 and self.player:isWounded() then return false end
-
-
 	local to_discard = nil
-
-
-	local index = 0
 	local all_peaches = 0
 	for _, card in ipairs(cards) do
 		if isCard("Peach", card, self.player) then
@@ -1019,7 +1027,6 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 	self:sortByKeepValue(cards)
 	cards = sgs.reverse(cards)
 
-
 	for i = #cards, 1, -1 do
 		local card = cards[i]
 		if not isCard("Peach", card, self.player) and not self.player:isJilei(card) then
@@ -1029,10 +1036,7 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 	end
 	if to_discard == nil then return false end
 
-
 	-- At last we try to find the target
-
-
 	local AssistTarget = self:AssistTarget()
 	if AssistTarget and not self:willSkipPlayPhase(AssistTarget) then
 		self.fangquan_target = AssistTarget
@@ -1040,18 +1044,15 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 		return true
 	end
 
-
 	self:sort(self.friends_noself, "handcard")
 	self.friends_noself = sgs.reverse(self.friends_noself)
-	for _, target in ipairs(self.friends_noself) do
+	for _, target in ipairs(self.friends_noself) do--怎样优化一下目标？
 		if target:hasShownSkills("zhiheng|" .. sgs.priority_skill .. "|shensu") and (not self:willSkipPlayPhase(target) or target:hasShownSkill("shensu")) then
 			self.fangquan_target = target
 			self.fangquan_card_str = "@FangquanCard=" .. to_discard .. "&fangquan->" .. target:objectName()
 			return true
 		end
 	end
-
-
 	return false
 end
 

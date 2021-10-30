@@ -95,7 +95,7 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
 end
 
 --陆郁生
-sgs.ai_skill_invoke.zhente = true
+sgs.ai_skill_invoke.zhente = true--队友解连环得加信息判断
 
 sgs.ai_skill_choice.zhente = function(self, choices, data)
   local use = data:toCardUse()

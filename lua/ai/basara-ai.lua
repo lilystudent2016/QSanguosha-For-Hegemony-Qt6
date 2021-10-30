@@ -94,7 +94,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			end
 		end
 		if string.find(choices, "wanggui") and not self.player:hasShownAllGenerals() then--华韵打伤害或摸牌
-			if #self.enemies > 0 then--选择触发时的self是自己吗？
+			if #self.enemies > 0 then
 				self:sort(self.enemies, "hp")
 				for _, p in ipairs(self.enemies) do
 					if self:isWeak(p) then
@@ -156,6 +156,8 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		if #skillnames > 0 then return skillnames[math.random(1, #skillnames)] end
 	end
 
+	global_room:writeToConsole("多技能触发选择:" .. choices)
+	--skillnames = choices:split("+")--为何会有空值的情况？
 	return skillnames[math.random(1, #skillnames)]
 end
 
