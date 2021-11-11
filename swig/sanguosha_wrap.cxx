@@ -3901,7 +3901,7 @@ int LuaMaxCardsSkill::getFixed(const Player *target) const
     return extra;
 }
 
-int LuaTargetModSkill::getResidueNum(const Player *from, const Card *card) const
+int LuaTargetModSkill::getResidueNum(const Player *from, const Card *card, const Player *to) const
 {
     if (residue_func == 0)
         return 0;
@@ -3913,8 +3913,9 @@ int LuaTargetModSkill::getResidueNum(const Player *from, const Card *card) const
     SWIG_NewPointerObj(L, this, SWIGTYPE_p_LuaTargetModSkill, 0);
     SWIG_NewPointerObj(L, from, SWIGTYPE_p_Player, 0);
     SWIG_NewPointerObj(L, card, SWIGTYPE_p_Card, 0);
+    SWIG_NewPointerObj(L, to, SWIGTYPE_p_Player, 0);
 
-    int error = lua_pcall(L, 3, 1, 0);
+    int error = lua_pcall(L, 4, 1, 0);
     if (error) {
         Error(L);
         return 0;
@@ -3926,7 +3927,7 @@ int LuaTargetModSkill::getResidueNum(const Player *from, const Card *card) const
     return residue;
 }
 
-int LuaTargetModSkill::getDistanceLimit(const Player *from, const Card *card) const
+int LuaTargetModSkill::getDistanceLimit(const Player *from, const Card *card, const Player *to) const
 {
     if (distance_limit_func == 0)
         return 0;
@@ -3938,8 +3939,9 @@ int LuaTargetModSkill::getDistanceLimit(const Player *from, const Card *card) co
     SWIG_NewPointerObj(L, this, SWIGTYPE_p_LuaTargetModSkill, 0);
     SWIG_NewPointerObj(L, from, SWIGTYPE_p_Player, 0);
     SWIG_NewPointerObj(L, card, SWIGTYPE_p_Card, 0);
+    SWIG_NewPointerObj(L, to, SWIGTYPE_p_Player, 0);
 
-    int error = lua_pcall(L, 3, 1, 0);
+    int error = lua_pcall(L, 4, 1, 0);
     if (error) {
         Error(L);
         return 0;
@@ -18453,6 +18455,54 @@ fail:
 }
 
 
+static int _wrap_Player_getSeemingKingdom(lua_State* L) {
+  int SWIG_arg = 0;
+  Player *arg1 = (Player *) 0 ;
+  QString result;
+  
+  SWIG_check_num_args("Player::getSeemingKingdom",1,1)
+  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("Player::getSeemingKingdom",1,"Player const *");
+  
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_Player,0))){
+    SWIG_fail_ptr("Player_getSeemingKingdom",1,SWIGTYPE_p_Player);
+  }
+  
+  result = ((Player const *)arg1)->getSeemingKingdom();
+  lua_pushstring(L, (&result)->toUtf8()); SWIG_arg++; 
+  return SWIG_arg;
+  
+  if(0) SWIG_fail;
+  
+fail:
+  lua_error(L);
+  return SWIG_arg;
+}
+
+
+static int _wrap_Player_isBigKingdomPlayer(lua_State* L) {
+  int SWIG_arg = 0;
+  Player *arg1 = (Player *) 0 ;
+  bool result;
+  
+  SWIG_check_num_args("Player::isBigKingdomPlayer",1,1)
+  if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("Player::isBigKingdomPlayer",1,"Player const *");
+  
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_Player,0))){
+    SWIG_fail_ptr("Player_isBigKingdomPlayer",1,SWIGTYPE_p_Player);
+  }
+  
+  result = (bool)((Player const *)arg1)->isBigKingdomPlayer();
+  lua_pushboolean(L,(int)(result!=0)); SWIG_arg++;
+  return SWIG_arg;
+  
+  if(0) SWIG_fail;
+  
+fail:
+  lua_error(L);
+  return SWIG_arg;
+}
+
+
 static int _wrap_Player_setRole(lua_State* L) {
   int SWIG_arg = 0;
   Player *arg1 = (Player *) 0 ;
@@ -28128,6 +28178,8 @@ static swig_lua_method swig_Player_methods[]= {
     { "getMaxCards", _wrap_Player_getMaxCards},
     { "getKingdom", _wrap_Player_getKingdom},
     { "setKingdom", _wrap_Player_setKingdom},
+    { "getSeemingKingdom", _wrap_Player_getSeemingKingdom},
+    { "isBigKingdomPlayer", _wrap_Player_isBigKingdomPlayer},
     { "setRole", _wrap_Player_setRole},
     { "getRole", _wrap_Player_getRole},
     { "getRoleEnum", _wrap_Player_getRoleEnum},
@@ -88769,12 +88821,14 @@ static int _wrap_LuaTargetModSkill_getResidueNum(lua_State* L) {
   LuaTargetModSkill *arg1 = (LuaTargetModSkill *) 0 ;
   Player *arg2 = (Player *) 0 ;
   Card *arg3 = (Card *) 0 ;
+  Player *arg4 = (Player *) 0 ;
   int result;
   
-  SWIG_check_num_args("LuaTargetModSkill::getResidueNum",3,3)
+  SWIG_check_num_args("LuaTargetModSkill::getResidueNum",4,4)
   if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("LuaTargetModSkill::getResidueNum",1,"LuaTargetModSkill const *");
   if(!SWIG_isptrtype(L,2)) SWIG_fail_arg("LuaTargetModSkill::getResidueNum",2,"Player const *");
   if(!SWIG_isptrtype(L,3)) SWIG_fail_arg("LuaTargetModSkill::getResidueNum",3,"Card const *");
+  if(!SWIG_isptrtype(L,4)) SWIG_fail_arg("LuaTargetModSkill::getResidueNum",4,"Player const *");
   
   if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_LuaTargetModSkill,0))){
     SWIG_fail_ptr("LuaTargetModSkill_getResidueNum",1,SWIGTYPE_p_LuaTargetModSkill);
@@ -88790,7 +88844,12 @@ static int _wrap_LuaTargetModSkill_getResidueNum(lua_State* L) {
     SWIG_fail_ptr("LuaTargetModSkill_getResidueNum",3,SWIGTYPE_p_Card);
   }
   
-  result = (int)((LuaTargetModSkill const *)arg1)->getResidueNum((Player const *)arg2,(Card const *)arg3);
+  
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,4,(void**)&arg4,SWIGTYPE_p_Player,0))){
+    SWIG_fail_ptr("LuaTargetModSkill_getResidueNum",4,SWIGTYPE_p_Player);
+  }
+  
+  result = (int)((LuaTargetModSkill const *)arg1)->getResidueNum((Player const *)arg2,(Card const *)arg3,(Player const *)arg4);
   lua_pushnumber(L, (lua_Number) result); SWIG_arg++;
   return SWIG_arg;
   
@@ -88807,12 +88866,14 @@ static int _wrap_LuaTargetModSkill_getDistanceLimit(lua_State* L) {
   LuaTargetModSkill *arg1 = (LuaTargetModSkill *) 0 ;
   Player *arg2 = (Player *) 0 ;
   Card *arg3 = (Card *) 0 ;
+  Player *arg4 = (Player *) 0 ;
   int result;
   
-  SWIG_check_num_args("LuaTargetModSkill::getDistanceLimit",3,3)
+  SWIG_check_num_args("LuaTargetModSkill::getDistanceLimit",4,4)
   if(!SWIG_isptrtype(L,1)) SWIG_fail_arg("LuaTargetModSkill::getDistanceLimit",1,"LuaTargetModSkill const *");
   if(!SWIG_isptrtype(L,2)) SWIG_fail_arg("LuaTargetModSkill::getDistanceLimit",2,"Player const *");
   if(!SWIG_isptrtype(L,3)) SWIG_fail_arg("LuaTargetModSkill::getDistanceLimit",3,"Card const *");
+  if(!SWIG_isptrtype(L,4)) SWIG_fail_arg("LuaTargetModSkill::getDistanceLimit",4,"Player const *");
   
   if (!SWIG_IsOK(SWIG_ConvertPtr(L,1,(void**)&arg1,SWIGTYPE_p_LuaTargetModSkill,0))){
     SWIG_fail_ptr("LuaTargetModSkill_getDistanceLimit",1,SWIGTYPE_p_LuaTargetModSkill);
@@ -88828,7 +88889,12 @@ static int _wrap_LuaTargetModSkill_getDistanceLimit(lua_State* L) {
     SWIG_fail_ptr("LuaTargetModSkill_getDistanceLimit",3,SWIGTYPE_p_Card);
   }
   
-  result = (int)((LuaTargetModSkill const *)arg1)->getDistanceLimit((Player const *)arg2,(Card const *)arg3);
+  
+  if (!SWIG_IsOK(SWIG_ConvertPtr(L,4,(void**)&arg4,SWIGTYPE_p_Player,0))){
+    SWIG_fail_ptr("LuaTargetModSkill_getDistanceLimit",4,SWIGTYPE_p_Player);
+  }
+  
+  result = (int)((LuaTargetModSkill const *)arg1)->getDistanceLimit((Player const *)arg2,(Card const *)arg3,(Player const *)arg4);
   lua_pushnumber(L, (lua_Number) result); SWIG_arg++;
   return SWIG_arg;
   

@@ -30,7 +30,7 @@ math.randomseed(os.time())
 -- SmartAI is the base class for all other specialized AI classes
 SmartAI = (require "middleclass").class("SmartAI")
 
-version = "QSanguosha AI 20211010 10:10(UTC+8)"
+version = "QSanguosha AI 20211111 12:02(UTC+8)"
 
 --- this function is only function that exposed to the host program
 --- and it clones an AI instance by general name
@@ -174,7 +174,7 @@ function setInitialTables()
 	sgs.need_kongcheng = 	"kongcheng"
 	sgs.save_skill = 		"jijiu|buyi|aocai"
 	sgs.exclusive_skill = 	"duanchang|buqu"
-	sgs.drawpeach_skill =	"tuxi|qiaobian|daoshu|huaiyi|jinfa"
+	sgs.drawpeach_skill =	"tuxi|qiaobian|huaiyi|jinfa|daoshu"
 	sgs.recover_skill =		"rende|kuanggu|zaiqi|jieyin|qingnang|shenzhi|buqu|buyi"
 	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|luanji|shuangxiong|lirang|" ..
 									"qice|jili|fengying|fengshix|zaoyun|huaiyi|baolie|lianpian|tongdu|juejue"
@@ -427,7 +427,7 @@ function SmartAI:objectiveLevel(player)
 	if player:getRole() == "careerist" and player:getActualGeneral1():getKingdom() == "careerist" then--野心家角色
 		if self.player:getMark("GlobalBattleRoyalMode") > 0 then
 			--global_room:writeToConsole("鏖战野心家角色:" .. player:objectName())
-			return 5.8
+			return 5
 		end
 		local focus_careerist = true
 		for k, v in pairs(sgs.current_mode_players) do
@@ -437,11 +437,11 @@ function SmartAI:objectiveLevel(player)
 		end
 		if focus_careerist then
 			--global_room:writeToConsole("聚焦野心家角色:" .. player:objectName())
-			return 5.2
+			return 5
 		end
 	end
-
-	if self.player:getMark("GlobalBattleRoyalMode") > 0  then--增加鏖战，但是无法优先进攻血量高的角色
+--[[
+	if self.player:getMark("GlobalBattleRoyalMode") > 0 then--增加鏖战，但是无法优先进攻血量高的角色
 		local focus_careerist = false
 		for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 			if p:getRole() == "careerist" and p:getActualGeneral1():getKingdom() == "careerist" then
@@ -453,7 +453,7 @@ function SmartAI:objectiveLevel(player)
 			return  5 + player:getHp()/10
 		end
 	end
-
+]]
 	if sgs.isRoleExpose() then
 		if self.lua_ai:isFriend(player) then return -2
 		elseif self.lua_ai:isEnemy(player) then return 5
@@ -499,7 +499,22 @@ function SmartAI:objectiveLevel(player)
 		end
 	elseif string.find(gameProcess, ">") then
 		local kingdom = gameProcess:split(">")[1]
-		if string.find(gameProcess, ">>>") then
+		if string.find(gameProcess, ">>>>") then
+			if string.find(gameProcess, self_kingdom..">>>>") and not selfIsCareerist then
+				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player)
+					and (player_kingdom_evaluate == self_kingdom or string.find(player_kingdom_evaluate, self_kingdom)) then return 0
+				elseif player_kingdom_evaluate == "unknown" and sgs.turncount <= 0 then return 0
+				else return 5
+				end
+			else
+				if string.find(gameProcess, player_kingdom_explicit..">>>>") then return 5
+				elseif string.find(gameProcess, player_kingdom_evaluate..">>>>") then return 5
+				elseif player_kingdom_evaluate == "unknown" then return -1
+				elseif not string.find(player_kingdom_evaluate, kingdom) then return -1
+				else return 0
+				end
+			end
+		elseif string.find(gameProcess, ">>>") then
 			if string.find(gameProcess, self_kingdom..">>>") and not selfIsCareerist then--self_kingdom == kingdom
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player)
 					and (player_kingdom_evaluate == self_kingdom or string.find(player_kingdom_evaluate, self_kingdom)) then return 0
@@ -535,7 +550,7 @@ function SmartAI:objectiveLevel(player)
 				end
 			end
 		else
-			if string.find(gameProcess, self_kingdom..">") and not selfIsCareerist then
+			if self_kingdom == kingdom and not selfIsCareerist then
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player) then
 					if player_kingdom_evaluate == self_kingdom then return -1
 					elseif string.find(player_kingdom_evaluate, self_kingdom) then return 0
@@ -548,10 +563,10 @@ function SmartAI:objectiveLevel(player)
 			else
 				local isWeakPlayer = player:getHp() == 1 and not player:hasShownSkill("duanchang") and self:isWeak(player)
 										and (player:isKongcheng() or sgs.card_lack[player:objectName()] == 1 and player:getHandcardNum() <= 1)
-										and (self:getReward(player) >= 2 or self.player:aliveCount() <= 4)
-				if string.find(gameProcess, player_kingdom_explicit..">") or isWeakPlayer then return 5
-				elseif string.find(gameProcess, player_kingdom_evaluate..">")then return 3
-				elseif player_kingdom_explicit == "careerist" and not player:getActualGeneral1():getKingdom() == "careerist" then return 0
+										and (self:getReward(player) >= 2 or self.player:aliveCount() <= 4)--鏖战处理？
+				if player_kingdom_explicit == kingdom or isWeakPlayer then return 5
+				elseif player_kingdom_evaluate == kingdom then return 3
+				elseif player_kingdom_explicit == "careerist" and string.find(gameProcess, "careerist>") then return 5
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return 0
 				else return 1
 				end
@@ -689,6 +704,14 @@ function sgs.gameProcess(update)
 					sum_value = sum_value + value[kingdoms[j]]
 					if value[kingdoms[i]] > sum_value then
 						process = process .. ">"
+					end
+				end
+			end
+			if sgs.turncount > 1 then--人数占优势怎么处理合适？如4 2 1 1
+				for j = #kingdoms, i+1, -1 do
+					if value[kingdoms[j]] > 0 and value[kingdoms[i]] > value[kingdoms[j]] * 2 then
+						process = process .. ">"
+						break
 					end
 				end
 			end
@@ -1100,7 +1123,7 @@ function SmartAI:updatePlayerKingdom(player, data)
 		for _, p in sgs.qlist(self.room:getAlivePlayers()) do
 			--if p:getRole() == "careerist" then continue end
 			local kingdom = p:getKingdom()
-			if kingdom == "god" then
+			if kingdom == "god" or p:getRole() == "careerist" then
 				kingdom = "careerist"
 			end
 			if not table.contains(sgs.KingdomsTable, kingdom) then
@@ -1464,7 +1487,7 @@ function SmartAI:writeKeepValue(card)
 		if i > 0 then value_number = value_number / i end
 		newvalue = maxvalue + value_suit + value_number
 		if not card:isKindOf(mostvaluable_class) then   newvalue = newvalue + 0.1 end
-		if card:isKindOf("ThreatenEmperor") then maxvalue = maxvalue + (sgs.isBigKingdom(self.player, "AI") and 3 or -3) end
+		if card:isKindOf("ThreatenEmperor") then maxvalue = maxvalue + (self.player:isBigKingdomPlayer() and 3 or -3) end
 		newvalue = self:adjustKeepValue(card, newvalue)
 		return newvalue
 	else
@@ -1600,7 +1623,7 @@ function SmartAI:getUseValue(card)
 		if card:getSkillName() == "shuangxiong" then v = 6 end
 		if card:isKindOf("Duel") then v = v + self:getCardsNum("Slash") * 2 end
 		if self.player:hasSkill("jizhi") then v = v + 4 end
-		if card:isKindOf("ThreatenEmperor") then v = v + (sgs.isBigKingdom(self.player, "AI") and 4 or -4) end
+		if card:isKindOf("ThreatenEmperor") then v = v + (self.player:isBigKingdomPlayer() and 4 or -4) end
 	end
 
 	if self.player:hasSkills(sgs.need_kongcheng) then
@@ -2140,8 +2163,10 @@ function sgs.updateAlivePlayerRoles()
 	sgs.robot = {}
 	for _, aplayer in sgs.qlist(global_room:getAllPlayers()) do
 		if aplayer:getState() == "robot" then table.insert(sgs.robot, aplayer) end
-		--if aplayer:getRole() == "careerist" then continue end
 		local kingdom = aplayer:getKingdom()
+		if aplayer:getRole() == "careerist" or kingdom == "god" then
+			kingdom = "careerist"
+		end
 		if not sgs.current_mode_players[kingdom] then sgs.current_mode_players[kingdom] = 0 end
 		sgs.current_mode_players[kingdom] = sgs.current_mode_players[kingdom] + 1
 	end
@@ -5380,18 +5405,20 @@ end
 
 function SmartAI:hasCrossbowEffect(player)
 	player = player or self.player
-	local zhangfei = sgs.findPlayerByShownSkillName("paoxiao")
 	local xuanhuo_paoxiao = false
-	if player:hasSkill("xuanhuoattach") and not zhangfei then
-		local has_yongjue = 0
-		for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-			if p:hasShownSkill("yongjue") and player:isFriendWith(p) then
-				has_yongjue = 1
-				break
+	if player:hasSkill("xuanhuoattach") and player:getPhase() == sgs.Player_Play and not player:hasUsed("XuanhuoAttachCard") then
+		local zhangfei = sgs.findPlayerByShownSkillName("paoxiao")
+		if not zhangfei and getCardsNum("Slash", player) > 0 then
+			local yongjue_slash = 0
+			for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+				if p:hasShownSkill("yongjue") and player:isFriendWith(p) and player:getSlashCount() == 0 then
+					yongjue_slash = 1
+					break
+				end
 			end
-		end
-		if getCardsNum("Slash", player) + has_yongjue >= 2 then
-			xuanhuo_paoxiao = true--似乎能一定程度解决眩惑弃杀的问题？还有问题
+			if getCardsNum("Slash", player) + player:getSlashCount() + yongjue_slash >= 2 then
+				xuanhuo_paoxiao = true--似乎能一定程度解决眩惑弃杀的问题？还有问题
+			end
 		end
 	end
 	return (player:hasWeapon("Crossbow") or player:hasShownSkills("paoxiao|paoxiao_xh")
@@ -6686,7 +6713,10 @@ function SmartAI:willShowForMasochism()
 end
 
 function SmartAI:getReward(player)
-	if self.player:getRole() == "careerist" or self.player:getActualGeneral1():getKingdom() == "careerist" then return 3 end
+	if self.player:getRole() == "careerist"
+	or (self.player:getActualGeneral1():getKingdom() == "careerist" and self.player:hasSkill("shilu")) then
+		return 3
+	end
 	if not sgs.isAnjiang(player) and player:getRole() == "careerist" then return 1 end
 	local x = 1
 	for _, p in sgs.qlist(global_room:getOtherPlayers(player)) do

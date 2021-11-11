@@ -732,7 +732,9 @@ function SmartAI:getValuableCardForGuanxing(cards, up_cards)
 		end
 
 		if halberd then
---@todo
+			if self.player:hasSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie") then
+				return halberd
+			end
 		end
 
 		if gudingdao then

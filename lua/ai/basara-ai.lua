@@ -75,8 +75,8 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 	local skillnames = choices:split("+")
 	table.removeOne(skillnames, "GameRule_AskForGeneralShowHead")
 	table.removeOne(skillnames, "GameRule_AskForGeneralShowDeputy")
-	table.removeOne(skillnames, "cancel")
-	if #skillnames ~= 0 then
+	--table.removeOne(skillnames, "cancel")
+	if #skillnames > 1 then
 		skillTrigger = true
 	end
 
@@ -157,7 +157,6 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 	end
 
 	global_room:writeToConsole("多技能触发选择:" .. choices)
-	--skillnames = choices:split("+")--为何会有空值的情况？
 	return skillnames[math.random(1, #skillnames)]
 end
 

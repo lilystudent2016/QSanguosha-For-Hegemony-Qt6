@@ -1874,11 +1874,6 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 		end
 	end
 
-	if self.player:hasSkill("duoshi") or
-	(self.player:getHandcardNum() == 0 and not (self.player:hasSkills("yingzi_zhouyu|yingzi_sunce|haoshi") or self.player:hasTreasure("JadeSeal") or congcha_draw)) then
-		table.removeOne(choices, "duoshi_flamemap")--双度势应该不需要，0张手牌，没额外摸牌技移除度势
-	end
-
 	if self.player:hasSkill("haoshi") and table.contains(choices, "haoshi_flamemap") then
 		if sgs.ai_skill_invoke.haoshi(self) and self.haoshi_target then
 			return "haoshi_flamemap"--有目标时双好施
@@ -1887,13 +1882,22 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 		end
 	end
 
-	if n > 4 and table.contains(choices, "duoshi_flamemap") then
-		return "duoshi_flamemap"--能选择两项则必选度势
-	end
-
 	if n > 4 and table.contains(choices, "haoshi_flamemap") and
 	self.player:getHandcardNum() > 3 and sgs.ai_skill_invoke.haoshi_flamemap(self) then--手牌大于3时触发好施必定有队友
-		return "haoshi_flamemap"--手牌充裕时好施给队友+度势
+		return "haoshi_flamemap"--手牌充裕时好施给队友
+	end
+
+	if self.player:getHandcardNum() == 0 and not (self.player:hasSkills("yingzi_zhouyu|yingzi_sunce|haoshi") or self.player:hasTreasure("JadeSeal") or congcha_draw) then
+		table.removeOne(choices, "duoshi_flamemap")--0张手牌，没额外摸牌技移除度势
+	end
+
+	if self.player:hasSkill("duoshi") and self.player:getHandcardNum() < 4
+	and not (self.player:hasSkills("yingzi_zhouyu|yingzi_sunce|yingzi_flamemap|haoshi|haoshi_flamemap|shelie") or self.player:hasTreasure("JadeSeal") or congcha_draw) then
+		table.removeOne(choices, "duoshi_flamemap")--已有度势，没额外摸牌技和手牌少时移除度势
+	end
+
+	if n > 4 and table.contains(choices, "duoshi_flamemap") then
+		return "duoshi_flamemap"--能选择两项则必选度势
 	end
 
 	if table.contains(choices, "yingzi_flamemap") and table.contains(choices, "haoshi_flamemap")  then
@@ -2017,6 +2021,14 @@ sgs.ai_skill_invoke.shelie = function(self, data)
 	end
 	if self.player:hasSkill("yingzi_flamemap") then
 		extra = extra+1
+	end
+	if sgs.ai_skill_invoke.haoshi(self) then
+		if self.player:hasSkill("haoshi") then
+			extra = extra+2
+		end
+		if self.player:hasSkill("haoshi_flamemap") then
+			extra = extra+2
+		end
 	end
 	if self.player:hasSkill("congcha") then
 		local congcha_draw = true

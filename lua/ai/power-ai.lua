@@ -167,7 +167,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
   end
 	self:sort(self.enemies, "defense")--还可以细化条件
   for _, target in ipairs(self.enemies) do
-    if target:getKingdom() ~= "wei" then--还可以细化条件
+    if target:getSeemingKingdom() ~= "wei" then--还可以细化条件
       visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), target:objectName())
       if not card:hasFlag("visible") then card:setFlags(visibleflag) end
       return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. target:objectName()
@@ -527,17 +527,24 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   local has_tieqi = self.player:hasSkill("tieqi")
   local has_liegong = self.player:hasSkill("liegong")
   local has_kuanggu = self.player:hasSkill("kuanggu")
-  --local has_kuanggu = self.player:inHeadSkills("kuanggu") or self.player:inDeputySkills("kuanggu")
   local has_qianxi = self.player:hasSkill("qianxi")
   local has_Crossbow = self:getCardsNum("Crossbow") > 0
   local has_baolie = self.player:hasSkill("baolie") and self.player:getHp() < 3--夏侯霸新技能豹烈
-  local has_yongjue = false
-  for _, p in ipairs(self.friends) do
-    if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) and self:getCardsNum("Slash") >= 1 then
-      has_yongjue = true--考虑有一张杀
-      break
+
+  local enough_pxslash = false
+  if self:getCardsNum("Slash") > 0 then
+    local yongjue_slash = 0
+    for _, p in ipairs(self.friends) do
+      if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) and self.player:getSlashCount() == 0 then
+        yongjue_slash = 1--考虑没出牌时？有一张杀
+        break
+      end
+    end
+    if yongjue_slash + self.player:getSlashCount() + self:getCardsNum("Slash") >= 2 then--getCardsNum包含转化的杀
+      enough_pxslash = true
     end
   end
+
 --集中判断保证自己没有相应的技能和选项里有技能，避免每次都重复判断
   local can_paoxiao = false
   local can_wusheng = false
@@ -571,9 +578,9 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   end
   global_room:writeToConsole("眩惑杀目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 
-  if not has_Crossbow and not has_paoxiao and table.contains(choices,"paoxiao") and (has_yongjue or self:getCardsNum("Slash") >= 2) then
+  if not has_Crossbow and not has_paoxiao and not has_baolie and table.contains(choices,"paoxiao") and enough_pxslash then
     self.room:writeToConsole(self.player:objectName()..":眩惑可咆哮")
-    can_paoxiao = true--getCardsNum包含转化的杀
+    can_paoxiao = true
   end
   if not has_wusheng and table.contains(choices,"wusheng") then
     self.room:writeToConsole(self.player:objectName()..":眩惑可武圣")
@@ -702,7 +709,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     end
   end
   if(has_paoxiao or has_Crossbow or has_baolie) then--张飞、夏侯霸
-    if (has_yongjue or self:getCardsNum("Slash") >= 2) then
+    if enough_pxslash then
       if can_kuanggu then
         return "kuanggu"
       elseif need_tieqi then
@@ -751,7 +758,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   if can_paoxiao and not (has_baolie or has_Crossbow) then--咆哮
     return "paoxiao"
   end
-  if can_kuanggu and ((has_Crossbow and (has_yongjue or self:getCardsNum("Slash") > 2))
+  if can_kuanggu and ((has_Crossbow and (yongjue_slash + self:getCardsNum("Slash") > 2))
     or (self.player:getHp() < 2 and target:isKongcheng())) then
     return "kuanggu"
   end
@@ -1337,17 +1344,17 @@ huibian_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
-	global_room:writeToConsole("使用挥鞭")
+	--global_room:writeToConsole("使用挥鞭")
   local can_huibian = false
   local maixueskills = {"yiji","fangzhu","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能详细选择有空再写
   local drawcard_target, recover_target
   local targets = {}
   self:sort(self.friends, "hp")--从小到大排序
   for _, friend in ipairs(self.friends) do
-    if friend:getKingdom() == "wei" then
+    if friend:getSeemingKingdom() == "wei" then
       table.insert(targets,friend)
     end
-    if friend:getKingdom() == "wei" and friend:isWounded() then
+    if friend:getSeemingKingdom() == "wei" and friend:isWounded() then
       can_huibian = true
     end
   end

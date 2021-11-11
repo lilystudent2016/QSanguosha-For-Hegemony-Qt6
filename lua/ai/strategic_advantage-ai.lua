@@ -45,7 +45,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 
 	local cards = {}
 	local oneJink = false
-	for _, c in sgs.qlist(self.player:getCards("he")) do
+	for _, c in sgs.qlist(self.player:getCards("h")) do
 		if c:isTransferable() and (not isCard("Peach", c, self.player) or #friends_shown > 0) then
 			if not oneJink and isCard("Jink", c, self.player) then
 				oneJink = true
@@ -86,10 +86,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 
 	if has_TE or has_BC then
 			local big_kingdoms = self.player:getBigKingdoms("AI")
-			--[[野心家无法分辨
-			if table.contains(big_kingdoms, self.player:getKingdom()) then
-			]]
-			if sgs.isBigKingdom(self.player, "AI") then
+			if self.player:isBigKingdomPlayer() then
 				for _, card in ipairs(cards) do
 					if card:isKindOf("ThreatenEmperor") then--大势力留下挟天子
 						table.removeOne(cards, card)
@@ -1220,6 +1217,13 @@ sgs.ai_skill_cardask["@imperial_order-equip"] = function(self)
 	if self:needToThrowArmor() then
 		return self.player:getArmor():getEffectiveId()
 	end
+	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1 then--君主
+		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
+			or self.player:inHeadSkills("zhiheng") or self.player:inHeadSkills("jianxiong") then
+				global_room:writeToConsole("敕令君主不弃牌")
+				return "."
+		end
+	end
 	local discard
 	local kingdom = self:evaluateKingdom(self.player)
 	if kingdom == "unknown" then discard = true
@@ -1228,7 +1232,6 @@ sgs.ai_skill_cardask["@imperial_order-equip"] = function(self)
 		discard = #kingdom / #sgs.KingdomsTable >= 0.5
 	end
 	if self.player:getPhase() == sgs.Player_NotActive and discard then
-		local cards = self.player:getCards("he")
 		local cards = sgs.QList2Table(self.player:getCards("he"))
 			for _, card in ipairs(cards) do
 				if not self:willShowForAttack() and ((card:isKindOf("Weapon") and self.player:getHandcardNum() < 3) or card:isKindOf("OffensiveHorse")) then

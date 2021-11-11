@@ -92,7 +92,7 @@ rende_skill.getTurnUseCard = function(self)
 	end
 end
 
-sgs.ai_skill_use_func.RendeCard = function(card, use, self)
+sgs.ai_skill_use_func.RendeCard = function(rdcard, use, self)
 	local cards = sgs.QList2Table(self.player:getHandcards())
 	self:sortByUseValue(cards, true)
 
@@ -153,13 +153,14 @@ end
 
 sgs.dynamic_value.benefit.RendeCard = true
 
-sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理，但是不用使用杀？
+sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理
 	global_room:writeToConsole("仁德选择:"..self.player:objectName().." :"..choices)
 	choices = choices:split("+")
 	if table.contains(choices, "peach") and self.player:getHp() < 3 then
 		return "peach"
 	end
 	if table.contains(choices, "fire_slash") or table.contains(choices, "thunder_slash") or table.contains(choices, "slash") then
+		self.rende_slashtarget = nil
 		local clone_slashes = {}
 		if table.contains(choices, "fire_slash") then
 			local fslash = sgs.cloneCard("fire_slash")
@@ -180,7 +181,7 @@ sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理
 					if self:isWeak(enemy) and self.player:canSlash(enemy, slash, true) and not self:slashProhibit(slash, enemy)
 						and self:slashIsEffective(slash, enemy) and sgs.isGoodTarget(enemy, self.enemies, self)
 						and not (self.player:hasFlag("slashTargetFix") and not enemy:hasFlag("SlashAssignee")) then
-							self.rende_slashtarget = enemy--可能会无限制距离？
+							self.rende_slashtarget = enemy
 							return slash:objectName()
 					end
 				end

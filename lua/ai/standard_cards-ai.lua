@@ -960,17 +960,18 @@ function SmartAI:useCardPeach(card, use)
 		end
 	end
 
-	for _, enemy in ipairs(self.enemies) do
-		if self.player:getHandcardNum() < 3 and
-				(enemy:hasShownSkills(sgs.drawpeach_skill) or getCardsNum("Dismantlement", enemy, self.player) >= 1
-					or enemy:hasShownSkill("jixi") and enemy:getPile("field"):length() >0 and enemy:distanceTo(self.player) == 1
-					or enemy:hasShownSkill("qixi") and getKnownCard(enemy, self.player, "black", nil, "he") >= 1
-					or getCardsNum("Snatch", enemy, self.player) >= 1 and enemy:distanceTo(self.player) == 1
-					or (enemy:hasShownSkills("tiaoxin|baolie") and (self.player:inMyAttackRange(enemy) and self:getCardsNum("Slash") < 1 or not self.player:canSlash(enemy))))
-					or enemy:hasShownSkill("chuli")--旋略怎么考虑呢？
-				then
-			mustusepeach = true
-			break
+	if self.player:getHandcardNum() < 3 then
+		for _, enemy in ipairs(self.enemies) do
+			if enemy:hasShownSkills(sgs.drawpeach_skill) or getCardsNum("Dismantlement", enemy, self.player) >= 1
+				or enemy:hasShownSkill("jixi") and enemy:getPile("field"):length() >0 and enemy:distanceTo(self.player) == 1
+				or enemy:hasShownSkill("qixi") and getKnownCard(enemy, self.player, "black", nil, "he") >= 1
+				or getCardsNum("Snatch", enemy, self.player) >= 1 and enemy:distanceTo(self.player) == 1
+				or (enemy:hasShownSkills("tiaoxin|baolie") and (self.player:inMyAttackRange(enemy) and self:getCardsNum("Slash") < 1 or not self.player:canSlash(enemy)))
+				or enemy:hasShownSkill("chuli")--旋略怎么考虑呢？
+			then
+				mustusepeach = true
+				break
+			end
 		end
 	end
 

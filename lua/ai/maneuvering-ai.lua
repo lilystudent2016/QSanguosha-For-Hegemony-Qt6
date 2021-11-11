@@ -570,7 +570,7 @@ sgs.ai_skill_cardask["@fire-attack"] = function(self, data, pattern, target)
 	return card and card:getId() or "."
 end
 
-function SmartAI:useCardFireAttack(fire_attack, use)
+function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打火计？？
 
 	local lack = {
 		spade = true,
@@ -711,7 +711,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)
 	end
 end
 
-sgs.ai_cardshow.fire_attack = function(self, requestor)
+sgs.ai_cardshow.fire_attack = function(self, requestor)--展示上一次已知火攻失败的花色？（展示已知使用方没有的花色）
 	local cards = sgs.QList2Table(self.player:getHandcards())
 	self:sortByKeepValue(cards)
 	if requestor:objectName() == self.player:objectName() then

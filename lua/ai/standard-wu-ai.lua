@@ -166,13 +166,13 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 		end
 
 	end
-	
+
 	for index = #unpreferedCards, 1, -1 do
 		if sgs.Sanguosha:getCard(unpreferedCards[index]):isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):length() > 1 then
 			table.removeOne(unpreferedCards, unpreferedCards[index])
 		end
 	end
-	
+
 	local has_equip = {}
 	if self.player:hasSkills(sgs.lose_equip_skill) then
 		for index = #unpreferedCards, 1, -1 do
@@ -181,10 +181,10 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 				if #has_equip > 1 then
 					table.removeOne(unpreferedCards, unpreferedCards[index])
 				end
-			end	
+			end
 		end
-	end	
-	
+	end
+
 	local use_cards = {}
 	for index = #unpreferedCards, 1, -1 do
 		if not self.player:isJilei(sgs.Sanguosha:getCard(unpreferedCards[index])) then
@@ -380,7 +380,7 @@ sgs.ai_skill_use["@@mouduan_move"] = function(self, prompt, method)
 			self.mouduancard = self:getMoveCardorTarget(friends[#friends], "card")
 			return MDCard .. friends[#friends]:objectName() .. "+" .. self:getMoveCardorTarget(friends[#friends], "target"):objectName()
 		end
-		
+
 	return "."
 end
 
@@ -1076,7 +1076,7 @@ duoshi_skill.getTurnUseCard = function(self, inclusive)
 
 	if self.player:usedTimes("ViewAsSkill_duoshiCard") >= DuoTime or self:getOverflow() < 0 then return end
 	if self.player:usedTimes("ViewAsSkill_duoshiCard") >= 4 then return end
-	
+
 	if sgs.turncount <= 1 and #self.friends_noself == 0 and not self:isWeak() and self:getOverflow() <= 0 then return end
 	local cards = self.player:getCards("h")
 	for _, id in sgs.qlist(self.player:getHandPile()) do
@@ -1885,8 +1885,8 @@ sgs.ai_skill_invoke.haoshi = function(self, data)
 		extra = extra + 1
 	end
 	if self.player:getHandcardNum() + extra <= 1 then return true end
-	
-	local function find_haoshi_target(extra)
+
+	local function find_haoshi_target()
 		local otherPlayers = sgs.QList2Table(self.room:getOtherPlayers(self.player))
 		self:sort(otherPlayers, "handcard")
 		local leastNum = otherPlayers[1]:getHandcardNum()
@@ -1907,7 +1907,7 @@ sgs.ai_skill_invoke.haoshi = function(self, data)
 		if self.haoshi_target then return true end
 	end
 
-	if not find_haoshi_target(extra) then return false end
+	if not find_haoshi_target() then return false end
 	--[[
 	for skill_name, n in pairs(draw_skills) do
 		if self.player:hasSkill(skill_name) then
@@ -1942,7 +1942,7 @@ sgs.ai_skill_use["@@haoshi_give!"] = function(self, prompt)
 	for i = 1, math.floor(#cards / 2) do
 		table.insert(card_ids, cards[i]:getEffectiveId())
 	end
-
+	self.haoshi_target = nil
 	return "@HaoshiCard=" .. table.concat(card_ids, "+") .. "&haoshi->" .. target:objectName()
 end
 
@@ -2197,7 +2197,7 @@ sgs.ai_cardneed.zhijian = sgs.ai_cardneed.equip
 sgs.ai_skill_exchange.guzheng = function(self, pattern, max_num, min_num, expand_pile)
 	local card_ids = self.player:property("guzheng_allCards"):toString():split("+")
 	local who = self.room:getCurrent()
-	
+
 	if not self.player:hasShownOneGeneral() then
 		if not (self:willShowForAttack() or self:willShowForDefence()) and #card_ids < 3  then
 			return {}
