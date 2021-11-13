@@ -1669,7 +1669,7 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 	if zhoutai and self.player:hasSkills("keshou|hunshang") and self.player:getHp() == 1 then
 		return "no"
 	end
-	if hasBuquEffect(self.player) then
+	if HasBuquEffect(self.player) then
 		return "no"
 	end
 
@@ -1755,7 +1755,7 @@ sgs.ai_skill_use_func.FlameMapCard = function(card,use,self)
 				if dummy_use.card then
 					if dummy_use.card:isKindOf("EquipCard") and self:getSameEquip(hcard) then
 						sgs.ai_use_priority.FlameMapCard = 20
-						--self.player:speak("有返回：" .. self:getSameEquip(hcard):getLogName())
+						global_room:writeToConsole("弃置装备技能有相同武器：" .. self:getSameEquip(hcard):getLogName())
 						use.card = sgs.Card_Parse("@FlameMapCard=" .. self:getSameEquip(hcard):getEffectiveId() .. "&showforviewhas")
 						return
 					end

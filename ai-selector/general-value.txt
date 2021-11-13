@@ -14,7 +14,6 @@ dianwei								6
 xunyu								7
 caopi								10
 yuejin								5
-jianggan							7
 dengai								7
 caohong	   							4
 lidian								8
@@ -103,10 +102,10 @@ yuanshu								7
 zhangxiu							8
 yanbaihu							4
 huangzu								7
-zhonghui							10
+zhonghui							9
 simazhao							9
-sunchen								4
-gongsunyuan							8
+sunchen								6
+gongsunyuan							7
 mengda								6
 tangzi								6
 zhanglu								6
@@ -116,9 +115,18 @@ shixie								4
 xuyou								9
 xiahouba							6
 panjun								8
-wenqin								6
+wenqin								8
 pengyang							7
-sufei								6
-
+sufei								5
+jianggan							7
+zhouyi								7
+nanhualaoxian						9
+huaxin								9
+luyusheng							6
+zongyux								5
+miheng								8
+fengxi								7
+dengzhi								7
+duyu								1
 
 

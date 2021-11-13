@@ -472,11 +472,9 @@ end
 --张任
 sgs.ai_skill_invoke.chuanxin = function(self, data)
 	local damage = data:toDamage()
-
-	if damage.to:hasShownSkill("niepan") and not damage.to:inHeadSkills("niepan") and  damage.to:getMark("@nirvana") > 0 then
+	if damage.to:hasShownSkill("niepan") and not damage.to:inHeadSkills("niepan") and damage.to:getMark("@nirvana") > 0 then
 		return true
 	end
-
 	return not self:isFriend(damage.to)
 		and not self:hasHeavySlashDamage(self.player, damage.card, damage.to)
 		and not (damage.to:getHp() == 1 and not damage.to:getArmor())

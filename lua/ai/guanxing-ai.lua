@@ -164,7 +164,7 @@ local function GuanXing(self, cards)
 
 	end
 
-	local drawCards = self:ImitateResult_DrawNCards(self.player, self.player:getVisibleSkillList(true))
+	local drawCards = self:imitateDrawNCards(self.player, self.player:getVisibleSkillList(true))
 	local drawCards_copy = drawCards
 	if willSkipDrawPhase then drawCards = 0 end
 
@@ -388,7 +388,7 @@ local function GuanXing(self, cards)
 	end
 
 	if #bottom > drawCards and #bottom > 0 and not nextplayer_judge_failed then
-		local maxCount = math.min(#bottom - drawCards, self:ImitateResult_DrawNCards(next_player, next_player:getVisibleSkillList(true)))
+		local maxCount = math.min(#bottom - drawCards, self:imitateDrawNCards(next_player, next_player:getVisibleSkillList(true)))
 		if self:isFriend(next_player) then
 			local i = 0
 			for index = 1, #bottom do

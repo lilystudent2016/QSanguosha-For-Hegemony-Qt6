@@ -331,44 +331,7 @@ sgs.ai_use_value.TenyearRendeCard = sgs.ai_use_value.RendeCard
 sgs.ai_use_priority.TenyearRendeCard = sgs.ai_use_priority.RendeCard
 sgs.ai_card_intention.TenyearRendeCard = sgs.ai_card_intention.RendeCard
 sgs.dynamic_value.benefit.TenyearRendeCard = true
-
-sgs.ai_skill_askforag.tenyearrende = function(self, card_ids)
-	local cards = {}
-	for _, id in ipairs(card_ids) do
-		local card = sgs.Sanguosha:getEngineCard(id)
-		if card:isKindOf("Analeptic") and self:getCardsNum("Slash") == 0 then continue end  --这里应该判断会不会使用【杀】，偷懒一下
-		if not card:targetFixed() then
-			local dummy_use = { isDummy = true, to = sgs.SPlayerList(), current_targets = {} }
-			self:useCardByClassName(card, dummy_use)
-			if dummy_use.card and dummy_use.to:length() > 0 then
-				table.insert(cards, card)
-			end
-		else
-			table.insert(cards, card)
-		end
-	end
-	if #cards > 0 then
-		self:sortByUseValue(cards)
-		return cards[1]:getEffectiveId()
-	end
-	for _, id in ipairs(card_ids) do
-		local card = sgs.Sanguosha:getEngineCard(id)
-		if card:isKindOf("Analeptic") then return id end
-	end
-	return card_ids[1]
-end
-
-sgs.ai_skill_invoke.tenyearrende = true
-
-sgs.ai_skill_use["@@tenyearrende"] = function(self, prompt, method)
-	local name = prompt:split(":")[2]
-	if not name then return "." end
-	local card = sgs.Sanguosha:cloneCard(name)
-	card:setSkillName("_tenyearrende")
-	return card:toString()
-end
 ]]--
-
 
 --关羽
 sgs.ai_view_as.wusheng = function(card, player, card_place)
@@ -404,7 +367,8 @@ wusheng_skill.getTurnUseCard = function(self, inclusive)
 	end
 	local cards = {}
 	for _, card in sgs.qlist(hecards) do
-		if (self.player:getLord() and self.player:getLord():hasShownSkill("shouyue") or card:isRed()) and not card:isKindOf("Slash")
+		if (self.player:getLord() and self.player:getLord():hasShownSkill("shouyue") or card:isRed())
+			and (not card:isKindOf("Slash") or card:isKindOf("NatureSlash"))
 			and ((not isCard("Peach", card, self.player) and not isCard("ExNihilo", card, self.player)) or useAll)
 			and not isCard("BefriendAttacking", card, self.player) and not isCard("AllianceFeast", card, self.player)
 			and (not isCard("Crossbow", card, self.player) or disCrossbow ) then
@@ -430,7 +394,7 @@ function sgs.ai_cardneed.wusheng(to, card)
 	return to:getHandcardNum() < 3 and card:isRed()
 end
 
-sgs.ai_suit_priority.wusheng= "club|spade|diamond|heart"
+sgs.ai_suit_priority.wusheng = "club|spade|diamond|heart"
 
 --张飞
 sgs.ai_skill_invoke.paoxiao = function(self, data)
@@ -470,8 +434,6 @@ sgs.paoxiao_keep_value = {
 	ThunderSlash = 5.5,
 	ExNihilo = 4.7
 }
-
---sgs.ai_skill_choice["paoxiaoVsCrossbow"] = "Crossbow"
 
 --诸葛亮
 sgs.ai_skill_invoke.kongcheng = true
@@ -1147,7 +1109,7 @@ sgs.ai_skill_invoke.shenzhi = function(self, data)
 	if self.player:getHandcardNum() >= 5 then return false end
 	if self.player:getHandcardNum() == 3 and self.player:getHp() == 1 then return true end
 	if self.player:getHandcardNum() >= 3 and not self:willSkipPlayPhase() then return false end
-	--(not self.player:containsTrick("indulgence") or self:getCardsNum("Nullification") > 0) 
+	--(not self.player:containsTrick("indulgence") or self:getCardsNum("Nullification") > 0)
 	if self.player:getHandcardNum() >= self.player:getHp() and self.player:isWounded() then return true end
 	return false
 end

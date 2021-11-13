@@ -201,7 +201,12 @@ sgs.ai_skill_invoke.fengshix = function(self, data)
   if not target or self:isFriend(target) then
     return false
   end
-  if self.player:getHandcardNum() > target:getHandcardNum() and not target:isNude() then
+  local use = self.player:getTag("FengshixUsedata"):toCardUse()
+  local card = use.card--更多的非伤害锦囊的情况？
+  if card:isKindOf("FireAttack") and target:getCardCount(true) == 1 then
+    return false
+  end
+  if self.player:getHandcardNum() > target:getHandcardNum() then-- and not target:isNude()
     if self.player:getHandcardNum() > 3 or self:isWeak(target) then
       return true
     end
@@ -209,11 +214,12 @@ sgs.ai_skill_invoke.fengshix = function(self, data)
 	return false
 end
 
---sgs.ai_skill_cardchosen.fengshix 默认ai是顺拆的策略，暂时不细化
-
 sgs.ai_skill_choice.fengshix = function(self, choices, data)
   local use = data:toCardUse()
-  if use.to:length() == 1 and not self:isFriend(use.to:first()) and (self.player:getHandcardNum() > 3 or self:isWeak(use.to:first())) then
+  if use.card:isKindOf("FireAttack") and use.to:length() == 1 and use.to:first():getCardCount(true) == 1 then
+    return "no"
+  end
+  if use.to:length() == 1 and self:isEnemy(use.to:first()) and (self.player:getHandcardNum() > 3 or self:isWeak(use.to:first())) then
     return "yes"
   end
 	return "no"
@@ -244,7 +250,7 @@ sgs.ai_skill_playerchosen.wenji = function(self, targets)
         target = p
       end
     end
-    if not target  then
+    if not target then
       for _, p in ipairs(targets) do
         if self.player:isFriendWith(p) and p:getHandcardNum() > 2 then
           target = p
@@ -370,7 +376,7 @@ sgs.ai_skill_choice.lixia = function(self, choices, data)
   if self:isEnemy(shixie) then
     local canslash_shixie = false
     for _, p in ipairs(self.friends) do
-      if p:canSlash(shixie, nil, true)  then
+      if p:canSlash(shixie, nil, true) then
         canslash_shixie = true
         break
       end
@@ -563,7 +569,7 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
     and not self:getDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
     and self.player:distanceTo(p) > 1 and self.player:getHandcardNum() + 1 >= self.player:distanceTo(p) then
       local nearest = 6
-      if p:getHp() == 1 and self.player:getHandcardNum() > 3 then
+      if p:getHp() == 1 and self:isWeak(p) and self.player:getHandcardNum() > 3 then
         sgs.ai_use_priority.ZaoyunCard = 3.4--AOE后，手牌充裕
         target = p
         break
@@ -827,7 +833,7 @@ local paiyi_skill = {}
 paiyi_skill.name = "paiyi"
 table.insert(sgs.ai_skills, paiyi_skill)
 paiyi_skill.getTurnUseCard = function(self)
-	if (self.player:getPile("power_pile"):length() > 1 and not self.player:hasUsed("PaiyiCard")) then
+	if (self.player:getPile("power_pile"):length() > 0 and not self.player:hasUsed("PaiyiCard")) then
 		return sgs.Card_Parse("@PaiyiCard=" .. self.player:getPile("power_pile"):first())
 	end
 	return nil
@@ -851,7 +857,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
  	  self:sort(self.enemies, "hp")
 	  if not target then
 		  for _, enemy in ipairs(self.enemies) do
-			  if self:isWeak(enemy)
+			  if enemy:getHp() == 1 and self:isWeak(enemy)
 				and not self:hasSkills(sgs.masochism_skill, enemy)
         and not enemy:hasSkill("jijiu")
 				and self:damageIsEffective(enemy, nil, self.player)
@@ -1470,8 +1476,6 @@ sgs.ai_skill_choice.lianpian = function(self, choices, data)
   end
 	return "cancel"
 end
-
---sgs.ai_skill_cardchosen.lianpian 默认ai是顺拆的策略，不用写了吧
 
 --诸葛恪
 --[[

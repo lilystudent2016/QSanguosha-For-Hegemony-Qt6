@@ -962,12 +962,17 @@ sgs.ai_playerchosen_intention.leiji = 80
 function sgs.ai_slash_prohibit.leiji(self, from, to, card)
 	if self:isFriend(to, from) then return false end
 	if from:hasShownSkills("tieqi|tieqi_xh") then return false end
-	if to:hasFlag("QianxiTarget") and (not self:hasEightDiagramEffect(to) or self.player:hasWeapon("QinggangSword")) then return false end
+	if from:hasShownSkill("jianchu") and (to:hasEquip() or to:getCardCount(true) == 1) then
+		return false
+	end
+	if (to:getMark("#qianxi+no_suit_red") or to:getMark("#qianxi+no_suit_black")) and (not self:hasEightDiagramEffect(to) or IgnoreArmor(from, to)) then
+		return false
+	end
 	local hcard = to:getHandcardNum()
 	if from:hasShownSkill("liegong") and (hcard >= from:getHp() or hcard <= from:getAttackRange()) then return false end
 	if (from:getHp() >= 4 and (getCardsNum("Peach", from, to) > 0 or from:hasShownSkill("ganglie"))) or from:hasShownSkill("hongyan") and #self.friends == 1 then
-		return false end
-
+		return false
+	end
 	if sgs.card_lack[to:objectName()]["Jink"] == 2 then return true end
 	if getKnownCard(to, global_room:getCurrent(), "Jink", true) >= 1 or (self:hasSuit("spade", true, to) and hcard >= 2) or hcard >= 4 then return true end
 	if self:hasEightDiagramEffect(to) then return true end
@@ -1295,7 +1300,7 @@ end
 
 sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 	local zhonghui = self.room:findPlayerBySkillName("quanji")
-	if zhonghui and zhonghui:getPile("power_pile"):length() > 3  and zhonghui:hasShownAllGenerals() and self:isEnemy(zhonghui) then
+	if zhonghui and zhonghui:getPile("power_pile"):length() > 3 and zhonghui:hasShownAllGenerals() and self:isEnemy(zhonghui) then
 		use.card = card
 		if not use.isDummy and use.to then
 			self.qingcheng = "zhonghui"
@@ -1304,7 +1309,26 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 		end
 		return
 	end
-
+	local sunchen = self.room:findPlayerBySkillName("shilu")
+	if sunchen and sunchen:getMark("#massacre") > 2  and sunchen:hasShownAllGenerals() and self:isEnemy(sunchen) then
+		use.card = card
+		if not use.isDummy and use.to then
+			self.qingcheng = "sunchen"
+			global_room:writeToConsole("倾城孙綝:"..self.qingcheng)
+			use.to:append(sunchen)
+		end
+		return
+	end
+	local gongsunyuan = self.room:findPlayerBySkillName("zisui")
+	if gongsunyuan and gongsunyuan:getPile("disloyalty"):length() > 1 and gongsunyuan:hasShownAllGenerals() and self:isEnemy(gongsunyuan) then
+		use.card = card
+		if not use.isDummy and use.to then
+			self.qingcheng = "gongsunyuan"
+			global_room:writeToConsole("倾城公孙渊:"..self.qingcheng)
+			use.to:append(gongsunyuan)
+		end
+		return
+	end
 	local zhoutai = self.room:findPlayerBySkillName("buqu")
 	if zhoutai and zhoutai:hasShownAllGenerals() and ((self:isEnemy(zhoutai) and zhoutai:getPile("scars"):length() > 0 and zhoutai:getPile("scars"):length() < 4)
 	or (self:isFriend(zhoutai) and zhoutai:getPile("scars"):length() > 3)) then
@@ -1337,7 +1361,6 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 			end
 		end
 	end
-	return
 end
 
 sgs.ai_skill_choice.qingcheng = function(self, choices)
@@ -1363,12 +1386,20 @@ sgs.ai_skill_playerchosen["qingcheng_second"] = function(self, targets)
 	if zhonghui and zhonghui:getPile("power_pile"):length() > 3  and zhonghui:hasShownAllGenerals() and self:isEnemy(zhonghui) then
 		return zhonghui
 	end
+	local sunchen = self.room:findPlayerBySkillName("shilu")
+	if sunchen and sunchen:getMark("#massacre") > 2  and sunchen:hasShownAllGenerals() and self:isEnemy(sunchen) then
+		return sunchen
+	end
+	local gongsunyuan = self.room:findPlayerBySkillName("zisui")
+	if gongsunyuan and gongsunyuan:getPile("disloyalty"):length() > 1 and gongsunyuan:hasShownAllGenerals() and self:isEnemy(gongsunyuan) then
+		return gongsunyuan
+	end
 	local zhoutai = self.room:findPlayerBySkillName("buqu")
 	if zhoutai and zhoutai:hasShownAllGenerals() and ((self:isEnemy(zhoutai) and zhoutai:getPile("scars"):length() > 0 and zhoutai:getPile("scars"):length() < 4)
 	or (self:isFriend(zhoutai) and zhoutai:getPile("scars"):length() > 3)) then
 		return zhoutai
 	end
-	return sgs.ai_skill_playerchosen.damage(self, targets)
+	return sgs.ai_skill_playerchosen.zero_card_as_slash(self, targets)
 end
 
 sgs.ai_use_value.QingchengCard = 6

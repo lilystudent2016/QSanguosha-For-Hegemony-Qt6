@@ -142,8 +142,8 @@ sgs.ai_use_priority.FengyingCard = 0
 
 --于禁
 sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
-  if self.player:isKongcheng() or --self:willSkipDrawPhase() then
-  (self.player:containsTrick("supply_shortage") and self:getCardsNum("Nullification") == 0 and self.player:getHandcardNum() > 1) then
+  if self.player:isKongcheng() or
+  (self:willSkipDrawPhase() and not(self.player:hasSkill("qiaobian") and self.player:getHandcardNum() == 1)) then
     return "."
   end
 	local handcards = self.player:getCards("h")
@@ -821,7 +821,8 @@ wusheng_xh_skill.getTurnUseCard = function(self, inclusive)
 	end
 	local cards = {}
 	for _, card in sgs.qlist(hecards) do
-		if (self.player:getLord() and self.player:getLord():hasShownSkill("shouyue") or card:isRed()) and not card:isKindOf("Slash")
+		if (self.player:getLord() and self.player:getLord():hasShownSkill("shouyue") or card:isRed())
+      and (not card:isKindOf("Slash") or card:isKindOf("NatureSlash"))
 			and ((not isCard("Peach", card, self.player) and not isCard("ExNihilo", card, self.player)) or useAll)
       and not isCard("BefriendAttacking", card, self.player) and not isCard("AllianceFeast", card, self.player)
 			and (not isCard("Crossbow", card, self.player) or disCrossbow ) then
@@ -843,7 +844,7 @@ wusheng_xh_skill.getTurnUseCard = function(self, inclusive)
 	return cards[1]
 end
 
-sgs.ai_suit_priority.wusheng_xh= "club|spade|diamond|heart"
+sgs.ai_suit_priority.wusheng_xh = "club|spade|diamond|heart"
 
 --咆哮
 sgs.ai_skill_invoke.paoxiao_xh = true
@@ -1167,6 +1168,8 @@ sgs.ai_skill_choice.zhuwei = function(self, choices, data)
     return "no"
   end
 end
+
+sgs.ai_slash_prohibit.zhuwei = sgs.ai_slash_prohibit.tiandu
 
 --张绣
 sgs.ai_skill_playerchosen.fudi_damage = sgs.ai_skill_playerchosen.damage

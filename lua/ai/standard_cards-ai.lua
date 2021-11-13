@@ -37,7 +37,7 @@ end
 function sgs.isGoodHp(player, observer)
 	observer = observer or sgs.recorder.player
 	local goodHp = player:getHp() > 1 or getCardsNum("Peach", player, observer) >= 1 or getCardsNum("Analeptic", player, observer) >= 1
-					or hasBuquEffect(player) or hasNiepanEffect(player)
+					or HasBuquEffect(player) or HasNiepanEffect(player)
 	if goodHp then
 		return goodHp
 	else
@@ -239,7 +239,7 @@ function sgs.getDefenseSlash(player, self)
 	if player:containsTrick("indulgence") then defense = defense - 0.25 end
 	if player:containsTrick("supply_shortage") then defense = defense - 0.15 end
 
-	if not hasEightDiagram then
+	if not hasEightDiagram then--这一部分用处？？
 		if player:hasShownSkill("jijiu") then
 			defense = defense - 3
 		elseif sgs.hasNullSkill("jijiu", player) then
@@ -1031,8 +1031,8 @@ function SmartAI:useCardPeach(card, use)
 		return
 	end
 
-	if #self.friends > 1 and ((not hasBuquEffect(self.friends[2]) and self.friends[2]:getHp() < 3 and self:getOverflow() < 2)
-								or (not hasBuquEffect(self.friends[1]) and self.friends[1]:getHp() < 2 and peaches <= 1 and self:getOverflow() < 3)) then
+	if #self.friends > 1 and ((not HasBuquEffect(self.friends[2]) and self.friends[2]:getHp() < 3 and self:getOverflow() < 2)
+								or (not HasBuquEffect(self.friends[1]) and self.friends[1]:getHp() < 2 and peaches <= 1 and self:getOverflow() < 3)) then
 		return
 	end
 
@@ -1415,8 +1415,8 @@ function sgs.ai_cardsview.Spear(self, class_name, player, cards)
 	end
 end
 
-function turnUse_spear(self, inclusive, skill_name)
-	if self.player:hasSkill("wusheng") then
+local function turnUse_spear(self, inclusive, skill_name)
+	if self.player:hasSkills("wusheng|wusheng_xh") then
 		local cards = self.player:getCards("he")
 		cards = sgs.QList2Table(cards)
 		for _, id in sgs.qlist(self.player:getHandPile()) do
@@ -1432,7 +1432,11 @@ function turnUse_spear(self, inclusive, skill_name)
 	self:sortByUseValue(cards)
 	local newcards = {}
 	for _, card in ipairs(cards) do
-		if not isCard("Slash", card, self.player) and not isCard("Peach", card, self.player) and not (isCard("ExNihilo", card, self.player) and self.player:getPhase() == sgs.Player_Play) then table.insert(newcards, card) end
+		if not isCard("Slash", card, self.player) and not isCard("Peach", card, self.player) and not isCard("AllianceFeast", card, self.player)
+		and not ((isCard("ExNihilo", card, self.player) or isCard("BefriendAttacking", card, self.player)) and self.player:getPhase() == sgs.Player_Play)
+		and not ((isCard("ThreatenEmperor", card, self.player)) and card:isAvailable(self.player)) then
+			table.insert(newcards, card)
+		end
 	end
 	if #cards <= self.player:getHp() - 1 and self.player:getHp() <= 4 and not self:hasHeavySlashDamage(self.player)
 		and not self.player:hasSkills("kongcheng|paoxiao") then return end
@@ -2984,12 +2988,11 @@ function SmartAI:willUseLightning(card)
 	--if sgs.Sanguosha:isProhibited(self.player, self.player, card) then return end
 
 	local function hasDangerousFriend()
-		local hashy = false
 		for _, aplayer in ipairs(self.enemies) do
-			if aplayer:hasSkill("hongyan") then hashy = true break end
+			if aplayer:hasSkill("hongyan") and #self.enemies == 1 then return true end
 		end
 		for _, aplayer in ipairs(self.enemies) do
-			if aplayer:hasSkill("guanxing") and self:isFriend(aplayer:getNextAlive()) then return true end
+			if aplayer:hasSkills("guanxing|yizhi") and self:isFriend(aplayer:getNextAlive()) then return true end
 		end
 		return false
 	end

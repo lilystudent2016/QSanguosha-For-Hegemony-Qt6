@@ -151,7 +151,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)--为何有马超兄弟对�
 			return false
 		end
 	end
-	if (hasBuquEffect(target) or hasNiepanEffect(target)) and target:getHp() == 1 then
+	if (HasBuquEffect(target) or HasNiepanEffect(target)) and target:getHp() == 1 then
 		return false
 	end
 	if target:hasShownSkill("gongqing") and self.player:getAttackRange() < 3 then
@@ -327,7 +327,7 @@ end
 
 function SmartAI:isGoodChainPartner(player)
 	player = player or self.player
-	if hasBuquEffect(player) or hasNiepanEffect(player) or self:needToLoseHp(player) or self:getDamagedEffects(player) then
+	if HasBuquEffect(player) or HasNiepanEffect(player) or self:needToLoseHp(player) or self:getDamagedEffects(player) then
 		return true
 	end
 	return false
@@ -639,9 +639,9 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 		and self:damageIsEffective(self.player, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(self.player)
 		and self:hasTrickEffective(fire_attack, self.player) then
 
-		if hasNiepanEffect(self.player) then
+		if HasNiepanEffect(self.player) then
 			table.insert(targets, self.player)
-		elseif hasBuquEffect(self.player)then
+		elseif HasBuquEffect(self.player)then
 			table.insert(targets, self.player)
 		else
 			local leastHP = 1

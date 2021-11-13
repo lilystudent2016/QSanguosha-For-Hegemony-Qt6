@@ -75,7 +75,7 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       end
     else
       if table.contains(choices,"head") then
-        local skills = (sgs.priority_skill):split("|")--需要判定君主技能等
+        local skills = (sgs.priority_skill):split("|")--需要判定君主技能等，更详细的技能判断
         table.removeOne(skills,"jianan")
         table.removeOne(skills,"shouyue")
         table.removeOne(skills,"jiahe")
@@ -95,7 +95,26 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
 end
 
 --陆郁生
-sgs.ai_skill_invoke.zhente = true--队友解连环得加信息判断
+sgs.ai_skill_invoke.zhente = function(self, data)
+  if not self:willShowForDefence() then
+    return false
+  end
+  local target = data:toPlayer()
+  local use = self.player:getTag("ZhenteUsedata"):toCardUse()
+  local card = use.card
+  if self:isFriend(target) then
+    if (card:isKindOf("IronChain") or card:isKindOf("FightTogether") or card:isKindOf("FireAttack") or card:isKindOf("NatureSlash"))
+      and not self.player:isChained() then
+        return true
+    elseif card:isKindOf("Slash") or card:isKindOf("Duel") or card:isKindOf("Drowning")
+      or card:isKindOf("BurningCamps") or card:isKindOf("SavageAssault") or card:isKindOf("ArcheryAttack") then
+        return true
+    else
+      return false
+    end
+  end
+  return true
+end
 
 sgs.ai_skill_choice.zhente = function(self, choices, data)
   local use = data:toCardUse()
@@ -153,11 +172,22 @@ sgs.ai_skill_invoke.qiao =  function(self, data)
   if not self:willShowForDefence() then
     return false
   end
-  local target = data:toPlayer()--详细使用的卡牌信息？
+  local target = data:toPlayer()
   if not target or self:isFriend(target) or target:isNude() then
     return false
   end
-  if (self.player:getHandcardNum() < 2 and (self:needKongcheng() or self:getLeastHandcardNum() > 0) and self:getCardsNum("Peach","h") == 0)
+  local use = self.player:getTag("QiaoUsedata"):toCardUse()
+  local card = use.card
+  if self.player:getHandcardNum() ==1 then
+    if (card:isKindOf("Slash") and (self:hasHeavySlashDamage(use.from, card, self.player) or self:isWeak())
+      or card:isKindOf("ArcheryAttack")) and self:getCardsNum("Jink") == 1 then
+      return false
+    end
+    if (card:isKindOf("SavageAssault") or card:isKindOf("Duel")) and self:isWeak() and self:getCardsNum("Slash") == 1 then
+      return false
+    end
+  end
+  if (self.player:getHandcardNum() <= 2 and (self:needKongcheng() or self:getLeastHandcardNum() > 0) and self:getCardsNum("Peach","h") == 0)
   or self.player:isNude() or self:getOverflow() > 0 or self:getDangerousCard(target) then
     return true
   end
@@ -173,11 +203,17 @@ sgs.ai_skill_invoke.shejian =  function(self, data)
   if not self:willShowForDefence() then
     return false
   end
-  local target = data:toPlayer()--详细使用的卡牌信息？不然无法知道如被酒杀等情况
+  local target = data:toPlayer()
   if not target or self:isFriend(target) then
     return false
   end
-  if (self.player:getHandcardNum() < 3 and self:getCardsNum("Peach","h") == 0) and target:getHp() == 1 then
+  local use = self.player:getTag("ShejianUsedata"):toCardUse()
+  local card = use.card
+  if card:isKindOf("Slash") and self:hasHeavySlashDamage(use.from, card, self.player) and self:getCardsNum("Jink") > 0 then
+    return false
+  end
+  if (self.player:getHandcardNum() < 3 and self:getCardsNum("Peach","h") == 0)
+  and target:getHp() <= (self.player:hasSkill("congjian") and 2 or 1) and self:isWeak(target) then
     return true
   end
 	return false
@@ -193,7 +229,8 @@ sgs.ai_skill_invoke.yusui =  function(self, data)
   or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
     return false
   end
-  if (self.yusui_target:getHp() - math.max(self.player:getHp()-1, 1) > 1) or (self.yusui_target:getHandcardNum() >= self.yusui_target:getMaxHp()) then
+  if (self.yusui_target:getHp() - math.max(self.player:getHp()-1, 1) > 1)
+  or (self.yusui_target:getHandcardNum() >= self.yusui_target:getMaxHp() and self.yusui_target:getHandcardNum() <= self.yusui_target:getMaxHp() + 2) then
     return true
   end
 	return false

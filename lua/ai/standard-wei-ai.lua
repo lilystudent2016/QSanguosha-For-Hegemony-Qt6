@@ -113,7 +113,7 @@ sgs.ai_need_damaged.fankui = function (self, attacker, player)
 	end
 
 	local cards = sgs.QList2Table(attacker:getEquips())
-	local handcards = sgs.QList2Table(attacker:getHandcards())
+	handcards = sgs.QList2Table(attacker:getHandcards())
 	if #handcards==1 and handcards[1]:hasFlag("visible") then table.insert(cards,handcards[1]) end
 
 	for i=1,#cards,1 do
@@ -152,7 +152,7 @@ sgs.ai_skill_cardask["@guicai-card"] = function(self, data)
 	for _, id in sgs.qlist(self.player:getHandPile()) do
 		table.insert(cards, 1, sgs.Sanguosha:getCard(id))
 	end
-	if self.player:hasSkill("luoshen") and self.player:hasTreasure("JadeSeal") then--去掉玉玺洛神
+	if self.player:hasSkill("luoshen") and self.player:hasTreasure("JadeSeal") then--去掉玉玺洛神，考虑判断reason？
 		table.removeOne(cards,sgs.Sanguosha:getCard(self:getCardId("JadeSeal")))
 	end
 
@@ -485,7 +485,7 @@ end
 
 function sgs.ai_slash_prohibit.tiandu(self, from, to)
 	if self:canLiegong(to, from) then return false end
-	if from:hasShownSkills("tieqi|tieqi_xh") then return false end
+	if from:hasShownSkills("tieqi|tieqi_xh|jianchu") then return false end
 	if self:isEnemy(to) and self:hasEightDiagramEffect(to) and not IgnoreArmor(from, to) and to:hasShownSkill("qingguo") then return true end
 	if self:isEnemy(to) and self:hasEightDiagramEffect(to) and not IgnoreArmor(from, to) and #self.enemies > 1 then return true end
 end

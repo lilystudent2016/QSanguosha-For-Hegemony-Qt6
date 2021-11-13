@@ -1227,7 +1227,7 @@ sgs.ai_skill_use_func.JieyinCard = function(card, use, self)
 		end
 	until true
 
-	if not target and self:isWeak() and self:getOverflow() >= 2 and (self.role == "lord" or self.role == "renegade") then
+	if not target and self:isWeak() and self:getOverflow() >= 2 and (self.role == "careerist" or self.player:getMark("GlobalBattleRoyalMode") > 0) then
 		local others = self.room:getOtherPlayers(self.player)
 		for _, other in sgs.qlist(others) do
 			if other:isWounded() and other:isMale() and not other:hasShownSkills(sgs.masochism_skill) then
@@ -1527,7 +1527,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 						or self:needToLoseHp(friend)
 						or (friend:getHandcardNum() < 3 and friend:hasShownSkill("rende"))) then
 				return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
-			elseif hasBuquEffect(friend) then return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName() end
+			elseif HasBuquEffect(friend) then return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName() end
 		end
 	end
 
@@ -1574,7 +1574,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 				if friend:getHp() >= 2 and (friend:hasShownSkills("shuangxiong|zaiqi|"..sgs.masochism_skill) or self:needToLoseHp(friend)) then
 					self.tianxiang_choice = 1
 					return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
-				elseif hasBuquEffect(friend) or friend:isRemoved() then
+				elseif HasBuquEffect(friend) or friend:isRemoved() then
 					self.tianxiang_choice = 1
 					return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
 				end
@@ -1610,7 +1610,7 @@ sgs.ai_card_intention.TianxiangCard = function(self, card, from, tos)
 	local to = tos[1]
 	if self:getDamagedEffects(to) or self:needToLoseHp(to) then return end
 	local intention = 10
-	if hasBuquEffect(to) then intention = 0
+	if HasBuquEffect(to) then intention = 0
 	elseif (to:getHp() >= 2 and to:hasShownSkills("yiji|shuangxiong|zaiqi|yinghun_sunjian|yinghun_sunce|jianxiong|fangzhu"))
 		or to:getHandcardNum() < 3 and to:hasShownSkill("rende") then
 		intention = -10
@@ -1839,7 +1839,7 @@ end
 function sgs.ai_skill_invoke.fenji(self, data)
 	if not self:willShowForDefence() and not self:willShowForAttack() then return false end
 	local target = self.room:getCurrent()
-	if self:isFriend(target) and self:isWeak(target) and hasBuquEffect(self.player) then
+	if self:isFriend(target) and self:isWeak(target) and HasBuquEffect(self.player) then
 	  return true
 	end
 	return false
@@ -2209,7 +2209,7 @@ sgs.ai_skill_exchange.guzheng = function(self, pattern, max_num, min_num, expand
 	end
 
 	local invoke = (self:isFriend(who) and not (who:hasSkill("kongcheng") and who:isKongcheng()))
-					or (#card_ids == 2 and not self:hasSkills(sgs.cardneed_skill, who))
+					or (#card_ids >= 2 and #card_ids <= 3 and not self:hasSkills(sgs.cardneed_skill, who)) or #card_ids > 3
 					or (self:isEnemy(who) and who:hasSkill("kongcheng") and who:isKongcheng())
 	if not invoke then return {} end
 
@@ -2349,11 +2349,11 @@ function getBestHp(player)
 	--if player:hasSkills("quanji+zhonghuizili") and player:getMark("zhonghuizili") == 0 then return (player:getMaxHp() - 1) end
 	return player:getMaxHp()
 end
-
+--[[旧
 sgs.ai_skill_invoke["_Guzheng"] = function(self, data)
 	return not (self:needKongcheng() and self.player:isKongcheng())
 end
-
+]]
 sgs.ai_skill_choice.guzheng = function(self, choices, data)
 	return "yes"
 end
