@@ -119,7 +119,7 @@ wenqin								8
 pengyang							7
 sufei								5
 jianggan							7
-zhouyi								7
+zhouyi								8
 nanhualaoxian						9
 huaxin								9
 luyusheng							6
@@ -127,6 +127,7 @@ zongyux								5
 miheng								8
 fengxi								7
 dengzhi								7
+xunchen								7
 duyu								1
 
 

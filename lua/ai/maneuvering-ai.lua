@@ -138,12 +138,12 @@ function sgs.ai_armor_value.Vine(player, self)
 	return 1
 end
 
-function SmartAI:shouldUseAnaleptic(target, card_use)--为何有马超兄弟对暗将带白银用酒杀的情况？？
+function SmartAI:shouldUseAnaleptic(target, card_use)
 	if self:evaluateKingdom(target) == "unknown" then return false end
 
-	if target:hasArmorEffect("SilverLion") and not self.player:hasWeapon("QinggangSword") then return false end
-	if target:hasArmorEffect("Breastplate") and target:getHp() <= 2 and not self.player:hasWeapon("QinggangSword") then
-		return false
+	if not IgnoreArmor(self.player, target) then
+		if target:hasArmorEffect("SilverLion") then return false end
+		if target:hasArmorEffect("Breastplate") and target:getHp() <= 2 then return false end
 	end
 
 	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
@@ -176,17 +176,28 @@ function SmartAI:shouldUseAnaleptic(target, card_use)--为何有马超兄弟对�
 	end
 
 	local hcard = target:getHandcardNum()
-	if self.player:hasSkill("liegong") and not (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then return false end
-
-	if self.player:hasWeapon("Axe") and self.player:getCards("he"):length() > 4 then return true end
-
+	if self.player:hasSkills("liegong|liegong_xh") and not (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then
+		return false
+	end
+	if self.player:hasWeapon("Axe") and self.player:getCards("he"):length() > 4 then
+		return true
+	end
 	if self.player:hasSkill("wushuang") then
 		if getKnownCard(target, player, "Jink", true, "he") >= 2 then return false end
 		return getCardsNum("Jink", target, self.player) < 2
 	end
-
-	if self.player:hasSkills(sgs.force_slash_skill) then return true end
-
+	if self.player:hasSkills("tieqi|tieqi_xh") then
+		return true
+	end
+	if self.player:hasShownSkill("jianchu") and (target:hasEquip() or target:getCardCount(true) == 1) then
+		return true
+	end
+	if target:getMark("#qianxi+no_suit_red") and not target:hasShownSkill("qingguo") then
+		return true
+	end
+	if self.player:hasWeapon("DragonPhoenix") and target:getCardCount(true) == 1 then
+		return true
+	end
 	if getKnownCard(target, self.player, "Jink", true, "he") >= 1 and not (self:getOverflow() > 0 and self:getCardsNum("Analeptic") > 1) then return false end
 	return self:getCardsNum("Analeptic") > 1 or getCardsNum("Jink", target, self.player) < 1 or sgs.card_lack[target:objectName()]["Jink"] == 1 or self:getOverflow() > 0
 end
@@ -567,6 +578,9 @@ sgs.ai_skill_cardask["@fire-attack"] = function(self, data, pattern, target)
 			end
 		end
 	end
+	if not card then
+		self.player:setTag("AI_FireAttack_NoSuit", sgs.QVariant(convert[pattern]))
+	end
 	return card and card:getId() or "."
 end
 
@@ -604,14 +618,15 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 		if self.player:hasFlag("FireAttackFailed_" .. enemy:objectName()) then
 			return false
 		end
+		--[[触发顺序有误
 		local damage = 1
 		if not enemy:hasArmorEffect("SilverLion") then
 			if enemy:hasArmorEffect("Vine") then damage = damage + 1 end
 		end
 		if enemy:hasShownSkill("mingshi") and not self.player:hasShownAllGenerals() then
 			damage = damage - 1
-		end
-		return self:objectiveLevel(enemy) > 3 and damage > 0 and not enemy:isKongcheng()
+		end]]
+		return self:objectiveLevel(enemy) > 3 and not enemy:isKongcheng()--and damage > 0
 				and self:damageIsEffective(enemy, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(enemy, self.player, damage)
 				and self:hasTrickEffective(fire_attack, enemy)
 				and sgs.isGoodTarget(enemy, self.enemies, self)
@@ -667,7 +682,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 	end
 
 	if ((suitnum == 2 and lack.diamond == false) or suitnum <= 1)
-		and self:getOverflow() <= (self.player:hasSkill("jizhi") and -2 or 0)
+		and self:getOverflow() <= ((self.player:hasSkill("jizhi") and not fire_attack:isVirtualCard()) and -2 or 0)
 		and #targets == 0 then return end
 
 	for _, enemy in ipairs(enemies) do
@@ -711,7 +726,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 	end
 end
 
-sgs.ai_cardshow.fire_attack = function(self, requestor)--展示上一次已知火攻失败的花色？（展示已知使用方没有的花色）
+sgs.ai_cardshow.fire_attack = function(self, requestor)
 	local cards = sgs.QList2Table(self.player:getHandcards())
 	self:sortByKeepValue(cards)
 	if requestor:objectName() == self.player:objectName() then
@@ -725,8 +740,29 @@ sgs.ai_cardshow.fire_attack = function(self, requestor)--展示上一次已知�
 			end
 		end
 	end
+	local nosuit = requestor:getTag("AI_FireAttack_NoSuit"):toString()
+	if nosuit ~= "" then--来源上一次火攻失败处理，过回合在filterEvent处理
+		requestor:removeTag("AI_FireAttack_NoSuit")
+		for _, card in ipairs(cards) do
+			if card:getSuitString() == nosuit  then
+				return card
+			end
+		end
+	end
 
+	local known_cards = {}
+	for _, c in sgs.qlist(requestor:getHandcards()) do
+		if sgs.cardIsVisible(c, requestor, self.player) then
+			table.insert(known_cards, c)
+		end
+	end
 	local priority = { heart = 4, spade = 3, club = 2, diamond = 1 }
+	if #known_cards > 0 then--已知花色处理
+		for _, c in ipairs(known_cards) do
+			priority[c:getSuitString()] = 0
+		end
+	end
+
 	local index = -1
 	local result
 	for _, card in ipairs(cards) do

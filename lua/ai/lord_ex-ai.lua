@@ -1748,7 +1748,7 @@ sgs.ai_skill_use_func.QingyinCard = function(card, use, self)
 end
 
 sgs.ai_card_intention.QingyinCard = -80
-sgs.ai_use_priority.QingyinCard = 0
+sgs.ai_use_priority.QingyinCard = 1--桃之前
 
 --朱灵
 sgs.ai_skill_invoke.juejue = function(self, data)--暂不考虑紫砂

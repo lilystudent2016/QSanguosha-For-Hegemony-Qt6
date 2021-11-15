@@ -26,6 +26,7 @@ qice_skill.getTurnUseCard = function(self)
 	if self.player:hasUsed("QiceCard") or self.player:isKongcheng() then return end
 	local handcardnum = self.player:getHandcardNum()
 	self.qicenum = {}
+	self.qice_to = nil
 
 	local cardsavailable = function(use_card, hcardnum)--增加手牌数方便判断吃桃
 		local target_num = 0
@@ -367,8 +368,9 @@ sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local userstring = card:toString()
 	userstring = (userstring:split(":"))[3]
 	local qicecard = sgs.Sanguosha:cloneCard(userstring, card:getSuit(), card:getNumber())
-	self:useTrickCard(qicecard, use)--确保锦囊能使用
+	self:useTrickCard(qicecard, use)--确保锦囊能使用？是否会直接使用了锦囊？？
 	if use.card then
+		global_room:writeToConsole("奇策卡使用")
 		use.card = card
 	end
 end
@@ -822,6 +824,7 @@ yigui_skill.getTurnUseCard = function(self)
 	"iron_chain","await_exhausted","amazing_grace","fight_together","lure_tiger","imperial_order",--几乎不会用到的群体锦囊
 	"collateral","known_both","fire_attack","threaten_emperor"}--几乎不会用到的单体锦囊
 
+	self.yigui_to = nil
 	local soul_name
 	local class_string
 	local str = "@YiguiCard=.&" .. ":"
@@ -873,6 +876,22 @@ yigui_skill.getTurnUseCard = function(self)
 			max_friend_kingom = key
 			f_num = value
 		end
+	end
+
+	local function getYiguiTargetByKingdom(kingdom, key, inverse)
+		kingdom = kingdom or "careerist"
+		key = key or "hp"
+		local targets = {}
+		for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+			if not p:isRemoved() and p:hasShownOneGeneral() and p:getKingdom() == kingdom then--非暗将和掉虎
+				table.insert(targets, p)
+			end
+		end
+		if #targets > 0 then
+			self:sort(targets, key, inverse)
+			return targets[1]
+		end
+		return nil
 	end
 
 	local function getYiguiAoeValue(AOE_name,kingdom,kingdom2)--甚至可以加上判断暗将桃园、五谷
@@ -949,10 +968,15 @@ yigui_skill.getTurnUseCard = function(self)
 				if not self.player:hasFlag("Yigui_AllianceFeast") and
 					((math.abs(kingdoms[double_kingdoms[1]]) >= self.player:getLostHp() and self.player:getLostHp() > 1)
 					or (kingdoms[double_kingdoms[1]] < 0 and self.player:isWounded())) then
-						soul_name = name
-						class_string = "alliance_feast"
-						global_room:writeToConsole("役鬼双势力联军")
-						return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+						local to = getYiguiTargetByKingdom(double_kingdoms[1], "handcard")
+						if to then
+							self.yigui_to = sgs.PlayerList()
+							self.yigui_to:append(to)
+							soul_name = name
+							class_string = "alliance_feast"
+							global_room:writeToConsole("役鬼双势力联军")
+							return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+						end
 				end
 			end
 		end
@@ -1022,6 +1046,7 @@ yigui_skill.getTurnUseCard = function(self)
 			if duel_t:getHp() == 1 and #yigui_kingdom[duel_t:getKingdom()] > 0 then
 				soul_name = yigui_kingdom[duel_t:getKingdom()][1]
 				class_string = "duel"
+				self.yigui_to = dummyuse.to
 				global_room:writeToConsole("役鬼决斗")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
@@ -1029,23 +1054,40 @@ yigui_skill.getTurnUseCard = function(self)
 	end
 	if not self.player:hasFlag("Yigui_BefriendAttacking") then
 		if max_friend_kingom and #yigui_kingdom[max_friend_kingom] > 0 and (self.player:getHandcardNum() < 3 or #yigui_kingdom[max_friend_kingom] > 1) then
-			soul_name = yigui_kingdom[max_friend_kingom][1]
-			class_string = "befriend_attacking"
-			global_room:writeToConsole("役鬼远交近攻1")
-			return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+			local to = getYiguiTargetByKingdom(max_friend_kingom, "handcard")
+			if to then
+				self.yigui_to = sgs.PlayerList()
+				self.yigui_to:append(to)
+				soul_name = yigui_kingdom[max_friend_kingom][1]
+				class_string = "befriend_attacking"
+				global_room:writeToConsole("役鬼远交近攻1")
+				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+			end
 		end
 		for key, value in pairs(kingdoms) do
 			if #yigui_kingdom[key] > 1 and value > 0 and key ~= max_enemy_kingdom then
-				soul_name = yigui_kingdom[key][1]
-				class_string = "befriend_attacking"
-				global_room:writeToConsole("役鬼远交近攻2")
-				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+				local to = getYiguiTargetByKingdom(key, "handcard")
+				if to then
+					self.yigui_to = sgs.PlayerList()
+					self.yigui_to:append(to)
+					soul_name = yigui_kingdom[key][1]
+					class_string = "befriend_attacking"
+					global_room:writeToConsole("役鬼远交近攻2")
+					return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+				end
 			end
+		end
+		for key, value in pairs(kingdoms) do
 			if #yigui_kingdom[key] > value and key == max_enemy_kingdom then
-				soul_name = yigui_kingdom[key][1]
-				class_string = "befriend_attacking"
-				global_room:writeToConsole("役鬼远交近攻3")
-				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+				local to = getYiguiTargetByKingdom(key, "handcard")
+				if to then
+					self.yigui_to = sgs.PlayerList()
+					self.yigui_to:append(to)
+					soul_name = yigui_kingdom[key][1]
+					class_string = "befriend_attacking"
+					global_room:writeToConsole("役鬼远交近攻3")
+					return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
+				end
 			end
 		end
 	end
@@ -1056,7 +1098,11 @@ yigui_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.YiguiCard = function(card, use, self)
-	use.card = card--部分锦囊需要手选目标，决斗、远交近攻等
+	use.card = card
+	if use.to and self.yigui_to then--部分锦囊需要手选目标，决斗、远交近攻等
+		use.to = sgs.PlayerList2SPlayerList(self.yigui_to)--P和SP的区别，需要targetFilter只能用sgs.PlayerList()
+		self.yigui_to = nil
+	end
 end
 
 sgs.ai_use_priority.YiguiCard = 2.8
@@ -1666,10 +1712,10 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 		end
 	end
 	local zhoutai = sgs.findPlayerByShownSkillName("buqu")
-	if zhoutai and self.player:hasSkills("keshou|hunshang") and self.player:getHp() == 1 then
+	if zhoutai and self.player:hasSkills("keshou|hunshang") and self:isWeak() then
 		return "no"
 	end
-	if HasBuquEffect(self.player) then
+	if self.player:inDeputySkills("buqu") and self.player:getPile("scars"):length() <= 4 then
 		return "no"
 	end
 
@@ -2329,7 +2375,7 @@ sgs.ai_skill_choice.transform = function(self, generals)
 		if self:isWeak() and (g2name == "pangtong" or g2name == "xushu" or g2name == "zhoutai" or g2name == "sunce" or g2name == "lukang") then
 			if sgs.general_value[g2name] and sgs.general_value[g2name] + 2 > singlevalue then
 				singlevalue = sgs.general_value[g2name] + 2
-				singlechoice = g2name--残血优先选庞统和周泰等
+				singlechoice = g2name--残血优先选庞统和周泰等，"zhoutai"和"xiaoqiao"本身就很高，是否去掉？
 			end
 		end
 		if sgs.general_value[g2name] and sgs.general_value[g2name] > singlevalue then
@@ -2337,7 +2383,7 @@ sgs.ai_skill_choice.transform = function(self, generals)
 			singlechoice = g2name
 		end
 	end
-	if pairchoice and sgs.general_value[g1name] and sgs.general_value[g1name] + singlevalue + 5 < pairvalue then
+	if pairchoice and sgs.general_value[g1name] and sgs.general_value[g1name] + singlevalue + 5 <= pairvalue then
 		choice = pairchoice--无法解决选将配对值不适合变将的情况，如荀攸+夏侯渊，和配对值为5的情况。只能单独去除
 	else
 		choice = singlechoice

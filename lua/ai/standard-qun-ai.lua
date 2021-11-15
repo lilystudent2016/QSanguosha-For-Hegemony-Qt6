@@ -196,7 +196,7 @@ sgs.ai_skill_invoke.wushuang = function(self, data)
 	local left_trigger = sgs.SPlayerList()
 	if use.to:length() > index + 1 then
 		for i = index, use.to:length() - 1, 1 do
-			left_trigger:append(use.to:at(i))
+			left_trigger:append(use.to:at(i))--会出现空值？
 		end
 	end
 

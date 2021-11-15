@@ -124,15 +124,14 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		end
 		if table.contains(skillnames, "yiji") then return "yiji" end
 		if table.contains(skillnames, "haoshi") then return "haoshi" end
-		if string.find(choices, "zisui") then--公孙渊摸牌，可能就配合和张辽会触发
-			return "zisui"
-		end
+		if string.find(choices, "zisui") then return "zisui" end--公孙渊摸牌，可能就配合和张辽会触发
+		if string.find(choices, "jieyue") then return "jieyue" end--节钺和五子良将
 
 		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到
 		or string.find(choices, "tieqi_xh") or string.find(choices, "liegong_xh")
-		or string.find(choices, "jianchu") then
-			global_room:writeToConsole("杀技能多目标选择:" .. skillnames[1])
-			return skillnames[1]--铁骑、烈弓多目标选择
+		or string.find(choices, "jianchu") or string.find(choices, "wushuang") then
+			global_room:writeToConsole("杀类技能多目标选择:" .. skillnames[1])
+			return skillnames[1]--杀类技能多目标选择
 		end
 
 		if string.find(choices, "keshou") and string.find(choices, "tianxiang") then--恪守、天香
@@ -141,21 +140,19 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 
 		local except = {}
 		for _, skillname in ipairs(skillnames) do
-			local invoke = self:askForSkillInvoke(skillname, data)
+			local invoke = self:askForSkillInvoke(skillname, data)--data和invoke的data不一致？？
 			if invoke == true then
 				return skillname
 			elseif invoke == false then
 				table.insert(except, skillname)
 			end
 		end
-		if string.find(choices, "cancel") and not canShowHead and not canShowDeputy and not self.player:hasShownOneGeneral() then
-			return "cancel"
-		end
 		table.removeTable(skillnames, except)
 
 		if #skillnames > 0 then return skillnames[math.random(1, #skillnames)] end
 	end
 
+	skillnames = choices:split("+")
 	global_room:writeToConsole("多技能触发选择:" .. choices)
 	return skillnames[math.random(1, #skillnames)]
 end
@@ -655,11 +652,9 @@ sgs.ai_skill_use_func.CompanionCard= function(card, use, self)
 		use.card = sgs.Card_Parse(card_str)
 		return
 	end
-	return
-
 --暂不考虑摸牌
---[[如何获取当前或上一张杀的目标？canHit?
-	情况1：能出杀，敌方目标血量为1且无闪或手牌小于等于2
+--[[如何获取当前或上一张杀的目标？可参考野心家标记补牌
+	情况1：能出杀，预测杀目标血量为1且无闪或手牌小于等于2
 	情况2：敌方目标血量为1且自身或团队状态良好，有桃
 ]]--
 end
@@ -692,7 +687,25 @@ sgs.ai_skill_choice.halfmaxhp = function(self, choices)
 	end
 	return "no"
 end
---暂不考虑摸牌
+
+local halfmaxhp_skill = {}
+halfmaxhp_skill.name = "halfmaxhp"
+table.insert(sgs.ai_skills, halfmaxhp_skill)
+halfmaxhp_skill.getTurnUseCard = function(self, inclusive)
+	if self.player:getMark("@halfmaxhp") < 1 then return end
+	return sgs.Card_Parse("@HalfMaxHpCard=.&")
+end
+
+sgs.ai_skill_use_func.HalfMaxHpCard= function(card, use, self)
+	--global_room:writeToConsole("阴阳鱼摸牌判断开始")
+	if self.player:isKongcheng() and self:isWeak() and not self:needKongcheng() then
+		use.card = card
+		return
+	end
+	--暂不考虑找进攻牌
+end
+
+sgs.ai_use_priority.HalfMaxHpCard = 0
 
 --先驱标记
 local firstshow_skill = {}
@@ -704,7 +717,7 @@ firstshow_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
-	sgs.ai_use_priority.CompanionCard = 0.1--挟天子之前
+	sgs.ai_use_priority.FirstShowCard = 0.1--挟天子之前
 	--global_room:writeToConsole("先驱判断开始")
 	if self.player:getHandcardNum() <= 1 and self:slashIsAvailable() then
 		for _,c in sgs.qlist(self.player:getHandcards()) do
@@ -722,7 +735,7 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 				return--先用光牌
 			end
 		end
-		sgs.ai_use_priority.CompanionCard = 2.4--杀之后
+		sgs.ai_use_priority.FirstShowCard = 2.4--杀之后
 		use.card = card
 		return
 	end
@@ -749,7 +762,7 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 				return--先用光牌
 			end
 		end
-		sgs.ai_use_priority.CompanionCard = 1--桃之前
+		sgs.ai_use_priority.FirstShowCard = 0.9--桃之后
 		use.card = card
 		return
 	end
@@ -792,28 +805,41 @@ sgs.ai_skill_use_func.CareermanCard= function(card, use, self)
 		return
 	end
 	if self.player:getHandcardNum() <= 1 and self:slashIsAvailable() then
-		for _,c in sgs.qlist(self.player:getHandcards()) do
-			local dummy_use = {
-				isDummy = true,
-			}
-			if c:isKindOf("BasicCard") then
-				self:useBasicCard(c, dummy_use)
-			elseif c:isKindOf("EquipCard") then
-				self:useEquipCard(c, dummy_use)
-			elseif c:isKindOf("TrickCard") then
-				self:useTrickCard(c, dummy_use)
-			end
-			if dummy_use.card then
-				return--先用光牌
+		local should_draw = false
+		local dummy_slash = { isDummy = true, to = sgs.SPlayerList() }
+		local slash = sgs.cloneCard("slash")
+		self:useCardSlash(slash, dummy_slash)
+		if use.card and use.to then
+			for _, p in sgs.qlist(use.to) do
+				if p:getHp() == 1 and self:isWeak(p) and sgs.getDefenseSlash(p, self) < 2 then
+					should_draw = true
+					break
+				end
 			end
 		end
-		sgs.ai_use_priority.CareermanCard = 2.4--杀之后
-		--global_room:writeToConsole("野心家标记补牌")
-		self.careerman_case = 4
-		use.card = card
-		return
+		if should_draw then
+				for _,c in sgs.qlist(self.player:getHandcards()) do
+				local dummy_use = {
+					isDummy = true,
+				}
+				if c:isKindOf("BasicCard") then
+					self:useBasicCard(c, dummy_use)
+				elseif c:isKindOf("EquipCard") then
+					self:useEquipCard(c, dummy_use)
+				elseif c:isKindOf("TrickCard") then
+					self:useTrickCard(c, dummy_use)
+				end
+				if dummy_use.card then
+					return--先用光牌
+				end
+			end
+			sgs.ai_use_priority.CareermanCard = 2.4--杀之后
+			--global_room:writeToConsole("野心家标记补牌")
+			self.careerman_case = 4
+			use.card = card
+			return
+		end
 	end
-	return
 	--暂时不考虑摸2牌
 end
 

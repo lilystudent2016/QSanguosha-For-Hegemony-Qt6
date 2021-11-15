@@ -280,16 +280,23 @@ sgs.ai_skill_use_func.JingheCard = function(card, use, self)
 end
 
 sgs.ai_card_intention.JingheCard = -90
-sgs.ai_use_priority.JingheCard = 9.21--远交近攻和无中生有之后
+sgs.ai_use_priority.JingheCard = 9.23--远交近攻和无中生有之后，更详细的判断？如配合敕令
 
 sgs.ai_skill_choice.jinghe_skill = function(self, choices, data)--有一个data存选技能的目标信息就好了
 	--"leiji_tianshu+yinbing+huoqi+guizhu+xianshou+lundao+guanyue+yanzheng+cancel"
 	global_room:writeToConsole("共修选择"..self.player:objectName()..":"..choices)
-	local targets = self.friends_noself
+	local current = self.room:getCurrent()
+	local objnames = current:getTag("JingheTargets"):toString():split("+")
+	local targets = {}
+	for _, friend in ipairs(self.friends_noself) do
+		if table.contains(objnames, friend:objectName()) then--判断已获得技能？
+			table.insert(targets, friend)
+		end
+	end
+
 	choices = choices:split("+")
 	table.removeOne(choices, "cancel")
 	if table.contains(choices, "yanzheng") then
-		local current = self.room:getCurrent()
 		if self.player:objectName() == current:objectName() and #choices > 1 then
 			table.removeOne(choices, "yanzheng")
 		end
@@ -532,6 +539,9 @@ end
 
 --言政
 sgs.ai_skill_exchange.yanzheng = function(self,pattern,max_num,min_num,expand_pile)
+	if self.player:isKongcheng() then
+		return {}
+	end
 	local can_yanzheng = false
 	local valuable_num = 0
 	local enemy_weak = 0
@@ -568,7 +578,7 @@ sgs.ai_skill_exchange.yanzheng = function(self,pattern,max_num,min_num,expand_pi
 		end
 	end
 	if can_yanzheng then
-		return {cards[1]:getEffectiveId()}
+		return {cards[1]:getEffectiveId()}--保留值最大的一张
 	end
 	return {}
 end

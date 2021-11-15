@@ -102,7 +102,7 @@ sgs.ai_skill_invoke.zhente = function(self, data)
   local target = data:toPlayer()
   local use = self.player:getTag("ZhenteUsedata"):toCardUse()
   local card = use.card
-  if self:isFriend(target) then
+  if target and self:isFriend(target) then
     if (card:isKindOf("IronChain") or card:isKindOf("FightTogether") or card:isKindOf("FireAttack") or card:isKindOf("NatureSlash"))
       and not self.player:isChained() then
         return true
@@ -144,7 +144,7 @@ end
 
 sgs.ai_skill_playerchosen.zhiwei = function(self, targets)
   local current = self.room:getCurrent()
-  if current:objectName() ~= self.player:objectName() and current:hasShownSkills("luanji|yigui") and current:getHandcardNum() > 3 then
+  if current:objectName() ~= self.player:objectName() and current:hasShownSkills("luanji|yigui") and current:getHandcardNum() > 2 then
     return current
   end
   targets = sgs.QList2Table(targets)
@@ -180,10 +180,10 @@ sgs.ai_skill_invoke.qiao =  function(self, data)
   local card = use.card
   if self.player:getHandcardNum() ==1 then
     if (card:isKindOf("Slash") and (self:hasHeavySlashDamage(use.from, card, self.player) or self:isWeak())
-      or card:isKindOf("ArcheryAttack")) and self:getCardsNum("Jink") == 1 then
+      or card:isKindOf("ArcheryAttack")) and self:getCardsNum("Jink","h") == 1 then
       return false
     end
-    if (card:isKindOf("SavageAssault") or card:isKindOf("Duel")) and self:isWeak() and self:getCardsNum("Slash") == 1 then
+    if (card:isKindOf("SavageAssault") or card:isKindOf("Duel")) and self:isWeak() and self:getCardsNum("Slash","h") == 1 then
       return false
     end
   end
@@ -209,7 +209,7 @@ sgs.ai_skill_invoke.shejian =  function(self, data)
   end
   local use = self.player:getTag("ShejianUsedata"):toCardUse()
   local card = use.card
-  if card:isKindOf("Slash") and self:hasHeavySlashDamage(use.from, card, self.player) and self:getCardsNum("Jink") > 0 then
+  if card:isKindOf("Slash") and self:hasHeavySlashDamage(use.from, card, self.player) and self:getCardsNum("Jink","h") > 0 then
     return false
   end
   if (self.player:getHandcardNum() < 3 and self:getCardsNum("Peach","h") == 0)
@@ -479,3 +479,152 @@ sgs.ai_skill_use_func.WeimengZonghengCard = function(card, use, self)
 end
 
 sgs.ai_use_priority.WeimengZonghengCard = 5
+
+--荀谌
+local fenglve_skill = {}
+fenglve_skill.name = "fenglve"
+table.insert(sgs.ai_skills, fenglve_skill)
+fenglve_skill.getTurnUseCard = function(self)
+	if self:willShowForAttack() and not self.player:hasUsed("FenglveCard") and not self.player:isKongcheng() then return sgs.Card_Parse("@FenglveCard=.&fenglve") end
+end
+
+sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
+	if #self.enemies == 0 then return end
+  sgs.ai_use_priority.FenglveCard = 0.5
+	local max_card = self:getMaxCard()
+	local max_point = max_card:getNumber()
+	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
+
+  local notlose = self:getOverflow() > 1
+  if self.player:getCardCount(true) < (self:needToThrowArmor() and 2 or 1) and not self:isValuableCard(max_card) then
+    notlose = true
+  end
+	self:sort(self.enemies, "handcard")
+	for _, enemy in ipairs(self.enemies) do
+		if not enemy:isKongcheng() and enemy:getCardCount(true) > 2 then
+			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_number = enemy_max_card and enemy_max_card:getNumber() or 0
+			if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_number = math.min(enemy_number + 3, 13) end
+			local allknown = false
+			if self:getKnownNum(enemy) == enemy:getHandcardNum() then
+				allknown = true
+			end
+			if (not enemy_max_card and (max_point > 11)) or notlose
+				or (enemy_max_card and max_point > enemy_number and not allknown and max_point > 10)
+				or (enemy_max_card and max_point > enemy_number and allknown) then
+          if notlose or (enemy_max_card and max_point > enemy_number and allknown) then
+            sgs.ai_use_priority.FenglveCard = 5
+          end
+					self.fenglve_card = max_card:getEffectiveId()
+					use.card = FLCard
+					if use.to then
+            use.to:append(enemy)
+            return
+          end
+			end
+		end
+	end
+end
+
+function sgs.ai_skill_pindian.fenglve(minusecard, self, requestor)
+  local max_card = self:getMaxCard()
+  if not self:isFriend(requestor) and self.player:getCardCount(true) < 5 then
+    local max_point = max_card:getNumber()
+    for _, card in sgs.qlist(self.player:getHandcards()) do
+			local point = card:getNumber()
+			if point > max_point then
+				max_point = point
+				max_card = card
+			end
+		end
+  end
+	return max_card
+end
+
+sgs.ai_cardneed.fenglve = sgs.ai_cardneed.bignumber
+
+sgs.ai_skill_invoke.anchao =  function(self, data)
+  if not self:willShowForAttack() then
+    return false
+  end
+  local target = data:toPlayer()
+  if not target or (self:isFriend(target) and not target:isChained()) then
+    return false
+  end
+  local damageStruct = self.player:getTag("AnchaoDamagedata"):toDamage()
+  if not self:damageIsEffective_(damageStruct) then
+    return false
+  end
+  local card = damageStruct.card
+  local original_num = damageStruct.damage
+
+  local function damageCount(tp,num)
+    local n = num
+    if tp:hasShownSkill("mingshi") and not self.player:hasShownAllGenerals() then
+      n = n - 1
+    end
+    if tp:getMark("#xiongnve_avoid") > 0 then
+      n = n - 1
+    end
+    if damageStruct.nature == sgs.DamageStruct_Fire
+    and (tp:hasArmorEffect("Vine") or self.player:hasSkill("xinghuo")) then
+      n = n + 1
+    end
+    local gongqing_avoid = false
+    if tp:hasShownSkill("gongqing") then
+      if self.player:getAttackRange() < 3 then
+        gongqing_avoid = true
+      end
+      if self.player:getAttackRange() > 3 then
+        n = n + 1
+      end
+    end
+    if (tp:hasArmorEffect("SilverLion") and (not card or not card:isKindOf("Slash") or not IgnoreArmor(self.player, tp)))
+    or gongqing_avoid then
+      n = 1
+    else
+      n = n * 2
+    end
+    return n
+  end
+
+  local allshown_invoke = target:hasShownAllGenerals() and (self.player:getHp() > 1 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic")) > 0)
+  local oneshown_invoke = target:hasShownOneGeneral() and (self.player:getHandcardNum() <= 2 or self:getOverflow() > 1 or self.player:hasSkill("lirang"))
+  local chained_invoke = false
+
+  if target:isChained() and damageStruct.nature ~= sgs.DamageStruct_Normal then
+    local tDamageNum = damageCount(target ,original_num)
+    local enemy_dnum = self:isEnemy(target) and tDamageNum or 0
+    local friend_dnum = self:isFriend(target) and tDamageNum or 0
+    local neutrality_dum = (not self:isFriend(target) and not self:isEnemy(target)) and tDamageNum or 0
+
+    for _, p in sgs.qlist(self.room:getOtherPlayers(target)) do
+      if p:isChained() then
+        damageStruct.to = p
+        if self.player:hasSkill("xinghuo") and damageStruct.nature == sgs.DamageStruct_Fire then--xinghuo是预置加伤可连续传导
+          tDamageNum = tDamageNum + 1
+        end
+        damageStruct.damage = tDamageNum
+        if self:damageIsEffective_(damageStruct) then
+          local damage_num = damageCount(p, tDamageNum)--考虑初次传导伤害
+          if self:isEnemy(p) then
+            enemy_dnum = enemy_dnum + damage_num
+          elseif self:isFriend(p) then
+            friend_dnum = friend_dnum + damage_num
+          else
+            neutrality_dum = neutrality_dum + damage_num
+          end
+        end
+      end
+    end
+    if enemy_dnum > 3 and enemy_dnum + neutrality_dum > friend_dnum then
+      chained_invoke = true
+    end
+  end
+
+  if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral())
+  or (self:isEnemy(target) and (self:isWeak(target) or oneshown_invoke or (damageCount(target ,original_num) > 2 and allshown_invoke))) then
+    return true
+  end
+	return false
+end

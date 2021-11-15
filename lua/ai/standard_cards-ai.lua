@@ -106,7 +106,7 @@ function sgs.getDefenseSlash(player, self)
 
 	if attacker:canSlashWithoutCrossbow() and attacker:getPhase() == sgs.Player_Play then
 		local hcard = player:getHandcardNum()
-		if attacker:hasShownSkill("liegong") and (hcard >= attacker:getHp() or hcard <= attacker:getAttackRange()) then defense = 0 end
+		if attacker:hasShownSkills("liegong|liegong_xh") and (hcard >= attacker:getHp() or hcard <= attacker:getAttackRange()) then defense = 0 end
 	end
 
 	local niaoxiang_BA = false
@@ -467,7 +467,7 @@ function SmartAI:useCardSlash(card, use)
 	cards = sgs.QList2Table(cards)
 	local no_distance = sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_DistanceLimit, self.player, card) > 50
 						or self.player:hasFlag("slashNoDistanceLimit") or self:hasWenjiBuff(card)
-	self.slash_targets = 1 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_ExtraTarget, self.player, card)
+	local slash_tgnum = 1 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_ExtraTarget, self.player, card)
 	local rangefix = 0
 	if card:isVirtualCard() then
 		if self.player:getWeapon() and card:getSubcards():contains(self.player:getWeapon():getEffectiveId()) then
@@ -506,7 +506,8 @@ function SmartAI:useCardSlash(card, use)
 				if use.to and canAppendTarget(friend) then
 					use.to:append(friend)
 				end
-				if not use.to or self.slash_targets <= use.to:length() then	return
+				if not use.to or slash_tgnum <= use.to:length() then
+					return
 				end
 			end
 		end
@@ -603,7 +604,7 @@ function SmartAI:useCardSlash(card, use)
 			if use.to and canAppendTarget(target) then
 				use.to:append(target)
 			end
-			if not use.to or self.slash_targets <= use.to:length() then
+			if not use.to or slash_tgnum <= use.to:length() then
 				return
 			end
 		end
@@ -615,7 +616,7 @@ function SmartAI:useCardSlash(card, use)
 				if use.to and canAppendTarget(target) then
 					use.to:append(target)
 				end
-				if not use.to or self.slash_targets <= use.to:length() then
+				if not use.to or slash_tgnum <= use.to:length() then
 					return
 				end
 			end
@@ -624,7 +625,7 @@ function SmartAI:useCardSlash(card, use)
 			if use.to and canAppendTarget(target) then
 				use.to:append(target)
 			end
-			if not use.to or self.slash_targets <= use.to:length() then
+			if not use.to or slash_tgnum <= use.to:length() then
 				return
 			end
 		end
@@ -636,7 +637,7 @@ function SmartAI:useCardSlash(card, use)
 				if use.to and canAppendTarget(target) then
 					use.to:append(target)
 				end
-				if not use.to or self.slash_targets <= use.to:length() then
+				if not use.to or slash_tgnum <= use.to:length() then
 					return
 				end
 			end
@@ -645,7 +646,7 @@ function SmartAI:useCardSlash(card, use)
 			if use.to and canAppendTarget(target) then
 				use.to:append(target)
 			end
-			if not use.to or self.slash_targets <= use.to:length() then
+			if not use.to or slash_tgnum <= use.to:length() then
 				return
 			end
 		end
@@ -659,7 +660,7 @@ function SmartAI:useCardSlash(card, use)
 				or (use.isDummy and self.predictedRange and self.player:distanceTo(friend, rangefix) <= self.predictedRange)) then
 			use.card = card
 			if use.to and canAppendTarget(friend) then use.to:append(friend) end
-			if not use.to or self.slash_targets <= use.to:length() then
+			if not use.to or slash_tgnum <= use.to:length() then
 				return
 			end
 		end

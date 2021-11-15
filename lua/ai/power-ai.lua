@@ -151,26 +151,35 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
 	self:sortByUseValue(handcards,true)
 	local card = handcards[1]
   local visibleflag--记录给出的手牌，盗书等技能需要
-  if card:isKindOf("Peach") then
-    if self:isWeak() then
-      return "."
-    end
-    self:sort(self.friends_noself, "hp")
-    for _, friend in ipairs(self.friends_noself) do
-      if friend:getKingdom() ~= "wei" then--还可以细化条件
-        visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), friend:objectName())
-        if not card:hasFlag("visible") then card:setFlags(visibleflag) end
-        return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. friend:objectName()
-      end
-    end
+  if card:isKindOf("Peach") and self:isWeak() then
     return "."
   end
-	self:sort(self.enemies, "defense")--还可以细化条件
-  for _, target in ipairs(self.enemies) do
-    if target:getSeemingKingdom() ~= "wei" then--还可以细化条件
-      visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), target:objectName())
+  local targets = {}
+  for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+		if p:getSeemingKingdom() ~= "wei" then
+			table.insert(targets, p)
+		end
+	end
+  if #targets == 0 then
+    return "."
+  end
+  self:sort(targets, "handcard")
+  for _, p in ipairs(targets) do
+    if self:isFriend(p) then
+      visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), p:objectName())
       if not card:hasFlag("visible") then card:setFlags(visibleflag) end
-      return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. target:objectName()
+        return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. p:objectName()
+    end
+  end
+  if card:isKindOf("Peach") then
+    return "."
+  end
+	self:sort(targets, "defense", true)
+  for _, p in ipairs(targets) do
+    if not self:isFriend(p) then
+      visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), p:objectName())
+      if not card:hasFlag("visible") then card:setFlags(visibleflag) end
+      return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. p:objectName()
     end
   end
   return "."
@@ -1169,7 +1178,7 @@ sgs.ai_skill_choice.zhuwei = function(self, choices, data)
   end
 end
 
-sgs.ai_slash_prohibit.zhuwei = sgs.ai_slash_prohibit.tiandu
+sgs.ai_slash_prohibit.zhuwei = sgs.ai_slash_prohibit.tiandu--考虑天香配合？
 
 --张绣
 sgs.ai_skill_playerchosen.fudi_damage = sgs.ai_skill_playerchosen.damage
@@ -1349,7 +1358,7 @@ end
 sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 	--global_room:writeToConsole("使用挥鞭")
   local can_huibian = false
-  local maixueskills = {"yiji","fangzhu","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能详细选择有空再写
+  local maixueskills = {"yiji","fangzhu","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能详细配合?
   local drawcard_target, recover_target
   local targets = {}
   self:sort(self.friends, "hp")--从小到大排序
@@ -1375,7 +1384,11 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
     table.insert(maixueskills,"jieming")--放到最后
   end
 
-  for _, p in ipairs(targets) do--还可以细化条件，如大家都是虚弱但队友有卖血技能等
+  if self.player:getHp() == 1 and self:isWeak() then--保君主
+    recover_target = self.player
+    table.removeOne(targets, self.player)
+  end
+  for _, p in ipairs(targets) do
     if self:isWeak(p) and not recover_target and p:hasShownSkills(sgs.priority_skill) then--先回复重要队友
       recover_target = p
       table.removeOne(targets,p)
@@ -1406,7 +1419,7 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
   for _, skill in ipairs(maixueskills) do--还可以细化条件，如队友被乐等
     for _, p in ipairs(targets) do
       if p:hasShownSkill(skill) and not drawcard_target and not self:willSkipPlayPhase(p)
-      and (p:getHp() > 1  or (self:getAllPeachNum() +  getKnownCard(p, self.player, "Analeptic", true, "he") > 1)) then
+      and (p:getHp() > (targets[#targets]:getHp() > 3 and 2 or 1) or (self:getAllPeachNum() +  getKnownCard(p, self.player, "Analeptic", true, "he") > 1)) then
         drawcard_target = p
         table.removeOne(targets,p)
       end
@@ -1436,7 +1449,7 @@ sgs.ai_use_priority.HuibianCard = 5--优先度多少合适？
 sgs.ai_skill_invoke.zongyu = true
 
 --五子良将纛
-sgs.ai_skill_cardask["@elitegeneralflag"] = function(self)
+sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target, target2)
 
 
 

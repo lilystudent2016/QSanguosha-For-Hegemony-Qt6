@@ -715,7 +715,7 @@ function sgs.gameProcess(update)
 					end
 				end
 				for j = #kingdoms, i+1, -1 do
-					if value[kingdoms[j]] > 0 and value[kingdoms[i]] > value[kingdoms[j]] * 3 then
+					if value[kingdoms[j]] > 0 and value[kingdoms[i]] > value[kingdoms[j]] * 3.5 then
 						process = process .. ">"
 						break
 					end
@@ -1723,6 +1723,9 @@ function SmartAI:adjustUsePriority(card, v)
 	if noresponselist and #noresponselist > 0 then
 		v = v + 0.25
 	end
+	if self:hasWenjiBuff(card) then--类似的求安卡？
+		v = v - 0.4
+	end
 
 	if self.player:getHandPile():contains(card:getEffectiveId()) then
 		v = v + 0.1
@@ -1804,10 +1807,6 @@ function SmartAI:getDynamicUsePriority(card)
 	elseif card:isKindOf("WendaoCard") and self.player:hasShownSkills("wendao+hongfa") and not self.player:getPile("heavenly_army"):isEmpty()
 		and self.player:getArmor() and self.player:getArmor():objectName() == "PeaceSpell" then
 		value = value + 8
-	end
-
-	if self:hasWenjiBuff(card) then
-		value = value - 0.4
 	end
 
 	return value
@@ -2534,6 +2533,10 @@ function SmartAI:filterEvent(event, player, data)
 		end
 	elseif event == sgs.EventPhaseEnd and player:getPhase() == sgs.Player_Player then
 		player:setFlags("AI_Playing")
+		if player:getTag("AI_FireAttack_NoSuit"):toString() ~= "" then--火攻失败标记处理
+			global_room:writeToConsole("回合结束火攻失败标记去除")
+			player:removeTag("AI_FireAttack_NoSuit")
+		end
 	elseif event == sgs.EventPhaseStart then
 		if player:getPhase() == sgs.Player_RoundStart then
 			if not sgs.ai_setSkillsPreshowed then
@@ -3879,6 +3882,14 @@ sgs.ai_skill_playerchosen.damage = function(self, targets)
 			table.insert(targetlist, p)
 		end
 	end
+	if #targetlist == 0 then
+		for _, p in sgs.qlist(targets) do
+			if not self:isFriend(p) then return p end
+		end
+		for _, p in sgs.qlist(targets) do
+			if not self:isFriendWith(p) then return p end
+		end
+	end
 	self:sort(targetlist, "hp")
 	for _, target in ipairs(targetlist) do
 		if self:isEnemy(target) then return target end
@@ -3889,7 +3900,6 @@ sgs.ai_skill_playerchosen.damage = function(self, targets)
 	for _, target in ipairs(targetlist) do
 		if not self:isFriendWith(target) then return target end
 	end
-	return targetlist[#targetlist]
 end
 
 function SmartAI:askForPlayersChosen(targets, reason, max_num, min_num)
@@ -4422,6 +4432,8 @@ function SmartAI:getMaxCard(player, cards, observer)
 	end
 
 	cards = cards or player:getHandcards()
+	observer = observer or self.player
+
 	local max_card, max_point = nil, 0
 	for _, card in sgs.qlist(cards) do
 		if (player:objectName() == self.player:objectName() and not self:isValuableCard(card)) or sgs.cardIsVisible(card, player, observer) then
