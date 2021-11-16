@@ -81,6 +81,10 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 	end
 
 	if skillTrigger then
+		if string.find(choices, "keshou") and string.find(choices, "tianxiang") then--恪守、天香
+			return "keshou"
+		end
+
 		if string.find(choices, "shicai") then--卖血技能先恃才弃牌
 			local damage = data:toDamage()
 			if damage.damage > 1 then
@@ -112,9 +116,8 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		end
 		if table.contains(skillnames, "fankui") and table.contains(skillnames, "ganglie") then return "fankui" end
 		if string.find(choices, "wangxi") and table.contains(skillnames, "ganglie") then return "wangxi" end
-		if string.find(choices, "luoshen") and string.find(choices, "guanxing") then return "guanxing" end
 		if string.find(choices, "wangxi") and string.find(choices, "fangzhu") then return "fangzhu" end
-		if string.find(choices, "qianxi") and sgs.ai_skill_invoke.qianxi(sgs.ais[self.player:objectName()]) then return "qianxi" end
+		if table.contains(skillnames, "yiji") then return "yiji" end
 
 		if table.contains(skillnames, "tiandu") then
 			local judge = data:toJudge()
@@ -122,10 +125,16 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 				return "tiandu"
 			end
 		end
-		if table.contains(skillnames, "yiji") then return "yiji" end
+
+		if string.find(choices, "luoshen") and string.find(choices, "guanxing") then return "guanxing" end
+		if string.find(choices, "qianxi") and sgs.ai_skill_invoke.qianxi(sgs.ais[self.player:objectName()]) then return "qianxi" end
+		if string.find(choices, "luoshen") then return "luoshen" end--洛神
+		if string.find(choices, "jieyue") then return "jieyue" end--节钺
+		if string.find(choices, "elitegeneralflag") then return "elitegeneralflag" end--五子良将纛可以暗求安函放掉血
+
+		if string.find(choices, "wuxin") then return "wuxin" end--悟心
 		if table.contains(skillnames, "haoshi") then return "haoshi" end
 		if string.find(choices, "zisui") then return "zisui" end--公孙渊摸牌，可能就配合和张辽会触发
-		if string.find(choices, "jieyue") then return "jieyue" end--节钺和五子良将
 
 		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到
 		or string.find(choices, "tieqi_xh") or string.find(choices, "liegong_xh")
@@ -134,9 +143,6 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			return skillnames[1]--杀类技能多目标选择
 		end
 
-		if string.find(choices, "keshou") and string.find(choices, "tianxiang") then--恪守、天香
-			return "keshou"
-		end
 
 		local except = {}
 		for _, skillname in ipairs(skillnames) do

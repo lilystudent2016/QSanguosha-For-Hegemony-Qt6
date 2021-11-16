@@ -197,7 +197,7 @@ sgs.ai_skill_invoke.ganglie = function(self, data)
 		local zhangjiao = sgs.findPlayerByShownSkillName("guidao")
 		return zhangjiao and self:isFriend(zhangjiao) and not zhangjiao:isNude()
 	end
---[[	
+--[[
 	if self:getDamagedEffects(damage.from, self.player) then
 		if self:isFriend(damage.from) then
 			return true
@@ -221,7 +221,7 @@ function ganglie_discard(self, discard_num, min_num, optional, include_equip, sk
 	local xiahou = sgs.findPlayerByShownSkillName(skillName)
 	if xiahou and (not self:damageIsEffective(self.player, sgs.DamageStruct_Normal, xiahou) or self:getDamagedEffects(self.player, xiahou)) then return {} end
 	if xiahou and self:needToLoseHp(self.player, xiahou) then return {} end
-	local to_discard = {} --copy from V2 
+	local to_discard = {} --copy from V2
 	local cards = sgs.QList2Table(self.player:getHandcards())
 	local index = 0
 	local all_peaches = 0
@@ -282,7 +282,7 @@ function SmartAI:findTuxiTarget()
 	local dengai = sgs.findPlayerByShownSkillName("tuntian")
 
 	local draw_num = 2--新突袭
-	if self.player:hasSkill("jieyue") then
+	if self.player:hasSkills("jieyue|jieyue_egf") then
 		draw_num = draw_num + math.random(0, self.player:getMark("JieyueExtraDraw")*3)
 		--global_room:writeToConsole("抽卡数:"..draw_num.."|"..self.player:getMark("JieyueExtraDraw")*3)
 	end
@@ -605,7 +605,7 @@ sgs.ai_skill_use["@@shensu1"] = function(self, prompt)
 	self.player:setFlags("slashNoDistanceLimit")
 	self:useBasicCard(slash, dummy_use)
 	self.player:setFlags("-slashNoDistanceLimit")
-	
+
 	if dummy_use.card and not dummy_use.to:isEmpty() then
 		for _, enemy in sgs.qlist(dummy_use.to) do
 			if self:isEnemy(enemy) and sgs.getDefenseSlash(enemy, self) < 3 then
@@ -782,7 +782,7 @@ function SmartAI:moveField(player, flag, froms, tos)
 	tos = tos or self.room:getAlivePlayers()
 	flag = flag or "ej"
 	--optional = optional or false
-	
+
 	if type(froms) == "table" then
 		local players = sgs.SPlayerList()
 		for _, p in ipairs(froms) do
@@ -797,7 +797,7 @@ function SmartAI:moveField(player, flag, froms, tos)
 		end
 		tos = players
 	end
-	
+
 	local from_friends, from_enemies, to_friends, to_enemies = {}, {}, {}, {}
 	for _, p in sgs.qlist(froms) do
 		if self:isFriend(p) then
@@ -813,17 +813,17 @@ function SmartAI:moveField(player, flag, froms, tos)
 			table.insert(to_enemies, p)
 		end
 	end
-	
+
 	local from_friends_noself = {}
 	for _, p in ipairs(from_friends) do
 		if p:objectName() == player:objectName() then continue end
 		table.insert(from_friends_noself, p)
 	end
-	
+
 	self:sort(from_enemies, "defense")
 	self:sort(from_friends, "defense")
 	self:sort(from_friends_noself, "defense")
-	
+
 	if flag:match("j") then
 		for _, friend in ipairs(from_friends) do
 			if not friend:getCards("j"):isEmpty() and not friend:containsTrick("YanxiaoCard") and card_for_qiaobian(self, friend, ".", flag, to_friends, to_enemies) then
@@ -836,7 +836,7 @@ function SmartAI:moveField(player, flag, froms, tos)
 			end
 		end
 	end
-	
+
 	if flag:match("e") then
 		for _, friend in ipairs(from_friends_noself) do
 			if not friend:getCards("e"):isEmpty() and self:hasSkills(sgs.lose_equip_skill, friend) and card_for_qiaobian(self, friend, ".", flag, to_friends, to_enemies) then
@@ -973,7 +973,7 @@ sgs.ai_skill_discard.qiaobian = function(self, discard_num, min_num, optional, i
 	self:sortByKeepValue(cards)
 	local stealer
 	for _, ap in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-		if ap:hasShownSkill("tuxi") and self:isEnemy(ap) then stealer = ap end
+		if ap:hasShownSkills("tuxi|tuxi_egf") and self:isEnemy(ap) then stealer = ap end
 	end
 	local card
 	for i = 1, #cards, 1 do
@@ -1022,9 +1022,9 @@ sgs.ai_skill_discard.qiaobian = function(self, discard_num, min_num, optional, i
 				end
 			end
 		end
-	elseif current_phase == sgs.Player_Draw and not self.player:isSkipped(sgs.Player_Draw) and not self.player:hasShownSkill("tuxi") then
+	elseif current_phase == sgs.Player_Draw and not self.player:isSkipped(sgs.Player_Draw) and not self.player:hasShownSkills("tuxi|tuxi_egf") then
 		if self.player:getTreasure() and self.player:getTreasure():isKindOf("JadeSeal") then return {} end
-		if self.player:hasSkill("jieyue") then return {} end--新增配合于禁
+		if self.player:hasSkills("jieyue|jieyue_egf") and self.player:getMark("JieyueExtraDraw") > 0 then return {} end--新增配合于禁
 		self.qiaobian_draw_targets = {}
 		local targets = self:findTuxiTarget()
 		if type(targets) == "table" and #targets == 2 then
@@ -1145,8 +1145,10 @@ local duanliang_skill = {}
 duanliang_skill.name = "duanliang"
 table.insert(sgs.ai_skills, duanliang_skill)
 duanliang_skill.getTurnUseCard = function(self)
-
 	if not self:willShowForAttack() then
+		return nil
+	end
+	if self.player:hasFlag("DuanliangCannot") then
 		return nil
 	end
 
@@ -1192,9 +1194,9 @@ function sgs.ai_skill_invoke.jushou(self, data)
 	if not self.player:faceUp() then return true end
 	if not self:willShowForDefence() then return false end
 	local to_count = sgs.SPlayerList()
-	
+
 	local all_players = self.room:getAlivePlayers()
-	
+
 	for _, p1 in sgs.qlist(all_players) do
 		if not p1:hasShownOneGeneral() then continue end
 		local add = true
@@ -1270,7 +1272,7 @@ sgs.ai_skill_cardask["@jushou"] = function(self, data)
 			end
 		end
 	end
-	
+
 	local all_cards = to_discard
 	for _, card in ipairs(equips) do
 		if not table.contains(_cards, card) then
@@ -1527,14 +1529,14 @@ sgs.ai_skill_playerchosen.fangzhu = function(self, targets)
 		else
 			self:sort(self.enemies)
 			for _, enemy in ipairs(self.enemies) do
-				if self:toTurnOver(enemy, n, "fangzhu") and enemy:hasShownSkills(sgs.priority_skill) then
+				if self:toTurnOver(enemy, n, "fangzhu") and enemy:hasShownSkills(sgs.priority_skill) and (not enemy:isRemoved() or enemy:isNude()) then
 					target = enemy
 					break
 				end
 			end
 			if not target then
 				for _, enemy in ipairs(self.enemies) do
-					if self:toTurnOver(enemy, n, "fangzhu") then
+					if self:toTurnOver(enemy, n, "fangzhu") and (not enemy:isRemoved() or enemy:isNude()) then
 						target = enemy
 						break
 					end
@@ -1568,7 +1570,7 @@ sgs.ai_skill_discard["fangzhu_discard"] = function(self, discard_num, min_num, o
 		return {}
 	end
 	local caopi = sgs.findPlayerByShownSkillName("fangzhu")
-	if caopi and self:isFriend(caopi) then--翻队友的情况
+	if caopi and self:isFriend(caopi) and caopi:getLostHp() > 2 then--翻队友的情况
 		return {}
 	end
 	if (self.player:isRemoved() and not self.player:isNude()) or (self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty()) then

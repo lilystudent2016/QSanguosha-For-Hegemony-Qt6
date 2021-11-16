@@ -589,7 +589,7 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
   end
 
   local allshown_invoke = target:hasShownAllGenerals() and (self.player:getHp() > 1 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic")) > 0)
-  local oneshown_invoke = target:hasShownOneGeneral() and (self.player:getHandcardNum() <= 2 or self:getOverflow() > 1 or self.player:hasSkill("lirang"))
+  local oneshown_invoke = target:hasShownOneGeneral() and (self.player:getHandcardNum() < 2 or self:getOverflow() > 1 or self.player:hasSkill("lirang"))
   local chained_invoke = false
 
   if target:isChained() and damageStruct.nature ~= sgs.DamageStruct_Normal then
@@ -623,7 +623,8 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
   end
 
   if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral())
-  or (self:isEnemy(target) and (self:isWeak(target) or oneshown_invoke or (damageCount(target ,original_num) > 2 and allshown_invoke))) then
+  or (self:isEnemy(target) and ((self:isWeak(target) and target:getHp() == 1)
+      or oneshown_invoke or (damageCount(target ,original_num) > 2 and allshown_invoke))) then
     return true
   end
 	return false

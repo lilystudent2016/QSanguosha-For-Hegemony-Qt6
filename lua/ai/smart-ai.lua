@@ -506,6 +506,8 @@ function SmartAI:objectiveLevel(player)
 				elseif player_kingdom_evaluate == "unknown" and sgs.turncount <= 0 then return 0
 				else return 5
 				end
+			elseif selfIsCareerist and string.find(gameProcess, "careerist>>>>") then
+				return 5
 			else
 				if string.find(gameProcess, player_kingdom_explicit..">>>>") then return 5
 				elseif string.find(gameProcess, player_kingdom_evaluate..">>>>") then return 5
@@ -4054,7 +4056,6 @@ function SmartAI:canRetrial(player, to_retrial, reason)
 		if blackequipnum + player:getHandcardNum() > 0 then return true end
 	end
 	if player:hasShownSkill("guicai") and player:getHandcardNum() > 0 then return true end
-	return
 end
 
 function SmartAI:getFinalRetrial(player, reason)
@@ -6471,7 +6472,7 @@ function SmartAI:willSkipPlayPhase(player, NotContains_Null)
 		if friend_null + friend_snatch_dismantlement > 1 then return false end
 		if (self:getFinalRetrial(player) == 1 and self:isFriend(player)) or (self:getFinalRetrial(player) == 2 and self:isEnemy(player)) then
 			local _, wP = self:getFinalRetrial(player)
-			if getKnownCard(wP, self.player, "heart", true, "h") then
+			if wP:hasShownSkill("guicai") and getKnownCard(wP, self.player, "heart", true, "h") then
 				return false
 			end
 		end

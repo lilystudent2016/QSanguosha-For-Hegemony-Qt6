@@ -368,7 +368,7 @@ sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local userstring = card:toString()
 	userstring = (userstring:split(":"))[3]
 	local qicecard = sgs.Sanguosha:cloneCard(userstring, card:getSuit(), card:getNumber())
-	self:useTrickCard(qicecard, use)--确保锦囊能使用？是否会直接使用了锦囊？？
+	self:useTrickCard(qicecard, use)--确保锦囊能使用
 	if use.card then
 		global_room:writeToConsole("奇策卡使用")
 		use.card = card
@@ -1724,7 +1724,7 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 		global_room:writeToConsole("典财无副将")
 		return "yes"
 	end
-	if (sgs.general_value[g2name] and sgs.general_value[g2name] < 7)then
+	if (sgs.general_value[g2name] and sgs.general_value[g2name] < 7) or self.player:inDeputySkills("yinghun_sunjian") then
 		global_room:writeToConsole("典财副将值小于7")
 		return "yes"
 	end

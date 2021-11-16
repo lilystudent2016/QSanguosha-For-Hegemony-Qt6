@@ -143,7 +143,7 @@ sgs.ai_use_priority.FengyingCard = 0
 --于禁
 sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
   if self.player:isKongcheng() or
-  (self:willSkipDrawPhase() and not(self.player:hasSkill("qiaobian") and self.player:getHandcardNum() == 1)) then
+  (self:willSkipDrawPhase() and not(self.player:hasSkill("qiaobian|qiaobian_egf") and self.player:getHandcardNum() == 1)) then
     return "."
   end
 	local handcards = self.player:getCards("h")
@@ -151,7 +151,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
 	self:sortByUseValue(handcards,true)
 	local card = handcards[1]
   local visibleflag--记录给出的手牌，盗书等技能需要
-  if card:isKindOf("Peach") and self:isWeak() then
+  if card:isKindOf("Peach") and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0 then
     return "."
   end
   local targets = {}
@@ -171,7 +171,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
         return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. p:objectName()
     end
   end
-  if card:isKindOf("Peach") then
+  if card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then
     return "."
   end
 	self:sort(targets, "defense", true)
@@ -417,13 +417,13 @@ local function shouldUseXuanhuo(self)
       self.need_xuanhuo_slash = true
       return true
     else
-      self.room:writeToConsole(self.player:objectName()..":眩惑无转换杀技能")
+      self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑无转换杀技能")
       return false
     end
   end
 
   if self:getCardsNum("Slash") == 1 and (choice == "wusheng" or choice == "longdan") then
-    self.room:writeToConsole(self.player:objectName()..":眩惑无进攻技能")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑无进攻技能")
     return false
   end
 
@@ -435,7 +435,7 @@ local function shouldUseXuanhuo(self)
   or self:getCardsNum("OffensiveHorse") > 0 and not self.player:getOffensiveHorse()) then
     self.need_kuanggu_AOE = true
     self.player:speak("需要眩惑狂骨AOE")
-    self.room:writeToConsole(self.player:objectName()..":眩惑狂骨AOE")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑狂骨AOE")
     return true
   end]]
 
@@ -444,7 +444,7 @@ local function shouldUseXuanhuo(self)
     local liubei = self.room:getLord(self.player:getKingdom())
     if liubei and liubei:hasLordSkill("shouyue") then
       self.player:speak("需要眩惑君刘备烈弓距离")
-      self.room:writeToConsole(self.player:objectName()..":眩惑君刘备烈弓距离")
+      self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑君刘备烈弓距离")
       return true
     else
       self.need_liegong_distance = false
@@ -452,7 +452,7 @@ local function shouldUseXuanhuo(self)
   end
 
   if not target then--无杀目标或无杀
-    self.room:writeToConsole(self.player:objectName()..":眩惑无杀目标")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑无杀目标")
     return false
   end
   assert(target)
@@ -464,7 +464,7 @@ local function shouldUseXuanhuo(self)
 
   if self.player:getMark("@strategy") >= 1 or self.player:getHandcardNum() > 4
    or (self.player:getHandcardNum() > 3 and self.player:getCards("e"):length() > 0) then--多余手牌需要弃置时？
-    self.room:writeToConsole(self.player:objectName()..":眩惑符合条件")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑符合条件")
     return true
   end
   return false
@@ -574,25 +574,25 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   end
 
   if not has_longdan and table.contains(choices,"longdan") and self:getCardsNum("Jink") >= 1 then--龙胆可以杀队友进行回复或伤害，不需要target，虽然ai目前不会
-    self.room:writeToConsole(self.player:objectName()..":眩惑可龙胆")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可龙胆")
     can_longdan = true
   end
 
   --Func(self.player, 2)
   local target = getSlashtarget(self)--中间给牌弃牌，可能失去武器或杀导致无返回目标。好像还有目标找错的情况？
   if not target then
-    self.room:writeToConsole(self.player:objectName()..":！！眩惑选择无杀目标或无杀！！")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":！！眩惑选择无杀目标或无杀！！")
     --assert(target)
     goto Pass_target--暂时无杀目标或无杀跳转至目标判定后，需要优化眩惑触发判断和弃牌给牌
   end
   global_room:writeToConsole("眩惑杀目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 
   if not has_Crossbow and not has_paoxiao and not has_baolie and table.contains(choices,"paoxiao") and enough_pxslash then
-    self.room:writeToConsole(self.player:objectName()..":眩惑可咆哮")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可咆哮")
     can_paoxiao = true
   end
   if not has_wusheng and table.contains(choices,"wusheng") then
-    self.room:writeToConsole(self.player:objectName()..":眩惑可武圣")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可武圣")
     can_wusheng = true
   end
   if not has_tieqi and table.contains(choices,"tieqi") then
@@ -600,29 +600,29 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
 	  for _, skill_name in ipairs(skills_name) do
 		  local skill = sgs.Sanguosha:getSkill(skill_name)
 		  if target:hasShownSkill(skill_name) and skill and skill:getFrequency() ~= sgs.Skill_Compulsory then
-        self.room:writeToConsole(self.player:objectName()..":眩惑需要铁骑")
+        self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑需要铁骑")
         need_tieqi = true--有需要铁骑的技能
         break
       end
 	  end
   end
   if not has_tieqi and table.contains(choices,"tieqi") then
-    self.room:writeToConsole(self.player:objectName()..":眩惑可铁骑")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可铁骑")
     can_tieqi = true
   end
   if not has_liegong and table.contains(choices,"liegong") and (target:getHandcardNum() >= self.player:getHp() or target:getHandcardNum() <= self.player:getAttackRange()) then
-    self.room:writeToConsole(self.player:objectName()..":眩惑可烈弓")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可烈弓")
     can_liegong = true--符合烈弓发动条件
   end
   if not has_kuanggu and table.contains(choices,"kuanggu") and (self.player:hasShownSkills("mashu_machao|mashu_madai") or self.player:distanceTo(target) < 2
   or (self.player:distanceTo(target) == 2 and self:getCardsNum("OffensiveHorse") > 0 and not self.player:getOffensiveHorse())) then
-    self.room:writeToConsole(self.player:objectName()..":眩惑可狂骨")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可狂骨")
     can_kuanggu = true--有马术或-1马或距离为1
   end
   if not has_longdan and table.contains(choices,"longdan") and self:getCardsNum("Jink") >= 1 then
     local liubei = self.room:getLord(self.player:getKingdom())
     if liubei and liubei:hasLordSkill("shouyue") then
-      self.room:writeToConsole(self.player:objectName()..":眩惑君龙胆")
+      self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑君龙胆")
       lord_longdan = true--有君刘备
     end
   end
@@ -792,7 +792,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   if can_longdan then
     return "longdan"
   end
-  global_room:writeToConsole(self.player:objectName()..":！！眩惑无可选技能！！")
+  global_room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":！！眩惑无可选技能！！")
   return choices[#choices]--一般是狂骨？没有目标选可以这个
 end
 
@@ -1450,18 +1450,203 @@ sgs.ai_skill_invoke.zongyu = true
 
 --五子良将纛
 sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target, target2)
+  local jianan_skills = {"tuxi", "qiaobian", "xiaoguo", "jieyue", "duanliang"}
+  for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+    for _, skill in ipairs(jianan_skills) do
+      if p:hasShownSkill(skill) or p:hasShownSkill(skill .. "_egf") then
+        table.removeOne(jianan_skills,skill)
+      end
+    end
+  end
+  if #jianan_skills == 0 and not self.player:getMark("JieyueExtraDraw") > 0 then--没有技能可选，参考眩惑预选
+    return "."
+  end
+  local allcards = sgs.QList2Table(self.player:getCards("he"))
+  self:sortByUseValue(allcards, true)
+  local discard = allcards[1]
 
-
-
-
-
-
-
-
-
-
+  local choice = sgs.ai_skill_choice.jianan_skill(self ,table.concat(jianan_skills,"+"))
+  self.room:writeToConsole("---五子良将纛预选技能:"..sgs.Sanguosha:translate(choice).."---")
+  if self.player:getMark("JieyueExtraDraw") > 0 then
+    if self.player:getCardCount(true) == 1 and allcards[1]:isKindOf("Peach")
+    and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+      return "."
+    end
+    if #jianan_skills == 0 then
+      if self.player:getCardCount(true) < 2
+      or (allcards[2]:isKindOf("Peach") and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0) then
+        return "."
+      end
+    end
+    return discard:toString()
+  end
+  if (self.player:hasSkill(choice) and choice ~= "jieyue") or choice == "xiaoguo" then--骁果
+    return "."
+  end
+  if choice == "qiaobian" then
+    return discard:toString()
+  end
+  if not discard:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+    local g1name = self.player:getActualGeneral1Name()
+    local g2name = self.player:getActualGeneral2Name()
+    --[[if sgs.general_value[g1name] then
+    global_room:writeToConsole("五子良将纛主将值:"..sgs.Sanguosha:translate(g1name)..sgs.general_value[g1name])
+    end
+    if sgs.general_value[g2name] then
+      global_room:writeToConsole("五子良将纛副将值:"..sgs.Sanguosha:translate(g2name)..sgs.general_value[g2name])
+    end]]
+    if (sgs.general_value[g1name] and sgs.general_value[g1name] < 7) or (sgs.general_value[g2name] and sgs.general_value[g2name] < 7) then
+      self.room:writeToConsole("五子良将纛准备弃牌")
+      return discard:toString()
+    end
+  end
 	return "."
 end
+
+sgs.ai_skill_choice.jianan_hide = function(self, choices)
+  if self.player:getMark("JieyueExtraDraw") > 0 then
+    if self.player:inHeadSkills("jieyue") then
+      return "head"
+    else
+      return "deputy"
+    end
+  end
+	local g1name = self.player:getActualGeneral1Name()
+  local g2name = self.player:getActualGeneral2Name()
+  if not sgs.general_value[g1name] then
+    sgs.general_value[g1name] = 5
+  end
+  if not sgs.general_value[g2name] then
+    sgs.general_value[g2name] = 5
+  end
+	return sgs.general_value[g1name] > sgs.general_value[g2name] and "deputy" or "head"
+end
+
+sgs.ai_skill_choice.jianan_skill = function(self, skills)
+	skills = skills:split("+")
+	if table.contains(skills, "tuxi") then--没牌时
+    if self.player:isKongcheng() then
+      return "tuxi"
+    end
+    if self.player:getMark("JieyueExtraDraw") > 0 and not (self:willSkipPlayPhase() and self:getOverflow() > 1) then--配合节钺
+      return "tuxi"
+    end
+	end
+  if table.contains(skills, "qiaobian") then--自己跳乐，为队友留跳乐，手牌较多时
+    if self:willSkipPlayPhase() and self:getOverflow() > (self.player:getMark("JieyueExtraDraw") > 0 and 0 or 1) then--大于几合适？
+      return "qiaobian"
+    end
+		if #skills > 1 then
+      for _, p in ipairs(self.friends_noself) do
+        if self.player:isFriendWith(p)
+        and ((self:willSkipPlayPhase(p) and self:getOverflow(p) > 1)
+          or (self:getOverflow(p) > 4 and p:getHandcardNum() > self.player:getHandcardNum())) then
+            table.removeOne(skills, "qiaobian")
+            break
+        end
+      end
+    end
+    if self:getOverflow() > (self.player:getMark("JieyueExtraDraw") > 0 and 2 or 4) and table.contains(skills, "qiaobian") then--配合节钺？
+      return "qiaobian"
+    end
+	end
+  if table.contains(skills, "xiaoguo") and self.player:getMaxCards() < 3 and #skills > 1 then
+		table.removeOne(skills, "xiaoguo")
+	end
+  if table.contains(skills, "jieyue") then--能发动节钺时
+    if sgs.ai_skill_use["@@jieyue"](self) ~= "." then
+      return "jieyue"
+    elseif #skills > 1 then
+      table.removeOne(skills, "jieyue")
+    end
+	end
+  if table.contains(skills, "duanliang") then
+    local duanliang_count = 0
+    local cards = self.player:getCards("he")
+    cards = sgs.QList2Table(cards)
+    for _, id in sgs.qlist(self.player:getHandPile()) do
+      table.insert(cards, sgs.Sanguosha:getCard(id))
+    end
+    self:sortByUseValue(cards, true)
+    for _,acard in ipairs(cards)  do
+      if acard:isBlack() and (acard:isKindOf("BasicCard") or acard:isKindOf("EquipCard")) and (self:getDynamicUsePriority(acard) < sgs.ai_use_value.SupplyShortage) then
+        duanliang_count = duanliang_count + 1
+      end
+    end
+    if duanliang_count >= 2 then--数量多少合适？
+      return "duanliang"
+    end
+	end
+  if table.contains(skills, "tuxi") then
+    return "tuxi"
+  end
+  --没有合适的优先选突袭巧变？
+	return skills[math.random(1, #skills)]
+end
+
+function sgs.ai_cardneed.elitegeneralflag(to, card)
+	return to:isKongcheng() and not to:hasShownSkills("yiji|fankui|jieming|jianxiong|wangxi|zhiyu|bushi|shicai")
+end
+
+--突袭
+sgs.ai_skill_playerchosen.tuxi_egf = sgs.ai_skill_playerchosen.tuxi
+
+--巧变
+sgs.ai_skill_discard.qiaobian_egf = sgs.ai_skill_discard.qiaobian
+
+--骁果相同
+
+--节钺
+sgs.ai_skill_use["@@jieyue_egf"] = sgs.ai_skill_use["@@jieyue"]
+
+--断粮
+local duanliang_egf_skill = {}
+duanliang_egf_skill.name = "duanliang_egf"
+table.insert(sgs.ai_skills, duanliang_egf_skill)
+duanliang_egf_skill.getTurnUseCard = function(self)
+	if not self:willShowForAttack() then
+		return nil
+	end
+  if self.player:hasFlag("DuanliangEGFCannot") then
+    return nil
+  end
+
+	local cards = self.player:getCards("he")
+	cards = sgs.QList2Table(cards)
+	for _, id in sgs.qlist(self.player:getHandPile()) do
+		table.insert(cards, sgs.Sanguosha:getCard(id))
+	end
+	local card
+
+	self:sortByUseValue(cards, true)
+
+	for _,acard in ipairs(cards)  do
+		if acard:isBlack() and (acard:isKindOf("BasicCard") or acard:isKindOf("EquipCard")) and (self:getDynamicUsePriority(acard) < sgs.ai_use_value.SupplyShortage) then
+			card = acard
+			break
+		end
+	end
+
+	if not card then return nil end
+	local suit = card:getSuitString()
+	local number = card:getNumberString()
+	local card_id = card:getEffectiveId()
+	local card_str = ("supply_shortage:duanliang_egf[%s:%s]=%d%s"):format(suit, number, card_id, "&duanliang_egf")
+	local skillcard = sgs.Card_Parse(card_str)
+
+	assert(skillcard)
+	return skillcard
+end
+
+sgs.ai_cardneed.duanliang_egf = function(to, card, self)
+	return card:isBlack() and card:getTypeId() ~= sgs.Card_TypeTrick and getKnownCard(to, self.player, "black", false) < 2
+end
+
+sgs.duanliang_egf_suit_value = {
+	spade = 3.9,
+	club = 3.9
+}
+sgs.ai_suit_priority.duanliang_egf= "club|spade|diamond|heart"
 
 --军令
 function SmartAI:askCommandto(command, to)
