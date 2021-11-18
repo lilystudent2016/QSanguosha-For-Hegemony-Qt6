@@ -708,7 +708,6 @@ diaogui_skill.getTurnUseCard = function(self)
   if equipcard then
     return sgs.Card_Parse("@DiaoguiCard=" .. equipcard:getEffectiveId())
   end
-  return
 end
 
 sgs.ai_skill_use_func.DiaoguiCard = function(card, use, self)
@@ -738,6 +737,8 @@ sgs.ai_skill_use_func.DiaoguiCard = function(card, use, self)
 end
 
 sgs.ai_use_priority.DiaoguiCard = sgs.ai_use_priority.LureTiger - 0.05--先用普通的掉虎
+
+sgs.ai_skill_invoke.fengyang = true
 
 --严白虎
 sgs.ai_skill_invoke.zhidao = function(self, data)

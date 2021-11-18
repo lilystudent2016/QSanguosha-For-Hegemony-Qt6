@@ -60,7 +60,7 @@ sunshangxiang lingtong							24 23
 sunshangxiang ganning							23 22
 sunshangxiang luxun								25 24
 sunshangxiang daqiao							22 21
-sunshangxiang wenqin							20 20
+sunshangxiang wenqin							21 20
 zhoutai zhouyu									23 22
 zhoutai lusu									23 22
 zhoutai sunce									23 22
@@ -75,7 +75,7 @@ sunce taishici									21 20
 zhouyu sunce									22 21
 zhouyu sunjian									23 22
 sunjian sunce									23 22
-lingtong wenqin									21 20
+lingtong wenqin									22 21
 lvfan lingtong									24 23
 lvfan sunshangxiang								25 24
 lvfan sunjian									22 21

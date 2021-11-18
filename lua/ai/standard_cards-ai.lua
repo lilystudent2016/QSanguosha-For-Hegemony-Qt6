@@ -1490,6 +1490,9 @@ Spear_skill.getTurnUseCard = function(self, inclusive)
 end
 
 function sgs.ai_weapon_value.Spear(self, enemy, player)
+	if player:hasShownSkills("paoxiao|paoxiao_xh") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
+		return math.min(2, player:getHandcardNum() /2)
+	end
 	if enemy and getCardsNum("Slash", player, self.player) == 0 then
 		if self:getOverflow(player) > 0 then return 2
 		elseif player:getHandcardNum() > 2 then return 1
@@ -2041,7 +2044,7 @@ function SmartAI:useCardDuel(duel, use)
 
 	for _, enemy in ipairs(enemies) do
 		local useduel
-		local n2 = getCardsNum("Slash", enemy, self.player)
+		local n2 = getCardsNum("Slash", enemy, self.player)--ai经常对明天兵决斗？
 		if enemy:hasSkill("wushuang") then n2 = n2 * 2 end
 		if sgs.card_lack[enemy:objectName()]["Slash"] == 1 then n2 = 0 end
 		if noresponselist and table.contains(noresponselist,enemy:objectName()) then
@@ -2130,8 +2133,15 @@ sgs.ai_skill_cardask["duel-slash"] = function(self, data, pattern, target)
 		end
 	end
 
+	local saveforcaopi = false
+	local caopi = sgs.findPlayerByShownSkillName("xingshang")
+	if caopi and self:isFriend(caopi) then
+		saveforcaopi = true
+	end
+
 	if (not self:isFriend(target) and self:getCardsNum("Slash") >= getCardsNum("Slash", target, self.player))
-		or (target:getHp() > 2 and self.player:getHp() <= 1 and self:getCardsNum("Peach") == 0 and not self.player:hasSkill("buqu")) then
+	or (self:isWeak() and self:getAllPeachNum() < 1 and (not saveforcaopi and self.player:getHp() == 1)
+		and (not self:isFriendWith(target) or (target:getHp() >= 2 and self.player:getHp() == 1))) then
 		return self:getCardId("Slash")
 	else return "." end
 
@@ -2183,7 +2193,8 @@ function SmartAI:getDangerousCard(who)
 	if armor and armor:isKindOf("RenwangShield") and who:hasShownSkill("jiang") then
 		return armor:getEffectiveId()
 	end
-	if armor and armor:isKindOf("PeaceSpell") and self.player:getPlayerNumWithSameKingdom("AI", who:getKingdom()) > 2 then
+	if armor and armor:isKindOf("PeaceSpell") and self.player:getPlayerNumWithSameKingdom("AI", who:getKingdom()) > 2
+	and (not who:hasSkill("wendao") or who:getPile("heavenly_army"):isEmpty()) then
 		return armor:getEffectiveId()
 	end
 
@@ -2281,7 +2292,7 @@ function SmartAI:useCardSnatchOrDismantlement(card, use)
 	local targets = {}
 	local targets_num = (1 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_ExtraTarget, self.player, card))
 
-	
+	--孙权、吴景取消装备移动判断？使用拆时有顺，先拆第二重要的卡？
 	local canOperate = function(target, card_id)
 		if card:isKindOf("Snatch") then
 			return self.player:canGetCard(target, card_id)

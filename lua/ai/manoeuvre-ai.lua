@@ -285,6 +285,9 @@ sgs.ai_skill_use_func.BoyanCard = function(card, use, self)
       target = self.enemies[1]
     end
   end
+  if not target and #self.friends_noself > 1 then
+    target = self.friends_noself[1]
+  end
   if target then
     global_room:writeToConsole("驳言目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
@@ -543,6 +546,31 @@ end
 
 sgs.ai_cardneed.fenglve = sgs.ai_cardneed.bignumber
 
+sgs.ai_skill_exchange["fenglve_give"] = function(self,pattern,max_num,min_num,expand_pile)
+  local to
+	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+		if p:hasFlag("FenglveTarget") then
+			to = p
+			break
+		end
+	end
+  if self:isFriend(to) and self:isWeak(to) then
+    if self.player:getHp() > 1 and self:getCardsNum("Analeptic") > 0 then
+      return self:getCard("Analeptic"):getEffectiveId()
+    end
+    if not self:isWeak() and self:getCardsNum("Peach") > 1 then
+      return self:getCard("Peach"):getEffectiveId()
+    end
+    if self:getCardsNum("Jink") > 1 then
+      return self:getCard("Jink"):getEffectiveId()
+    end
+  end
+  local cards = self.player:getCards("he")
+	cards = sgs.QList2Table(cards)
+	self:sortByUseValue(cards,true)
+	return cards[1]:getEffectiveId()
+end
+
 sgs.ai_skill_invoke.anchao =  function(self, data)
   if not self:willShowForAttack() then
     return false
@@ -566,8 +594,7 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
     if tp:getMark("#xiongnve_avoid") > 0 then
       n = n - 1
     end
-    if damageStruct.nature == sgs.DamageStruct_Fire
-    and (tp:hasArmorEffect("Vine") or self.player:hasSkill("xinghuo")) then
+    if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--or self.player:hasSkill("xinghuo")兴火增加伤害在前
       n = n + 1
     end
     local gongqing_avoid = false
@@ -585,11 +612,14 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
     else
       n = n * 2
     end
+    global_room:writeToConsole("暗潮预测伤害:"..sgs.Sanguosha:translate(string.format("SEAT(%s)",tp:getSeat()))..n)
     return n
   end
 
-  local allshown_invoke = target:hasShownAllGenerals() and (self.player:getHp() > 1 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic")) > 0)
-  local oneshown_invoke = target:hasShownOneGeneral() and (self.player:getHandcardNum() < 2 or self:getOverflow() > 1 or self.player:hasSkill("lirang"))
+  local allshown_invoke = target:hasShownAllGenerals()
+                      and (self.player:getHp() > 1 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic")) > 0)
+  local oneshown_invoke = not target:hasShownAllGenerals() and target:hasShownOneGeneral()
+                      and (self.player:getHandcardNum() < 2 or self:getOverflow() > 1 or self.player:hasSkill("lirang"))
   local chained_invoke = false
 
   if target:isChained() and damageStruct.nature ~= sgs.DamageStruct_Normal then
@@ -622,9 +652,10 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
     end
   end
 
-  if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral())
-  or (self:isEnemy(target) and ((self:isWeak(target) and target:getHp() == 1)
-      or oneshown_invoke or (damageCount(target ,original_num) > 2 and allshown_invoke))) then
+  local anchao_damage = damageCount(target ,original_num)
+  if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral() and anchao_damage > 1)
+  or (self:isEnemy(target) and anchao_damage > 1 and ((self:isWeak(target) and target:getHp() == 1)
+      or oneshown_invoke or (anchao_damage > 2 and allshown_invoke))) then
     return true
   end
 	return false

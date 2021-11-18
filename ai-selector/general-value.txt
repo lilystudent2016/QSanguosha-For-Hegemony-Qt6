@@ -60,7 +60,7 @@ daqiao								8
 luxun								7
 sunshangxiang						9
 sunjian								7
-xiaoqiao							8
+xiaoqiao							9
 taishici							6
 zhoutai								10
 lusu								7
@@ -72,7 +72,7 @@ sunce								6
 chenwudongxi						4
 lingtong							9
 lvfan								10
-wuguotai							6
+wuguotai							7
 lukang								5
 wujing								4
 zhugeke								6
@@ -95,7 +95,7 @@ zoushi								4
 yuji								8
 hetaihou							7
 dongzhuo							6
-zhangren							6
+zhangren							5
 lijueguosi							7
 new_zuoci							10
 yuanshu								7
@@ -107,7 +107,7 @@ simazhao							9
 sunchen								6
 gongsunyuan							7
 mengda								6
-tangzi								6
+tangzi								7
 zhanglu								6
 mifangfushiren						5
 liuqi								7

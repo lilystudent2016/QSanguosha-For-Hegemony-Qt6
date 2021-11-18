@@ -5621,14 +5621,14 @@ function SmartAI:useEquipCard(card, use)
 
 	if card:isKindOf("Armor") and card:objectName() == "PeaceSpell" then
 		local lord_zhangjiao = sgs.findPlayerByShownSkillName("wendao") --有君张角在其他人（体力为2/有防具）则不装备太平要术
-		if lord_zhangjiao and lord_zhangjiao:isAlive() and not self:isWeak(lord_zhangjiao) then
+		if lord_zhangjiao and lord_zhangjiao:isAlive() then
 			if self.player:objectName() ~= lord_zhangjiao:objectName() and (not self.player:getHp() == 2 or self.player:getArmor()) then
 				return
 			end
 		end
 	end
 	if card:isKindOf("Weapon") and card:objectName() == "DragonPhoenix" then
-		local lord_liubei = sgs.findPlayerByShownSkillName("zhangwu") --有君刘备在（其他势力/除他以外有武器）的人不装备龙凤剑
+		local lord_liubei = sgs.findPlayerByShownSkillName("zhangwu") --有君刘备在（其他势力/已有武器）不装备龙凤剑
 		if lord_liubei and lord_liubei:isAlive() then
 			if not self.player:isFriendWith(lord_liubei) or (self.player:objectName() ~= lord_liubei:objectName() and self.player:getWeapon()) then
 				return
@@ -5636,7 +5636,7 @@ function SmartAI:useEquipCard(card, use)
 		end
 	end
 	if card:isKindOf("Treasure") and card:objectName() == "LuminousPearl" then
-		local lord_sunquan = sgs.findPlayerByShownSkillName("jubao") --有君孙权在（其他势力/除他以外有宝物）的人不装备夜明珠
+		local lord_sunquan = sgs.findPlayerByShownSkillName("jubao") --有君孙权在（其他势力/已有宝物）不装备夜明珠
 		if lord_sunquan and lord_sunquan:isAlive() then
 			if not self.player:isFriendWith(lord_sunquan) or (self.player:objectName() ~= lord_sunquan:objectName() and self.player:getTreasure()) then
 				return
@@ -5644,10 +5644,9 @@ function SmartAI:useEquipCard(card, use)
 		end
 	end
 	if card:isKindOf("SixDragons") then
-		local lord_caocao = sgs.findPlayerByShownSkillName("zongyu") --有君曹操在（其他势力/除他以外有马）的人不装备六龙，似乎曹操没这么严？
+		local lord_caocao = sgs.findPlayerByShownSkillName("zongyu") --有君曹操在（其他势力且曹操有马）不装备六龙
 		if lord_caocao and lord_caocao:isAlive() then
-			if not self.player:isFriendWith(lord_caocao) or (self.player:objectName() ~= lord_caocao:objectName()
-				and (self.player:getDefensiveHorse() or self.player:getOffensiveHorse())) then
+			if (not self.player:isFriendWith(lord_caocao) and (lord_caocao:getDefensiveHorse() or lord_caocao:getOffensiveHorse())) then
 				return
 			end
 		end

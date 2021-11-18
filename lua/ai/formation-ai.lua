@@ -599,6 +599,9 @@ function sgs.ai_weapon_value.DragonPhoenix(self, enemy, player)
 		--(sgs.card_lack[enemy:objectName()]["Jink"] == 1 or getCardsNum("Jink", enemy, self.player) == 0)
 		return 4.5
 	end
+	if player:hasShownSkills("paoxiao|paoxiao_xh") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
+		return 3.5
+	end
 	return 2.5
 end
 

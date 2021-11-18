@@ -391,6 +391,12 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		end
 	end
 
+	local lord_caocao = sgs.findPlayerByShownSkillName("jianan")
+	if lord_caocao and self.player:willBeFriendWith(lord_caocao) then--判断明置是否合适？
+		--global_room:writeToConsole("五子良将纛明置")
+		return "show_both_generals"
+	end
+
 	local notshown, shown, allshown, f, e, eAtt = 0, 0, 0, 0, 0, 0
 	for _,p in sgs.qlist(self.room:getAlivePlayers()) do
 		if  not p:hasShownOneGeneral() then
@@ -490,14 +496,14 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		end
 	end
 
-	if self.player:getMark("CompanionEffect") > 0 then
-		if self:isWeak() or (shown > 0 and eAtt > 0 and e - f < 3 and not self:willSkipPlayPhase()) then
+	if self.player:getMark("CompanionEffect") > 0 then--标记修改
+		if self:isWeak() or (shown > 0 and eAtt > 0 and e - f < 3) or self:willShowForDefence() then
 			return "show_both_generals"
 		end
 	end
 
 	if self.player:getMark("HalfMaxHpLeft") > 0 then
-		if self:isWeak() and self:willShowForDefence() then
+		if self:isWeak() or self:willShowForDefence() then
 			return "show_both_generals"
 		end
 	end
