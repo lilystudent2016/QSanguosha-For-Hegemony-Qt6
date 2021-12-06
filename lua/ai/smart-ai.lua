@@ -30,7 +30,7 @@ math.randomseed(os.time())
 -- SmartAI is the base class for all other specialized AI classes
 SmartAI = (require "middleclass").class("SmartAI")
 
-version = "QSanguosha AI 20211111 12:02(UTC+8)"
+version = "QSanguosha AI 20211202 12:21(UTC+8)"
 
 --- this function is only function that exposed to the host program
 --- and it clones an AI instance by general name
@@ -176,9 +176,9 @@ function setInitialTables()
 	sgs.exclusive_skill = 	"duanchang|buqu"
 	sgs.drawpeach_skill =	"tuxi|qiaobian|huaiyi|jinfa|daoshu"
 	sgs.recover_skill =		"rende|kuanggu|zaiqi|jieyin|qingnang|shenzhi|buqu|buyi"
-	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|luanji|shuangxiong|lirang|" ..
-									"qice|jili|fengying|fengshix|zaoyun|huaiyi|baolie|lianpian|tongdu|juejue"
-	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|keshou|fudi"
+	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|duoshi|dimeng|luanji|shuangxiong|lirang|" ..
+									"qice|jili|fengying|fengshix|zaoyun|huaiyi|shilu|baolie|lianpian|tongdu|juejue"
+	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|zhendu|qianhuan|keshou|fudi|quanji"
 	sgs.cardneed_skill =  	sgs.Active_cardneed_skill .. "|" .. sgs.notActive_cardneed_skill
 	sgs.use_lion_skill =	"duanliang|guicai|guidao|lijian|qingcheng|zhiheng|qixi|fenxun|kurou|diaogui|quanji|jinfa|xishe"
 	sgs.need_equip_skill = 	"shensu|beige|huyuan|qingcheng|xiaoji|zhijian|diaodu"
@@ -1194,12 +1194,16 @@ function sgs.getDefense(player)--似乎是嘲讽值
 		end
 	end
 	if not pair then
-		if name1 == "anjiang" or player:isDuanchang(true) or not sgs.general_value[name1] then
+		if name1:match("sujiang") or player:isDuanchang(true) then
+			defense = defense + 1
+		elseif name1 == "anjiang" or not sgs.general_value[name1] then
 			defense = defense + 2.5
 		elseif sgs.general_value[name1] then
 			defense = defense + sgs.general_value[name1]*0.5
 		end
-		if name2 == "anjiang" or player:isDuanchang(false) or not sgs.general_value[name2] then
+		if name2:match("sujiang") or player:isDuanchang(false) then
+			defense = defense + 1
+		elseif name2 == "anjiang" or not sgs.general_value[name2] then
 			defense = defense + 2.5
 		elseif sgs.general_value[name2] then
 			defense = defense + sgs.general_value[name2]*0.5
@@ -2431,6 +2435,9 @@ function SmartAI:filterEvent(event, player, data)
 				if t:hasShownSkills("fangzhu|jianxiong|qiuan") then sgs.ai_AOE_data = data break end
 				if t:hasShownSkill("guidao") and t:hasShownSkill("leiji") and card:isKindOf("ArcheryAttack") then sgs.ai_AOE_data = data break end
 			end
+			if from and from:hasSkill("zhiman") then--马谡相关
+				sgs.ai_AOE_data = data
+			end
 		end
 
 	elseif event == sgs.PreDamageDone then
@@ -3514,7 +3521,7 @@ function SmartAI:SimpleGuixinInvoke(player)
 	local friend, others = 0, 0
 	for _, p in sgs.qlist(self.room:getOtherPlayers(player)) do
 		if self:isFriend(p, player) then
-			if p:getJudgingArea():length() > 0 or self:needToThrowArmor() then
+			if p:getJudgingArea():length() > 0 or self:needToThrowArmor(p) then
 				friend = friend + 1
 			end
 		else
@@ -3902,6 +3909,7 @@ sgs.ai_skill_playerchosen.damage = function(self, targets)
 	for _, target in ipairs(targetlist) do
 		if not self:isFriendWith(target) then return target end
 	end
+	return targets:first()--万一都是队友。。
 end
 
 function SmartAI:askForPlayersChosen(targets, reason, max_num, min_num)
@@ -4007,7 +4015,7 @@ end
 function SmartAI:getOverflow(player, getMaxCards)
 	player = player or self.player
 	local MaxCards = player:getMaxCards()
-	if player:hasShownSkill("qiaobian") and not player:hasFlag("AI_ConsideringQiaobianSkipDiscard") then
+	if player:hasShownSkills("qiaobian|qiaobian_egf") and not player:hasFlag("AI_ConsideringQiaobianSkipDiscard") then
 		MaxCards = math.max(self.player:getHandcardNum() - 1, MaxCards)
 		player:setFlags("-AI_ConsideringQiaobianSkipDiscard")
 	end

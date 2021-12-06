@@ -352,7 +352,7 @@ end
 
 sgs.ai_skill_use_func.WeimengCard = function(card, use, self)
   local target
-  local _, friend = self:getCardNeedPlayer(sgs.QList2Table(self.player:getCards("h")))
+  local _, friend = self:getCardNeedPlayer(sgs.QList2Table(self.player:getCards("he")))
   if friend and friend:getHandcardNum() > 1 then
     target = friend
   end
@@ -366,7 +366,7 @@ sgs.ai_skill_use_func.WeimengCard = function(card, use, self)
     end
   end
   if not target then
-    self:sort(self.enemies, "handcard", true)
+    self:sort(self.enemies, "handcard", true)--破坏敌人防御？
     for _, p in ipairs(self.enemies) do
       if not p:isKongcheng() then
         target = p
@@ -399,35 +399,37 @@ sgs.ai_skill_exchange["weimeng_giveback"] = function(self,pattern,max_num,min_nu
 			break
 		end
 	end
-  if self:isFriend(to) then--怎样才不会重复
-    if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 and #weimeng_give < max_num then
-      table.insert(weimeng_give, self:getCard("Analeptic"):getEffectiveId())
-    end
-    if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 1 and #weimeng_give < max_num then
-      table.insert(weimeng_give, self:getCard("Peach"):getEffectiveId())
-    end
-    if self:getCardsNum("Jink") > 1 and #weimeng_give < max_num then
-      table.insert(weimeng_give, self:getCard("Jink"):getEffectiveId())
-    end
-    --[[会重复
-    local c, friend = self:getCardNeedPlayer(sgs.QList2Table(self.player:getCards("he")),to)
-    if friend and friend:objectName() == to:objectName() and #weimeng_give < max_num then
-      table.insert(weimeng_give, c:getEffectiveId())
-    end
-    if self:getCardsNum("Jink") > 1 and self:isWeak(to) and #weimeng_give < max_num then
-      table.insert(weimeng_give, self:getCard("Jink"):getEffectiveId())
-    end]]
-    if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() and #weimeng_give < max_num then
-      table.insert(weimeng_give, self:getCard("Slash"):getEffectiveId())
+
+  local function weiming_insert(c_id)--判断并防止重复
+    if #weimeng_give < max_num and not table.contains(weimeng_give, c_id) then
+      table.insert(weimeng_give, c_id)
     end
   end
-  local cards = self.player:getCards("h")
+
+  local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
-  for _, c in ipairs(cards) do
-    if #weimeng_give < max_num then
-      table.insert(weimeng_give, c:getEffectiveId())
+  if self:isFriend(to) then
+    if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 then
+      weiming_insert(self:getCard("Analeptic"):getEffectiveId())
     end
+    if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 0 then
+      weiming_insert(self:getCard("Peach"):getEffectiveId())
+    end
+    local c, friend = self:getCardNeedPlayer(cards, {to})
+    if friend and friend:objectName() == to:objectName() then
+      weiming_insert(c:getEffectiveId())
+    end
+    if self:getCardsNum("Jink") > 1 then
+      weiming_insert(self:getCard("Jink"):getEffectiveId())
+    end
+    if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() then
+      weiming_insert(self:getCard("Slash"):getEffectiveId())
+    end
+  end
+
+  for _, c in ipairs(cards) do
+    weiming_insert(c:getEffectiveId())
   end
 	return weimeng_give
 end
@@ -450,7 +452,7 @@ end
 
 sgs.ai_skill_use_func.WeimengZonghengCard = function(card, use, self)
   local target
-  local _, friend = self:getCardNeedPlayer(sgs.QList2Table(self.player:getCards("h")))
+  local _, friend = self:getCardNeedPlayer(sgs.QList2Table(self.player:getCards("he")))
   if friend and not friend:isKongcheng() then
     target = friend
   end
@@ -488,16 +490,57 @@ local fenglve_skill = {}
 fenglve_skill.name = "fenglve"
 table.insert(sgs.ai_skills, fenglve_skill)
 fenglve_skill.getTurnUseCard = function(self)
-	if self:willShowForAttack() and not self.player:hasUsed("FenglveCard") and not self.player:isKongcheng() then return sgs.Card_Parse("@FenglveCard=.&fenglve") end
+	if self:willShowForAttack() and not self.player:hasUsed("FenglveCard") and not self.player:isKongcheng() then
+    return sgs.Card_Parse("@FenglveCard=.&fenglve")
+  end
 end
 
 sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
-	if #self.enemies == 0 then return end
-  sgs.ai_use_priority.FenglveCard = 0.5
+	if #self.enemies == 0 and #self.friends_noself == 0 then return end
+  self.fenglve_card = nil
+  sgs.ai_use_priority.FenglveCard = 0.5--是否合适？
 	local max_card = self:getMaxCard()
 	local max_point = max_card:getNumber()
 	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
 
+  if #self.friends_noself > 0 then
+    self:sort(self.friends_noself, "handcard", true)
+  end
+  for _, friend in ipairs(self.friends_noself) do--拆判定区多于1的队友
+    if not friend:isKongcheng() and friend:getJudgingArea():length() > (self:needToThrowArmor(friend) and 0 or 1) then
+      local friend_min_card = self:getMinCard(friend)
+      local friend_number = friend_min_card and friend_min_card:getNumber() or 0
+      if friend_min_card and friend:hasShownSkill("yingyang") then friend_number = math.max(friend_number - 3, 1) end
+      if friend_min_card and max_point> friend_number then
+        local hcards = sgs.QList2Table(self.player:getHandcards())
+        self:sortByUseValue(cards,true)
+        for _, c in ipairs(hcards) do
+          if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
+            sgs.ai_use_priority.FenglveCard = 4.2
+            global_room:writeToConsole("暗涌队友1:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+            self.fenglve_card = c:getEffectiveId()
+            use.card = FLCard
+            if use.to then
+              use.to:append(friend)
+              return
+            end
+          end
+        end
+      end
+      if not friend_min_card and max_point > 8 then
+        sgs.ai_use_priority.FenglveCard = 4.2--顺之后
+        global_room:writeToConsole("暗涌队友2:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+        self.fenglve_card = max_card:getEffectiveId()
+        use.card = FLCard
+        if use.to then
+          use.to:append(friend)
+          return
+        end
+      end
+    end
+  end
+
+  if #self.enemies == 0 then return end
   local notlose = self:getOverflow() > 1
   if self.player:getCardCount(true) < (self:needToThrowArmor() and 2 or 1) and not self:isValuableCard(max_card) then
     notlose = true
@@ -515,7 +558,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
 			if (not enemy_max_card and (max_point > 11)) or notlose
 				or (enemy_max_card and max_point > enemy_number and not allknown and max_point > 10)
 				or (enemy_max_card and max_point > enemy_number and allknown) then
-          if notlose or (enemy_max_card and max_point > enemy_number and allknown) then
+          if notlose or (enemy_max_card and max_point > enemy_number and allknown) or max_point > 11 then
             sgs.ai_use_priority.FenglveCard = 5
           end
 					self.fenglve_card = max_card:getEffectiveId()
@@ -541,12 +584,18 @@ function sgs.ai_skill_pindian.fenglve(minusecard, self, requestor)
 			end
 		end
   end
+  if self:isFriend(requestor) and (self.player:getJudgingArea():length() > 0 or self:needToThrowArmor()) then
+    return self:getMinCard()
+  end
 	return max_card
 end
 
 sgs.ai_cardneed.fenglve = sgs.ai_cardneed.bignumber
 
+--一次交给2牌用默认策略可否？参考军令2
+
 sgs.ai_skill_exchange["fenglve_give"] = function(self,pattern,max_num,min_num,expand_pile)
+  local fenglve_give = {}
   local to
 	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 		if p:hasFlag("FenglveTarget") then
@@ -554,65 +603,187 @@ sgs.ai_skill_exchange["fenglve_give"] = function(self,pattern,max_num,min_num,ex
 			break
 		end
 	end
+
+  local function fenglve_insert(c_id)--判断并防止重复
+    if #fenglve_give < max_num and not table.contains(fenglve_give, c_id) then
+      table.insert(fenglve_give, c_id)
+    end
+  end
+
   if self:isFriend(to) and self:isWeak(to) then
     if self.player:getHp() > 1 and self:getCardsNum("Analeptic") > 0 then
-      return self:getCard("Analeptic"):getEffectiveId()
+      fenglve_insert(self:getCard("Analeptic"):getEffectiveId())
     end
-    if not self:isWeak() and self:getCardsNum("Peach") > 1 then
-      return self:getCard("Peach"):getEffectiveId()
+    if not self:isWeak() and self:getCardsNum("Peach") > 0 then
+      fenglve_insert(self:getCard("Peach"):getEffectiveId())
     end
     if self:getCardsNum("Jink") > 1 then
-      return self:getCard("Jink"):getEffectiveId()
+      fenglve_insert(self:getCard("Jink"):getEffectiveId())
     end
   end
   local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
-	return cards[1]:getEffectiveId()
+  for _, c in ipairs(cards) do
+    fenglve_insert(c:getEffectiveId())
+  end
+	return fenglve_give
 end
 
-sgs.ai_skill_invoke.anchao =  function(self, data)
+sgs.ai_skill_choice.fenglve = function(self, choices, data)
+  local target = data:toPlayer()
+  if not self:isEnemy(target) then--其他情况？
+    return "yes"
+  end
+  return "no"
+end
+
+local fenglvezongheng_skill = {}
+fenglvezongheng_skill.name = "fenglvezongheng"
+table.insert(sgs.ai_skills, fenglvezongheng_skill)
+fenglvezongheng_skill.getTurnUseCard = function(self)
+	if self:willShowForAttack() and not self.player:hasUsed("FenglveZonghengCard") and not self.player:isKongcheng() then
+    return sgs.Card_Parse("@FenglveZonghengCard=.&fenglvezongheng")
+  end
+end
+
+sgs.ai_skill_use_func.FenglveZonghengCard = function(FLCard, use, self)
+	if #self.enemies == 0 and #self.friends_noself == 0 then return end
+  sgs.ai_use_priority.FenglveZonghengCard = 0.5
+	local max_card = self:getMaxCard()
+	local max_point = max_card:getNumber()
+	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
+
+  if #self.friends_noself > 0 then
+    self:sort(self.friends_noself, "handcard", true)
+  end
+  for _, friend in ipairs(self.friends_noself) do--拆队友乐，判断闪电？
+    if not friend:isKongcheng() and friend:containsTrick("indulgence") and self:getOverflow(friend) > 0 then
+      local friend_min_card = self:getMinCard(friend)
+      local friend_number = friend_min_card and friend_min_card:getNumber() or 0
+      if friend_min_card and friend:hasShownSkill("yingyang") then friend_number = math.max(friend_number - 3, 1) end
+      if friend_min_card and max_point> friend_number then
+        local hcards = sgs.QList2Table(self.player:getHandcards())
+        self:sortByUseValue(cards,true)
+        for _, c in ipairs(hcards) do
+          if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
+            sgs.ai_use_priority.FenglveCard = 4.2
+            self.fenglve_card = c:getEffectiveId()
+            use.card = FLCard
+            if use.to then
+              use.to:append(friend)
+              return
+            end
+          end
+        end
+      end
+      if not friend_min_card and max_point > 9 then
+        sgs.ai_use_priority.FenglveCard = 4.2--顺之后
+        self.fenglve_card = max_card:getEffectiveId()
+        use.card = FLCard
+        if use.to then
+          use.to:append(friend)
+          return
+        end
+      end
+    end
+  end
+
+  if #self.enemies == 0 then return end
+  local notlose = false
+  if self.player:getCardCount(true) < (self:needToThrowArmor() and 2 or 1) and not self:isValuableCard(max_card) then
+    notlose = true
+  end
+	self:sort(self.enemies, "handcard")
+	for _, enemy in ipairs(self.enemies) do
+		if not enemy:isKongcheng() and enemy:getCardCount(true) > 1 then
+			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_number = enemy_max_card and enemy_max_card:getNumber() or 0
+			if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_number = math.min(enemy_number + 3, 13) end
+			local allknown = false
+			if self:getKnownNum(enemy) == enemy:getHandcardNum() then
+				allknown = true
+			end
+			if (not enemy_max_card and (max_point > 12)) or notlose
+				or (enemy_max_card and max_point > enemy_number and not allknown and max_point > 11)
+				or (enemy_max_card and max_point > enemy_number and allknown) then
+          if notlose or (enemy_max_card and max_point > enemy_number and allknown) then
+            sgs.ai_use_priority.FenglveZonghengCard = 5
+          end
+					self.fenglvezongheng_card = max_card:getEffectiveId()
+					use.card = FLCard
+					if use.to then
+            use.to:append(enemy)
+            return
+          end
+			end
+		end
+	end
+end
+
+function sgs.ai_skill_pindian.fenglvezongheng(minusecard, self, requestor)
+  local max_card = self:getMaxCard()
+  if not self:isFriend(requestor) and self.player:getCardCount(true) < 4 then
+    local max_point = max_card:getNumber()
+    for _, card in sgs.qlist(self.player:getHandcards()) do
+			local point = card:getNumber()
+			if point > max_point then
+				max_point = point
+				max_card = card
+			end
+		end
+  end
+  if self:isFriend(requestor) and (self.player:getJudgingArea():length() > 0 or self:needToThrowArmor()) then
+    return self:getMinCard()
+  end
+	return max_card
+end
+
+sgs.ai_cardneed.fenglvezongheng = sgs.ai_cardneed.bignumber
+
+sgs.ai_skill_invoke.anyong =  function(self, data)
   if not self:willShowForAttack() then
     return false
   end
-  local target = data:toPlayer()
-  if not target or (self:isFriend(target) and not target:isChained()) then
-    return false
-  end
-  local damageStruct = self.player:getTag("AnchaoDamagedata"):toDamage()
+  local damageStruct = self.player:getTag("AnyongDamagedata"):toDamage()
   if not self:damageIsEffective_(damageStruct) then
     return false
   end
   local card = damageStruct.card
   local original_num = damageStruct.damage
+  local from = damageStruct.from
+  local target = damageStruct.to--data:toPlayer()新源码的data有问题
+  if not target or (self:isFriend(target) and not target:isChained()) then
+    return false
+  end
 
   local function damageCount(tp,num)
     local n = num
-    if tp:hasShownSkill("mingshi") and not self.player:hasShownAllGenerals() then
+    if tp:hasShownSkill("mingshi") and not from:hasShownAllGenerals() then
       n = n - 1
     end
     if tp:getMark("#xiongnve_avoid") > 0 then
       n = n - 1
     end
-    if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--or self.player:hasSkill("xinghuo")兴火增加伤害在前
+    if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--or from:hasSkill("xinghuo")兴火增加伤害在前
       n = n + 1
     end
     local gongqing_avoid = false
     if tp:hasShownSkill("gongqing") then
-      if self.player:getAttackRange() < 3 then
+      if from:getAttackRange() < 3 then
         gongqing_avoid = true
       end
-      if self.player:getAttackRange() > 3 then
+      if from:getAttackRange() > 3 then
         n = n + 1
       end
     end
-    if (tp:hasArmorEffect("SilverLion") and (not card or not card:isKindOf("Slash") or not IgnoreArmor(self.player, tp)))
+    if (tp:hasArmorEffect("SilverLion") and (not card or not card:isKindOf("Slash") or not IgnoreArmor(from, tp)))
     or gongqing_avoid then
       n = 1
     else
       n = n * 2
     end
-    global_room:writeToConsole("暗潮预测伤害:"..sgs.Sanguosha:translate(string.format("SEAT(%s)",tp:getSeat()))..n)
+    global_room:writeToConsole("暗涌预测伤害:"..sgs.Sanguosha:translate(string.format("SEAT(%s)",tp:getSeat()))..n)
     return n
   end
 
@@ -631,7 +802,7 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
     for _, p in sgs.qlist(self.room:getOtherPlayers(target)) do
       if p:isChained() then
         damageStruct.to = p
-        if self.player:hasSkill("xinghuo") and damageStruct.nature == sgs.DamageStruct_Fire then--xinghuo是预置加伤可连续传导
+        if from:hasSkill("xinghuo") and damageStruct.nature == sgs.DamageStruct_Fire then--xinghuo是预置加伤可连续传导
           tDamageNum = tDamageNum + 1
         end
         damageStruct.damage = tDamageNum
@@ -652,10 +823,10 @@ sgs.ai_skill_invoke.anchao =  function(self, data)
     end
   end
 
-  local anchao_damage = damageCount(target ,original_num)
-  if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral() and anchao_damage > 1)
-  or (self:isEnemy(target) and anchao_damage > 1 and ((self:isWeak(target) and target:getHp() == 1)
-      or oneshown_invoke or (anchao_damage > 2 and allshown_invoke))) then
+  local anyong_damage = damageCount(target ,original_num)
+  if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral() and anyong_damage > 1)
+  or (self:isEnemy(target) and anyong_damage > 1 and ((self:isWeak(target) and target:getHp() == 1)
+      or oneshown_invoke or (anyong_damage > 2 and allshown_invoke))) then
     return true
   end
 	return false

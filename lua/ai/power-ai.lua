@@ -1511,13 +1511,8 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   if not discard:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then
     local g1name = self.player:getActualGeneral1Name()
     local g2name = self.player:getActualGeneral2Name()
-    --[[if sgs.general_value[g1name] then
-    global_room:writeToConsole("五子良将纛主将值:"..sgs.Sanguosha:translate(g1name)..sgs.general_value[g1name])
-    end
-    if sgs.general_value[g2name] then
-      global_room:writeToConsole("五子良将纛副将值:"..sgs.Sanguosha:translate(g2name)..sgs.general_value[g2name])
-    end]]
-    if shouldUseJiananByValue(self, g1name) or shouldUseJiananByValue(self, g2name) then
+    if shouldUseJiananByValue(self, g1name) or shouldUseJiananByValue(self, g2name)
+    or self.player:isDuanchang(true) or self.player:isDuanchang(false) then
       self.room:writeToConsole("五子良将纛准备弃牌")
       return discard:toString()
     end
@@ -1534,16 +1529,25 @@ sgs.ai_skill_choice.jianan_hide = function(self, choices)
       return "deputy"
     end
   end
---邓艾田判断？
+
 	local g1name = self.player:getActualGeneral1Name()
   local g2name = self.player:getActualGeneral2Name()
-  if not sgs.general_value[g1name] then
-    sgs.general_value[g1name] = 5
+  local v1 = sgs.general_value[g1name] or 5
+  local v2 = sgs.general_value[g2name] or 5
+  if self.player:isDuanchang(true) then
+    v1 = 0
   end
-  if not sgs.general_value[g2name] then
-    sgs.general_value[g2name] = 5
+  if self.player:isDuanchang(false) then
+    v2 = 0
   end
-	return sgs.general_value[g1name] > sgs.general_value[g2name] and "deputy" or "head"
+  if self.player:hasShownSkill("tuntian") then
+    if self.player:inHeadSkills("tuntian") then
+      v1 = v1 + self.player:getPile("field"):length()
+    else
+      v2 = v2 + self.player:getPile("field"):length() * 0.5
+    end
+	end
+	return v1 > v2 and "deputy" or "head"
 end
 
 sgs.ai_skill_choice.jianan_skill = function(self, skills)
@@ -1564,11 +1568,12 @@ sgs.ai_skill_choice.jianan_skill = function(self, skills)
       return "qiaobian"
     end
 		if #skills > 1 then
+      local lord_caocao = sgs.findPlayerByShownSkillName("jianan")
       for _, p in ipairs(self.friends_noself) do
-        if self.player:isFriendWith(p)
+        if self.player:isFriendWith(p) and self:playerGetRound(p, lord_caocao) > self:playerGetRound(self.player, lord_caocao)
         and ((self:willSkipPlayPhase(p) and self:getOverflow(p) > 1)
           or (self:getOverflow(p) > 3 and p:getHandcardNum() > self.player:getHandcardNum())) then
-            table.removeOne(skills, "qiaobian")--考虑座次影响？经过曹操位置会重置选择
+            table.removeOne(skills, "qiaobian")--考虑座次影响，经过曹操位置会重置选择
             break
         end
       end
@@ -1579,9 +1584,6 @@ sgs.ai_skill_choice.jianan_skill = function(self, skills)
     and table.contains(skills, "qiaobian") then
       return "qiaobian"
     end
-	end
-  if self.player:getMaxCards() < 3 and #skills > 1 then
-		table.removeOne(skills, "xiaoguo")
 	end
   if table.contains(skills, "jieyue") then--能发动节钺时
     if sgs.ai_skill_use["@@jieyue"](self) ~= "." and not self:willSkipDrawPhase() then
@@ -1623,13 +1625,19 @@ sgs.ai_skill_choice.jianan_skill = function(self, skills)
   if table.contains(skills, "tuxi") then
     return "tuxi"
   end
-  if self.player:hasShownAllGenerals() and table.contains(skills, "qiaobian") then--预选时去除巧变，万一只剩一个技能？
+  if self.player:hasShownAllGenerals() and table.contains(skills, "qiaobian") then--预选时去除巧变。处理预选手牌差异？
     local g1name = self.player:getActualGeneral1Name()
     local g2name = self.player:getActualGeneral2Name()
     if not shouldUseJiananByValue(self, g1name) and not shouldUseJiananByValue(self, g2name) then
       table.removeOne(skills, "qiaobian")
     end
+    if #skills == 0 then--奇怪的预选处理，返回"null"用于预选？
+      table.insert(skills, "xiaoguo")
+    end
   end
+  if self.player:getMaxCards() < 3 and #skills > 1 then
+		table.removeOne(skills, "xiaoguo")
+	end
   --没有合适的优先选突袭巧变？
 	return skills[math.random(1, #skills)]
 end

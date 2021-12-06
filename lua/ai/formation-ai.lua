@@ -461,7 +461,7 @@ end
 
 sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, target2)
 
-	local function qianhuan_CanPut(self,card)
+	local function qianhuan_CanPut(card)
 		local sorcery_ids = self.player:getPile("sorcery")
 		local suits = {"heart", "diamond", "spade", "club"}
 		for _,id in sgs.qlist(sorcery_ids) do
@@ -478,8 +478,13 @@ sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, ta
 	local cards = self.player:getCards("he")
 	cards=sgs.QList2Table(cards)
 	self:sortByKeepValue(cards)
+	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
+		if self:getKeepValue("WoodenOx") > sgs.ai_keep_value.Peach then
+			table.removeOne(cards,self.player:getTreasure())
+		end
+	end
 	for _,card in ipairs(cards) do
-		if qianhuan_CanPut(self,card) and not card:isKindOf("Peach") then
+		if qianhuan_CanPut(card) and (not card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0) then
 			return card:toString()
 		end
 	end

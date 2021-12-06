@@ -239,7 +239,7 @@ function sgs.getDefenseSlash(player, self)
 	if player:containsTrick("indulgence") then defense = defense - 0.25 end
 	if player:containsTrick("supply_shortage") then defense = defense - 0.15 end
 
-	if not hasEightDiagram then--这一部分用处？？
+	if not hasEightDiagram then--这一部分用处？？控制集火？
 		if player:hasShownSkill("jijiu") then
 			defense = defense - 3
 		elseif sgs.hasNullSkill("jijiu", player) then

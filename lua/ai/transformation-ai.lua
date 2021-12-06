@@ -1219,7 +1219,29 @@ sgs.ai_choicemade_filter.skillInvoke.zhiman = function(self, player, promptlist)
 end
 
 sgs.ai_skill_choice.zhiman = function(self, choices)
-	global_room:writeToConsole("制蛮命令变更")--变更只能一次，所以能有使用卡牌结构的目标判定就好了
+	global_room:writeToConsole("制蛮命令变更")
+	if sgs.ai_AOE_data then--变更只能一次，判断aoe保留变更
+		local use = sgs.ai_AOE_data:toCardUse()
+		local save_transform = false
+		for _, p in sgs.qlist(use.to) do
+			if self.player:isFriendWith(p) and self:playerGetRound(p) > self:playerGetRound(self.player) then
+				local skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
+				for _, skill in ipairs(skills) do
+					if skill:getFrequency() == sgs.Skill_Limited and (skill:getLimitMark() ~= "" and self.player:getMark(skill:getLimitMark()) == 0) then--限定技已发动
+						save_transform = true
+						break
+					end
+				end
+				if p:getActualGeneral2Name():match("sujiang") then
+					save_transform = true
+				end
+			end
+			if save_transform then
+				global_room:writeToConsole("制蛮保留变更")
+				return "no"
+			end
+		end
+	end
 	return "yes"
 end
 
@@ -1279,7 +1301,7 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 		if maxhp < p:getHp() then maxhp = p:getHp() end
 	end
     for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-		if p:getHp() == maxhp then
+		if p:getHp() == maxhp and not p:isRemoved() then--调虎离山和伤害优先级？
 			targets:append(p)
 		end
 	end
@@ -1289,17 +1311,22 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 	end]]
 	local target
 	if self.player:getMark("zhimantransformUsed") == 0 then--增加优先变将
-		--global_room:writeToConsole("散谣优先变更")
 		for _, p in sgs.qlist(targets) do
-			if self.player:isFriendWith(p) and not target then
+			if self.player:isFriendWith(p) then
+				if p:getActualGeneral2Name():match("sujiang") then
+					target = p
+					global_room:writeToConsole("散谣优先变更无副将")
+					break
+				end
 				local skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
 				for _, skill in ipairs(skills) do
 					if skill:getFrequency() == sgs.Skill_Limited and (skill:getLimitMark() ~= "" and self.player:getMark(skill:getLimitMark()) == 0) then--限定技已发动
 						target = p
+						break
 					end
 				end
-				if not target and p:getActualGeneral2Name():match("sujiang") then
-					target = p
+				if target then
+					global_room:writeToConsole("散谣优先变更限定技")
 					break
 				end
 			end

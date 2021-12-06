@@ -622,7 +622,7 @@ end
 --徐庶
 sgs.ai_skill_invoke.pozhen = function(self, data)
   local target = data:toPlayer()
-  if not self:isFriend(target) and self:getOverflow(target) > 2 then
+  if not self:isFriend(target) and self:getOverflow(target) > 1 then
     local weak_count = 0
     for _, p in ipairs(self.friends) do
       if target:canSlash(p, nil, true) and self:isWeak(p) then
@@ -659,13 +659,13 @@ end
 sgs.ai_skill_invoke.jiancai = function(self, data)
   local prompt = data:toString():split(":")
   if prompt[1] == "transform" then
-    global_room:writeToConsole("荐才:变更时的备选武将数+2")
+    --global_room:writeToConsole("荐才:变更时的备选武将数+2")
     return true
   end
-  if prompt[1] == "damage" then--无法知道伤害大小信息
+  if prompt[1] == "damage" then--无法知道伤害大小信息，判断多点减伤和桃数量
     local target = prompt[2]
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if p:objectName() == target and self.player:isFriendWith(p) then
+      if p:objectName() == target and self.player:isFriendWith(p) and p:getHp() == 1 then--处理野心家？
         return true
       end
     end

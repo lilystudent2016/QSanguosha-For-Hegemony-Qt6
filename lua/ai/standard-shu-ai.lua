@@ -326,11 +326,6 @@ sgs.ai_skill_use_func.TenyearRendeCard = function(card, use, self)
         end
     end
 end
-
-sgs.ai_use_value.TenyearRendeCard = sgs.ai_use_value.RendeCard
-sgs.ai_use_priority.TenyearRendeCard = sgs.ai_use_priority.RendeCard
-sgs.ai_card_intention.TenyearRendeCard = sgs.ai_card_intention.RendeCard
-sgs.dynamic_value.benefit.TenyearRendeCard = true
 ]]--
 
 --关羽
@@ -1062,7 +1057,21 @@ sgs.ai_skill_invoke.juxiang = function(self, data)
 end
 
 sgs.ai_cardneed.lieren = function(to, card, self)
-	return isCard("Slash", card, to) and getKnownCard(to, self.player, "Slash", true) == 0
+	local cards = to:getHandcards()
+	local has_big = false
+	for _, c in sgs.qlist(cards) do
+		if sgs.cardIsVisible(c, to, self.player) then
+			if c:getNumber() > 10 then
+				has_big = true
+				break
+			end
+		end
+	end
+	if not has_big then
+		return card:getNumber() > 10
+	else
+		return isCard("Slash", card, to) and getKnownCard(to, self.player, "Slash", true) == 0
+	end
 end
 
 sgs.ai_skill_invoke.lieren = function(self, data)

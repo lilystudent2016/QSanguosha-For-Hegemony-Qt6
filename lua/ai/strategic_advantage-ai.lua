@@ -17,7 +17,6 @@
 
   Mogara
 *********************************************************************]]
-
 --transfer
 local transfer_skill = {}
 transfer_skill.name = "transfer"
@@ -1161,6 +1160,7 @@ function SmartAI:useCardThreatenEmperor(card, use)
 	local cardPlace = self.room:getCardPlace(card:getEffectiveId())--修改后无法使用装备，考虑手牌区
 	if self.player:getCardCount(false) < 1 + (cardPlace == sgs.Player_PlaceHand and 1 or 0) then return end
 	if not self:hasTrickEffective(card, self.player, self.player) then return end
+	if self.player:hasSkills("qiaobian|qiaobian_egf") and self:getOverflow() > 1 then return end
 	use.card = card
 end
 sgs.ai_use_value.ThreatenEmperor = 8
