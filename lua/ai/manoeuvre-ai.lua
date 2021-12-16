@@ -503,9 +503,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
 	local max_point = max_card:getNumber()
 	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
 
-  if #self.friends_noself > 0 then
-    self:sort(self.friends_noself, "handcard", true)
-  end
+  self:sort(self.friends_noself, "handcard", true)
   for _, friend in ipairs(self.friends_noself) do--拆判定区多于1的队友
     if not friend:isKongcheng() and friend:getJudgingArea():length() > (self:needToThrowArmor(friend) and 0 or 1) then
       local friend_min_card = self:getMinCard(friend)
@@ -517,7 +515,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
         for _, c in ipairs(hcards) do
           if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
             sgs.ai_use_priority.FenglveCard = 4.2
-            global_room:writeToConsole("暗涌队友1:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+            global_room:writeToConsole("锋略队友1:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
             self.fenglve_card = c:getEffectiveId()
             use.card = FLCard
             if use.to then
@@ -529,7 +527,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
       end
       if not friend_min_card and max_point > 8 then
         sgs.ai_use_priority.FenglveCard = 4.2--顺之后
-        global_room:writeToConsole("暗涌队友2:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+        global_room:writeToConsole("锋略队友2:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
         self.fenglve_card = max_card:getEffectiveId()
         use.card = FLCard
         if use.to then

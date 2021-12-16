@@ -110,7 +110,7 @@ sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
 	--global_room:writeToConsole("除疠目标数"..#targets)
 	if #targets == 0 then return end
 	for _, p in ipairs(targets) do
-		local id = self:askForCardChosen(p, "he", "dummyreason", sgs.Card_MethodDiscard)
+		local id = self:askForCardChosen(p, "he", "chuli_dismantlement", sgs.Card_MethodDiscard)
 		if self:isFriend(p) then
 			local chosen_card
 			if id then chosen_card = sgs.Sanguosha:getCard(id) end
@@ -780,19 +780,14 @@ sgs.ai_skill_invoke.jianchu = function(self,data)
 	return not self:isFriend(target) and not self:doNotDiscard(target, "he")
 end
 
-sgs.ai_skill_cardchosen.jianchu = function(self, who, flags)--其实感觉用默认策略就好了
+sgs.ai_skill_cardchosen.jianchu = function(self, who, flags, method)
 	if not who:isNude() then
-		if who:hasEquip() then--直接用狂斧，鏖战对面有弃装备技能时需要单独处理
-			return sgs.ai_skill_cardchosen.kuangfu(self, who, flags)
+		if who:hasEquip() then
+			return self:askForCardChosen(who, "e", "jianchu_dismantlement", method)
 		else
-			local cards = who:getCards(flags)
-			local length = cards:length()
-			local index = math.random(0, length)
-			local card = cards:at(index)
-			return card:getId()
+			return self:askForCardChosen(who, flags, "jianchu_dismantlement", method)
 		end
 	end
-	return
 end
 
 --张角
@@ -965,7 +960,7 @@ function sgs.ai_slash_prohibit.leiji(self, from, to, card)
 	if from:hasShownSkill("jianchu") and (to:hasEquip() or to:getCardCount(true) == 1) then
 		return false
 	end
-	if (to:getMark("#qianxi+no_suit_red") or to:getMark("#qianxi+no_suit_black")) and (not self:hasEightDiagramEffect(to) or IgnoreArmor(from, to)) then
+	if (to:getMark("#qianxi+no_suit_red") + to:getMark("#qianxi+no_suit_black") > 0) and (not self:hasEightDiagramEffect(to) or IgnoreArmor(from, to)) then
 		return false
 	end
 	local hcard = to:getHandcardNum()
@@ -1188,7 +1183,6 @@ sgs.ai_skill_invoke.kuangfu = function(self, data)
 	return not benefit
 end
 
---sgs.ai_skill_choice.kuangfu_equip = function(self, choices, data)
 sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 	if self:isFriend(who) then
 		if who:getArmor() and self:needToThrowArmor(who) then return who:getArmor():getEffectiveId() end
@@ -1214,7 +1208,8 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 			if card_id then return card_id end
 		end
 		local dangerous = self:getDangerousCard(who)
-		if dangerous then--为何不直接return dangerous ??
+		if dangerous then return dangerous end
+		--[[
 			local card = sgs.Sanguosha:getCard(dangerous)
 			if card:isKindOf("Weapon") and who:getWeapon() then return who:getWeapon():getEffectiveId()
 			elseif card:isKindOf("Armor") and who:getArmor() then return who:getArmor():getEffectiveId()
@@ -1222,7 +1217,7 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 			elseif card:isKindOf("OffensiveHorse") and who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId()
 			elseif card:isKindOf("Treasure") and who:getTreasure() then return who:getTreasure():getEffectiveId()
 			end
-		end
+		]]
 		if who:getArmor() and who:getArmor():isKindOf("EightDiagram") and not self:needToThrowArmor(who) then return who:getArmor():getEffectiveId() end
 		if who:hasShownSkills("jijiu|beige|weimu|qingcheng") and not self:doNotDiscard(who, "e", false, 1, reason) then
 			if who:getPile("wooden_ox"):length() > 1 or who:hasTreasure("JadeSeal") then return who:getTreasure():getEffectiveId() end
@@ -1232,7 +1227,8 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 			if who:getWeapon() and (not who:hasShownSkills("jijiu") or who:getWeapon():isRed()) then return who:getWeapon():getEffectiveId() end
 		end
 		local valuable = self:getValuableCard(who)
-		if valuable then
+		if valuable then return valuable end
+		--[[
 			local card = sgs.Sanguosha:getCard(valuable)
 			if card:isKindOf("Weapon") and who:getWeapon() then return who:getWeapon():getEffectiveId()
 			elseif card:isKindOf("Armor") and who:getArmor() then return who:getArmor():getEffectiveId()
@@ -1240,13 +1236,14 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 			elseif card:isKindOf("OffensiveHorse") and who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId()
 			elseif card:isKindOf("Treasure") and who:getTreasure() then return who:getTreasure():getEffectiveId()
 			end
-		end
+		]]
 		if not self:doNotDiscard(who, "e") then
-			if who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId() end
-			if who:getArmor() then return who:getArmor():getEffectiveId() end
-			if who:getDefensiveHorse() then return who:getDefensiveHorse():getEffectiveId() end
-			if who:getWeapon() then return who:getWeapon():getEffectiveId() end
+			if who:getArmor() and self:isWeak() then return who:getArmor():getEffectiveId() end
 			if who:getTreasure() then return who:getTreasure():getEffectiveId() end
+			if who:getArmor() then return who:getArmor():getEffectiveId() end
+			if who:getWeapon() then return who:getWeapon():getEffectiveId() end
+			if who:getDefensiveHorse() then return who:getDefensiveHorse():getEffectiveId() end
+			if who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId() end
 		end
 	end
 end

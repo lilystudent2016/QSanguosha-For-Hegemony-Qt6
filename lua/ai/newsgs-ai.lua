@@ -135,12 +135,15 @@ sgs.ai_skill_invoke.zhukou = true
 sgs.ai_skill_invoke.duannian = function(self, data)
 	local has_peach = false
 	for _, card in sgs.qlist(self.player:getHandcards()) do
-		if isCard("Peach", card, self.player) then
+		if isCard("Peach", card, self.player) or (isCard("Analeptic", card, self.player) and self:isWeak()) then
 			has_peach = true
 		end
 	end
 	if not has_peach then
-		if self.player:getHandcardNum() <= self.player:getMaxHp() then
+		if self.player:getHandcardNum() < self.player:getMaxHp() then
+			return true
+		end
+		if self.player:getHandcardNum() == self.player:getMaxHp() and self:getCardsNum("Jink") == 0 then
 			return true
 		end
 		if self.player:getHandcardNum() > self.player:getMaxHp() and self:getOverflow() > 0 and self:getCardsNum("Jink") == 0 then
@@ -413,7 +416,7 @@ function sgs.ai_slash_prohibit.leiji_tianshu(self, from, to, card)
 	if from:hasShownSkill("jianchu") and (to:hasEquip() or to:getCardCount(true) == 1) then
 		return false
 	end
-	if (to:getMark("#qianxi+no_suit_red") or to:getMark("#qianxi+no_suit_black")) and (not self:hasEightDiagramEffect(to) or IgnoreArmor(from, to)) then
+	if (to:getMark("#qianxi+no_suit_red") + to:getMark("#qianxi+no_suit_black") > 0) and (not self:hasEightDiagramEffect(to) or IgnoreArmor(from, to)) then
 		return false
 	end
 	local hcard = to:getHandcardNum()
@@ -572,7 +575,7 @@ sgs.ai_skill_exchange.yanzheng = function(self,pattern,max_num,min_num,expand_pi
 				enemy_weak = enemy_weak + 1
 			end
 		end
-		if (valuable_num < 2) or (valuable_num < 3 and enemy_weak > 0)
+		if self.player:hasSkill("lirang") or (valuable_num < 2) or (valuable_num < 3 and enemy_weak > 0)
 		and (discard_num <= #self.enemies + 2 or (discard_num >= enemy_weak and enemy_weak > 1)) then
 			can_yanzheng = true
 		end

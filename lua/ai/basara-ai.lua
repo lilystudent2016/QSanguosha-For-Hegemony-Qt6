@@ -383,7 +383,6 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	local bothShow = ("luanji+shuangxiong|luanji+huoshui|huoji+jizhi|luoshen+fangzhu|guanxing+jizhi"):split("|")
 	local followShow = ("qianhuan|duoshi|rende|cunsi|jieyin|xiongyi|shouyue|hongfa"):split("|")
 
-	--assert(sgs.GetConfig("EnableLordConvertion", true))
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") == 1 and canShowHead then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
 			or self.player:inHeadSkills("zhiheng") or self.player:inHeadSkills("jianxiong") then
@@ -392,8 +391,11 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	end
 
 	local lord_caocao = sgs.findPlayerByShownSkillName("jianan")
-	if lord_caocao and self.player:willBeFriendWith(lord_caocao) then--判断明置是否合适？
-		--global_room:writeToConsole("五子良将纛明置")
+	if lord_caocao and self.player:willBeFriendWith(lord_caocao) then
+		return "show_both_generals"
+	end
+	local lord_sunquan = sgs.findPlayerByShownSkillName("jiahe")
+	if lord_sunquan and self.player:willBeFriendWith(lord_sunquan) and not lord_sunquan:getPile("flame_map"):isEmpty() then
 		return "show_both_generals"
 	end
 
@@ -512,7 +514,19 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		local fazheng = sgs.findPlayerByShownSkillName("xuanhuo")
 		if fazheng and self.player:getActualGeneral2():getKingdom() == fazheng:getKingdom() then
 			if canShowDeputy then
-				return "show_head_general"
+				return "show_deputy_general"
+			end
+			return "cancel"
+		end
+		if lord_caocao and self.player:getActualGeneral2():getKingdom() == lord_caocao:getKingdom() then
+			if canShowDeputy then
+				return "show_deputy_general"
+			end
+			return "cancel"
+		end
+		if lord_sunquan and self.player:getActualGeneral2():getKingdom() == lord_sunquan:getKingdom() then
+			if canShowDeputy and not lord_sunquan:getPile("flame_map"):isEmpty() then
+				return "show_deputy_general"
 			end
 			return "cancel"
 		end
@@ -710,7 +724,7 @@ end
 
 sgs.ai_skill_use_func.HalfMaxHpCard= function(card, use, self)
 	--global_room:writeToConsole("阴阳鱼摸牌判断开始")
-	if self.player:isKongcheng() and self:isWeak() and not self:needKongcheng() then
+	if self.player:isKongcheng() and self:isWeak() and not self:needKongcheng() and self.player:getMark("@firstshow") < 1 then
 		use.card = card
 		return
 	end
@@ -754,8 +768,9 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 
 	local freindisweak = false
 	for _, friend in ipairs(self.friends) do
-		if self:isWeak(friend) then
+		if friend:getHp() == 1 and self:isWeak(friend) then
 			freindisweak = true
+			break
 		end
 	end
 	if self.player:getHandcardNum() <= 2 and self:getCardsNum("Peach") == 0 and freindisweak then
@@ -786,8 +801,6 @@ sgs.ai_skill_choice["firstshow_see"] = function(self, choices)
 
 	--暂不考虑详细
 end
-
-sgs.ai_card_intention.FirstShowCard = 0
 
 --野心家标记
 local careerman_skill = {}
@@ -898,7 +911,7 @@ sgs.ai_skill_choice["GameRule:CareeristSummon"]= function(self, choices)
 end
 
 sgs.ai_skill_choice["GameRule:CareeristAdd"]= function(self, choices)
-	return "no"--目前直接不加入，怎样设置更有趣？
+	return math.random(1, 3) > 1 and "no" or "yes"
 end
 
 --锁定技明置主将的武将牌

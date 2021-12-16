@@ -39,7 +39,7 @@ sgs.ai_keep_value.FireSlash = 3.63
 sgs.ai_use_priority.FireSlash = 2.5
 
 sgs.weapon_range.Fan = 4
-sgs.ai_use_priority.Fan = 2.655
+sgs.ai_use_priority.Fan = 2.68
 sgs.ai_use_priority.Vine = 0.95
 
 sgs.ai_skill_invoke.Fan = function(self, data)
@@ -179,7 +179,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 	if self.player:hasSkills("liegong|liegong_xh") and not (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then
 		return false
 	end
-	if self.player:hasWeapon("Axe") and self.player:getCards("he"):length() > 4 then
+	if self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
 		return true
 	end
 	if self.player:hasSkill("wushuang") then
@@ -192,7 +192,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 	if self.player:hasShownSkill("jianchu") and (target:hasEquip() or target:getCardCount(true) == 1) then
 		return true
 	end
-	if target:getMark("#qianxi+no_suit_red") and not target:hasShownSkill("qingguo") then
+	if target:getMark("#qianxi+no_suit_red") > 0 and not target:hasShownSkill("qingguo") then
 		return true
 	end
 	if self.player:hasWeapon("DragonPhoenix") and target:getCardCount(true) == 1 then
@@ -273,21 +273,25 @@ function SmartAI:useCardSupplyShortage(card, use)
 
 		local value = 0 - enemy:getHandcardNum()
 
-		if enemy:hasShownSkills("tuxi|lijian|fanjian|jijiu|jieyin|beige")--技能重复？
-		  or (enemy:hasShownSkill("zaiqi") and enemy:getLostHp() > 2)
-			then value = value + 5
+		if enemy:hasShownSkills(sgs.priority_skill) then
+		  value = value + 3
 		end
-		if enemy:hasShownSkills(sgs.cardneed_skill)
-			then value = value + 5
+		if enemy:hasShownSkills(sgs.cardneed_skill) then
+			value = value + 5
 		end
-		if enemy:hasShownSkills(sgs.drawcard_skill) then value = value + 5 end
+		if enemy:hasShownSkills(sgs.drawcard_skill) or (enemy:hasShownSkill("zaiqi") and enemy:getLostHp() > 2) then
+			value = value + 5
+		end
 		if self:isWeak(enemy) then value = value + 5 end
-		if enemy:isLord() then value = value + 3 end
+		if enemy:isLord() then value = value + 1 end
+		if enemy:getRole() == "careerist" and enemy:getActualGeneral1():getKingdom() == "careerist" then
+			value = value + 3
+		end
 
 		if self:objectiveLevel(enemy) < 3 then value = value - 10 end
 		if not enemy:faceUp() then value = value - 10 end
 		if enemy:hasShownSkills("keji|shensu") then value = value - enemy:getHandcardNum() end
-		if enemy:hasShownSkills("guanxing|tiandu|guidao") then value = value - 5 end
+		if enemy:hasShownSkills("guanxing|tiandu|guidao|zhuwei") then value = value - 5 end
 		if not sgs.isGoodTarget(enemy, self.enemies, self) then value = value - 1 end
 		if self:needKongcheng(enemy) then value = value - 1 end
 		return value
@@ -389,14 +393,14 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 	if to:hasArmorEffect("SilverLion") then damage = 1 end
 
 	local punish
-	local kills, the_enemy = 0
+	local kills, the_enemy = 0, nil
 	local good, bad, F_count, E_count = 0, 0, 0, 0
 	local peach_num = self.player:objectName() == from:objectName() and self:getCardsNum("Peach") or getCardsNum("Peach", from, self.player)
 
 	local function getChainedPlayerValue(target, dmg)
 		local newvalue = 0
-		if self:isGoodChainPartner(target) then newvalue = newvalue + 1 end
-		if self:isWeak(target) then newvalue = newvalue - 1 end
+		if self:isGoodChainPartner(target) then newvalue = newvalue + (self:isFriend(target) and 1 or -1) end
+		if self:isWeak(target) then newvalue = newvalue + (self:isFriend(target) and -1 or 1) end
 		if dmg and nature == sgs.DamageStruct_Fire then
 			if target:hasArmorEffect("Vine") then dmg = dmg + 1 end
 			if target:getMark("@gale") > 0 then dmg = dmg + 1 end
@@ -415,7 +419,7 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 				and self:damageIsEffective(from, nil, target) and peach_num < 1 then newvalue = newvalue - 100 end
 		end
 
-		if target:hasArmorEffect("SilverLion") then return newvalue - 1 end
+		if target:hasArmorEffect("SilverLion") then return newvalue + (self:isFriend(target) and 1 or -1) end
 		return newvalue - damage * 2 - (dmg and dmg * 2 or 0)
 	end
 
@@ -644,7 +648,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 	local can_FireAttack_self
 	for _, card in ipairs(canDis) do
 		if (not isCard("Peach", card, self.player) or self:getCardsNum("Peach") >= 3) and not self.player:hasArmorEffect("IronArmor")
-			and (not isCard("Analeptic", card, self.player) or self:getCardsNum("Analeptic") >= 2) then
+			and (not isCard("Analeptic", card, self.player) or self:getCardsNum("Analeptic") >= 2) and not self.player:hasSkill("enyuan") then
 			can_FireAttack_self = true
 		end
 	end

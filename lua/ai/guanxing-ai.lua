@@ -700,7 +700,7 @@ function SmartAI:getValuableCardForGuanxing(cards, up_cards)
 						or enemy:isKongcheng()
 						or self:canLiegong(enemy, self.player)
 						or self.player:hasShownSkills(sgs.force_slash_skill)
-						or (self.player:hasWeapon("Axe") or self:getCardsNum("Axe") > 0) and self.player:getCards("he"):length() > 4
+						or (self.player:hasWeapon("Axe") or self:getCardsNum("Axe") > 0) and self.player:getCardCount(true) > 4
 						then
 						return analeptic
 					end
@@ -732,7 +732,7 @@ function SmartAI:getValuableCardForGuanxing(cards, up_cards)
 		end
 
 		if halberd then
-			if self.player:hasSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie") then
+			if self.player:hasSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie|xiongnve|kuangcai") then
 				return halberd
 			end
 		end

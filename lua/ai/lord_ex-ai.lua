@@ -126,6 +126,7 @@ end
 
 sgs.ai_skill_choice.midao = function(self, choices, data)
   local use = self.player:getTag("MidaoUseData"):toCardUse()
+  local card = use.card
   local from = use.from
   local targets = sgs.QList2Table(use.to)
   local fire_value, thunder_value, normal_value = 0,0,0
@@ -142,20 +143,23 @@ sgs.ai_skill_choice.midao = function(self, choices, data)
     if p:hasArmorEffect("Vine") then
       fire_value = fire_value + (self:isFriend(p) and -2 or 2)
     end
+    if p:hasArmorEffect("IronArmor") and card:isKindOf("Slash") then
+      fire_value = fire_value + (self:isFriend(p) and 2 or -2)
+    end
     if p:isChained() then
       fire_value = fire_value + (self:isFriend(p) and -0.5 or 0.5)--调小0.5，1会出现装太平和被锁时值相等的情况，多少合适？
       thunder_value = thunder_value + (self:isFriend(p) and -0.5 or 0.5)
     end
   end
   global_room:writeToConsole("米道火:"..fire_value.." 雷:"..thunder_value.." 普通:"..normal_value)
-  if fire_value >= normal_value and fire_value >= thunder_value then--是否应该把普放第一？
-    return "fire"
+  if thunder_value >= fire_value and thunder_value >= normal_value then
+    return "thunder"
   end
   if normal_value >= fire_value and normal_value >= thunder_value then
     return "normal"
   end
-  if thunder_value >= fire_value and thunder_value >= normal_value then
-    return "thunder"
+  if fire_value >= normal_value and fire_value >= thunder_value then--是否应该把普放第一？
+    return "fire"
   end
   return "normal"
 end
@@ -202,19 +206,23 @@ sgs.ai_skill_invoke.fengshix = function(self, data)
     return false
   end
   local use = self.player:getTag("FengshixUsedata"):toCardUse()
-  local card = use.card--更多的非伤害锦囊的情况？
+  local card = use.card--更多的非伤害锦囊的情况？现在空城也可触发无需担心
+  self.fengshix_discard = nil
   if card:isKindOf("FireAttack") and target:getCardCount(true) == 1 then
     return false
   end
-  if self.player:getHandcardNum() > target:getHandcardNum() then-- and not target:isNude()
-    if self.player:getHandcardNum() > 3 or self:isWeak(target) then
-      return true
-    end
+  if card:isKindOf("Drowning") and target:getEquips():length() == 1 then
+    self.fengshix_discard = target:getEquips():first():getEffectiveId()
+    return true
+  end
+  if self.player:getHandcardNum() > 3 or self:isWeak(target) then
+    return true
   end
 	return false
 end
 
 sgs.ai_skill_choice.fengshix = function(self, choices, data)
+  self.fengshix_discard = nil
   local use = data:toCardUse()
   if use.card:isKindOf("FireAttack") and use.to:length() == 1 and use.to:first():getCardCount(true) == 1 then
     return "no"
@@ -223,6 +231,13 @@ sgs.ai_skill_choice.fengshix = function(self, choices, data)
     return "yes"
   end
 	return "no"
+end
+
+sgs.ai_skill_cardchosen.fengshix = function(self, who, flags, method)
+  if self.fengshix_discard then--自己被水淹七军缺信息
+    return self.fengshix_discard
+  end
+  return self:askForCardChosen(who, flags, "fengshix_dismantlement", method)
 end
 
 --刘琦
@@ -434,7 +449,7 @@ end
 sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
   sgs.ai_use_priority.QuanjinCard = 2.4
   local target
-  local sphnum = self.player:getHandcardNum()
+  local my_hnum = self.player:getHandcardNum()
   local maxcard_num,maxhurt_num= 0,0
   local maxcard_hurt
   for _, p in sgs.qlist(self.room:getAlivePlayers()) do
@@ -474,14 +489,14 @@ sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
   end
 
   if card:isKindOf("Peach") or (maxcard_num >= maxhurt_num)--桃或者牌最多的不是受伤的
-  or (sphnum > 2 and sphnum >= maxcard_num)--自己手牌最多发牌
-  or (maxcard_num >= sphnum + 2)--能摸3张
+  or (my_hnum > 2 and my_hnum >= maxcard_num)--自己手牌最多发牌
+  or (maxcard_num >= my_hnum + 2)--能摸3张
   or (weak_friend and weak_friend:getHandcardNum() + 1 >= maxhurt_num) then--队友的牌数比受伤的不少于1
     if weak_friend then
       target = weak_friend
     end
   end
-  if not target and not card:isKindOf("Peach") and (sphnum < maxcard_num or sphnum == maxhurt_num) then
+  if not target and not card:isKindOf("Peach") and (my_hnum < maxcard_num or my_hnum == maxhurt_num) then
     target = maxcard_hurt
   end
 
@@ -501,43 +516,72 @@ sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
   end
 end
 
-sgs.ai_skill_choice["startcommand_quanjin"] = function(self, choices)
-  self.player:speak(choices)
-  choices = choices:split("+")
-  local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
-  local command_value1 = table.indexOf(commands,choices[1])
-  local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.max(command_value1,command_value2)--需要一些额外的标记？
-  --global_room:writeToConsole("choice:".. choices[index])
-  return commands[index]
-end
+sgs.ai_skill_choice["startcommand_quanjin"] = sgs.ai_skill_choice.startcommand_to
 
 sgs.ai_skill_choice["docommand_quanjin"] = function(self, choices, data)
-  --target->setFlags("JieyueTarget");有标记可使用
-  --[[if index <= 4 then
-    return "yes"
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+  local source_hnum = source:getHandcardNum()
+  local my_hnum = self.player:getHandcardNum()
+  local draw_num = my_hnum - source_hnum
+  if index == 1 then
+    if not is_enemy and not is_friend then
+      return "yes"
+    end
+    if is_friend then
+      if draw_num <= 1 then
+        return "yes"
+      end
+      if draw_num == 2 and not self:isWeak(source) then
+        for _, p in ipairs(self.enemies) do
+          if self:isWeak(p) and self:isEnemy(source, p) then
+            return "yes"
+          end
+        end
+      end
+    end
+    if is_enemy and draw_num > 3 then
+      for _, p in ipairs(self.friends) do
+        if self:isWeak(p) and self:isEnemy(source, p) then
+          return "no"
+        end
+      end
+      return "yes"
+    end
+  end
+  if index == 2 then
+    if is_friend and draw_num < 2 then
+      return "yes"
+    end
+    if is_enemy and draw_num > 1 then
+      return "yes"
+    end
   end
   if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
-      return "yes"
-    else
-      return "no"
-    end
-  end
-  if index == 6 then
     if not self.player:faceUp() then
       return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
     end
-  end]]--
+    if is_enemy and draw_num > 4 and math.random(1, 2) > 1 then
+      return "yes"
+    end
+  end
+  if is_enemy then
+    if index == 3 and draw_num > 3 and not self:isWeak() then
+      return "yes"
+    end
+    if index == 4 and draw_num > 1 and not source:canSlash(self.player, nil, true) then
+      return "yes"
+    end
+    if index == 6 and self.player:getEquips():length() < 3 and my_hnum < 3 and draw_num > 1 then
+      return "yes"
+    end
+  end
   return "no"
 end
+
+sgs.ai_skill_playerchosen["command_quanjin"] = sgs.ai_skill_playerchosen.damage
 
 local zaoyun_skill = {}
 zaoyun_skill.name = "zaoyun"
@@ -552,6 +596,9 @@ end
 
 sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
   sgs.ai_use_priority.ZaoyunCard = 2.65--杀之前，怎么配合一技能先后？
+  if self.player:hasSkill("daoshu") then
+    sgs.ai_use_priority.QuanjinCard = 2.97--盗书之前
+  end
 
   for _,c in sgs.qlist(self.player:getCards("h")) do
     local dummy_use = {
@@ -561,7 +608,6 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
        self:useBasicCard(c, dummy_use)
     end
   end
-  --self.player:speak("zaoyun函数:"..self.player:objectName())
   local target
   self:sort(self.enemies, "hp")
   for _, p in ipairs(self.enemies) do
@@ -589,23 +635,20 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
       end
     end
   end
-  --assert(target)
   if target then
-    --self.player:speak("zaoyun目标:"..target:objectName())
   	local card_list = {}
     local need_num = self.player:distanceTo(target) - 1
     local handcards = self.player:getCards("h")
     handcards = sgs.QList2Table(handcards)
-    self:sortByKeepValue(handcards)
+    self:sortByUseValue(handcards, true)
     for _,c in ipairs(handcards) do
-      if not c:isKindOf("Peach")  then
+      if not (c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0) then
         table.insert(card_list, c:getEffectiveId())
       end
       if #card_list == need_num then
         break
       end
     end
-    assert(#card_list)
     if #card_list == need_num then
       local card_str = ("@ZaoyunCard=" .. table.concat(card_list, "+") .."&zaoyun")
       use.card =  sgs.Card_Parse(card_str)
@@ -616,29 +659,29 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
 		  end
    end
 	end
-  return
 end
 
 --徐庶
 sgs.ai_skill_invoke.pozhen = function(self, data)
   local target = data:toPlayer()
-  if not self:isFriend(target) and self:getOverflow(target) > 1 then
+  local has_attack_skill = target:hasSkills("luanji|shuangxiong")
+  if not self:isFriend(target) and (self:getOverflow(target) > 1 or target:getHandcardNum() > 4) then
     local weak_count = 0
     for _, p in ipairs(self.friends) do
-      if target:canSlash(p, nil, true) and self:isWeak(p) then
+      if (target:canSlash(p, nil, true) or has_attack_skill) and self:isWeak(p) then
         weak_count = weak_count + 1
         if weak_count > 1 then
           return true
         end
       end
-      if target:canSlash(p, nil, true) and p:getHp() == 1 then
+      if (target:canSlash(p, nil, true) or has_attack_skill) and p:getHp() == 1 then
         return true
       end
     end
   end
   if self:isEnemy(target) and self.player:getHp() == 1 then
       for _, p in ipairs(self.friends) do
-        if target:canSlash(p, nil, true) and self:isWeak(p) then
+        if (target:canSlash(p, nil, true) or has_attack_skill) and self:isWeak(p) then
           return true
         end
       end
@@ -818,11 +861,34 @@ end
 sgs.ai_skill_exchange._quanji = function(self,pattern,max_num,min_num,expand_pile)
 	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
-  if self.player:getPhase() == sgs.Player_Play then
+  if self.player:getPhase() <= sgs.Player_Play then
 		self:sortByUseValue(cards, true)
 	else
 		self:sortByKeepValue(cards)
 	end
+  for _, c in ipairs(cards) do--藏君主装备
+    if c:isKindOf("LuminousPearl") then
+      local lord = self.room:getLord("wu")
+      if lord and self:isEnemy(lord) then
+        return c:getEffectiveId()
+      end
+    elseif c:isKindOf("DragonPhoenix") then
+      local lord = self.room:getLord("shu")
+      if lord and self:isEnemy(lord) then
+        return c:getEffectiveId()
+      end
+    elseif c:isKindOf("PeaceSpell") then
+      local lord = self.room:getLord("qun")
+      if lord and self:isEnemy(lord) then
+        return c:getEffectiveId()
+      end
+    elseif c:isKindOf("SixDragons") then
+      local lord = self.room:getLord("wei")
+      if lord and self:isEnemy(lord) then
+        return c:getEffectiveId()
+      end
+    end
+  end
   if #cards > 1 and cards[1]:isKindOf("Crossbow")--别放连弩
   and not ((cards[2]:isKindOf("Peach") or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
     return cards[2]:getEffectiveId()
@@ -929,50 +995,89 @@ sgs.ai_skill_invoke.zhaoxin = function(self, data)
   if not self:willShowForDefence() or not self:willShowForMasochism() then
     return false
   end
---昭心的触发条件给怎么写？现在主要是找桃，会出现17张牌找桃换2牌的情况。。
-  local same_card_num = false
-  local one_less_num = false
-  local known_peach = false
-  local need_peach = false
-  if (self.player:getHp() > 1 and self:getCardsNum("Peach") == 0)
-  or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
-    need_peach = true
-  end
+  local my_hnum = self.player:getHandcardNum()
+  local targets = {}
+  self.zhaoxin_target = nil
   for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-    if not p:isKongcheng() then
-      if (getKnownCard(p, self.player, "Peach", false, "h") > 0) and p:getHandcardNum() <= self.player:getHandcardNum() then
-        known_peach = true
-      end
-      if p:getHandcardNum() == self.player:getHandcardNum() then
-        same_card_num = true
-      end
-      if (p:getHandcardNum() + 1 == self.player:getHandcardNum())then
-        one_less_num = true
-      end
+    if not p:isKongcheng() and p:getHandcardNum() <= my_hnum then
+      table.insert(targets, p)
     end
   end
-  if need_peach and same_card_num then
+  if #targets == 0 then
+    return false
+  end
+  self:sort(targets, "handcard", true)
+
+  local my_value = 0
+  for _, card in sgs.qlist(self.player:getHandcards()) do
+    if self.player:getPhase() <= sgs.Player_Play then
+      my_value = my_value + self:getUseValue(card)
+    else
+      my_value = my_value + self:getKeepValue(card)
+    end
+  end
+
+  local same_card_target, one_less_target
+  local same_card_value, one_less_value = 0, 0
+  local mark_peach_num = self.player:getMark("@companion") + self.player:getMark("@careerist")--包含标记桃
+  local need_peach = (self.player:getHp() > 1 and self:getCardsNum("Peach") < 1 + mark_peach_num)
+        or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") < 1 + mark_peach_num)
+
+  for _, p in ipairs(targets) do
+    local known = 0
+    local value = 0
+    local p_hnum = p:getHandcardNum()
+    for _, card in sgs.qlist(p:getHandcards()) do
+      if sgs.cardIsVisible(card, p, self.player) then
+        known = known + 1
+        if self.player:getPhase() <= sgs.Player_Play then
+          value = value + self:getUseValue(card)
+        else
+          value = value + self:getKeepValue(card)
+        end
+        if isCard("Peach", card, self.player) or isCard("Analeptic", card, self.player) then
+          if need_peach and self:isWeak() then
+            global_room:writeToConsole("昭心找桃")
+            self.zhaoxin_target = p
+            return true
+          end
+        end
+      end
+    end
+    if value > my_value then
+      global_room:writeToConsole("昭心换好牌")
+      self.zhaoxin_target = p
+      return true
+    end
+    if p_hnum == my_hnum and not (known == p_hnum and value < my_value) and value >= same_card_value then
+      same_card_value = value
+      same_card_target = p
+    end
+    if p_hnum + 1 == my_hnum and not (known == p_hnum and value < my_value) and value >= one_less_value then
+      one_less_value = value
+      one_less_target = p
+    end
+  end
+  if need_peach and same_card_target then
+    global_room:writeToConsole("昭心换等量牌")
+    self.zhaoxin_target = same_card_target
     return true
   end
-  if need_peach and self.player:isWounded() and one_less_num then
-    return true
-  end
-  if need_peach and self:isWeak() and known_peach then
+  if need_peach and self.player:isWounded() and one_less_target then
+    global_room:writeToConsole("昭心换-1牌")
+    self.zhaoxin_target = one_less_target
     return true
   end
 	return false
 end
 
-sgs.ai_skill_playerchosen["zhaoxin-exchange"] = function(self, targets)
+sgs.ai_skill_playerchosen["zhaoxin_exchange"] = function(self, targets)
   targets = sgs.QList2Table(targets)
-  self:sort(targets, "handcard", true)--去除空城和已换过手牌（已知全部手牌内容）的目标？
-  if self:isWeak() then
-    for _, p in ipairs(targets) do
-      if getKnownCard(p, self.player, "Peach", false, "h") + getKnownCard(p, self.player, "Analeptic", false, "h") > 0 then
-        return p
-      end
-    end
+  if self.zhaoxin_target then-- and table.contains(targets ,self.zhaoxin_target)
+    global_room:writeToConsole("昭心目标:"..sgs.Sanguosha:translate(self.zhaoxin_target:getGeneralName()).."/"..sgs.Sanguosha:translate(self.zhaoxin_target:getGeneral2Name()))
+    return self.zhaoxin_target
   end
+  self:sort(targets, "handcard", true)
 	return targets[1]
 end
 
@@ -1015,12 +1120,50 @@ end
 
 sgs.ai_skill_choice.xiongnve_attack = function(self, generals)
   generals = generals:split("+")
+  local xiongnve_kingdom = {["wei"] = {}, ["shu"] = {}, ["wu"] = {}, ["qun"] = {}, ["careerist"] = {}, ["double"] = {}}
+	for _, name in ipairs(generals) do
+		local general = sgs.Sanguosha:getGeneral(name)
+		if not general:isDoubleKingdoms() then
+			table.insert(xiongnve_kingdom[general:getKingdom()],name)
+		else
+			table.insert(xiongnve_kingdom["double"],name)
+		end
+	end
+  local kingdoms = {wei = 0, shu = 0, wu = 0, qun = 0, careerist = 0}--计算势力的人数，正是敌人，负是队友
+	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+		if not p:isRemoved() and p:hasShownOneGeneral() then--非暗将和掉虎
+			local p_kingdom = p:getKingdom()
+			if p_kingdom == "god" then
+				p_kingdom = "careerist"
+			end
+			kingdoms[p_kingdom] = kingdoms[p_kingdom] + (self:isFriend(p) and -1 or 1)
+		end
+	end
+  local max_friend_kingom
+	local max_enemy_kingdom
+	local f_num, e_num = 0,0
+	for key, value in pairs(kingdoms) do
+		if key and value > e_num then
+			max_enemy_kingdom = key
+			e_num = value
+		end
+		if key and value < f_num then
+			max_friend_kingom = key
+			f_num = value
+		end
+	end
+  if (self:getCardsNum("Crossbow", 'he') > 0 or self:hasCrossbowEffect()) then
+    
+  end
 	return generals[math.random(1,#generals)]
 end
 
 sgs.ai_skill_choice.xiongnve = function(self, choices, data)
   choices = choices:split("+")
 --"adddamage+extraction+nolimit"
+  if self.xiongnve_choice then
+    return self.xiongnve_choice
+  end
   return choices[1]
 end
 
@@ -1046,7 +1189,7 @@ sgs.ai_skill_choice.xiongnve_defence = function(self, generals)
     end
   end
   if key then
-    global_room:writeToConsole("凶虐减伤选择:"..key)
+    --global_room:writeToConsole("凶虐减伤选择:"..key)
     return xiongnve_kingdom[key][1]
   end
   if #xiongnve_kingdom["double"] > 0 then
@@ -1066,9 +1209,9 @@ local huaiyi_skill = {
       if self.player:getPile("disloyalty"):length() == self.player:getMaxHp() then
           return nil
       end
-      if self.player:getPile("disloyalty"):length() + 1 == self.player:getMaxHp() and math.random(1, 5) > 4 then
+      if self.player:getPile("disloyalty"):length() + 1 == self.player:getMaxHp() and math.random(1, 5) > 1 then
         return nil
-    end
+      end
       local handcards = self.player:getHandcards()
       local red, black = false, false
       for _,c in sgs.qlist(handcards) do
@@ -1092,47 +1235,25 @@ local huaiyi_skill = {
 table.insert(sgs.ai_skills, huaiyi_skill)
 
 sgs.ai_skill_use_func["HuaiyiCard"] = function(card, use, self)
-  local handcards = self.player:getHandcards()
-  local reds, blacks = {}, {}
-  for _,c in sgs.qlist(handcards) do
-      local dummy_use = {
-          isDummy = true,
-      }
-      if c:isKindOf("BasicCard") then
-          self:useBasicCard(c, dummy_use)
-      elseif c:isKindOf("EquipCard") then
-          self:useEquipCard(c, dummy_use)
-      elseif c:isKindOf("TrickCard") then
-          self:useTrickCard(c, dummy_use)
-      end
-      if dummy_use.card then
-          return --It seems that self.player should use this card first.
-      end
-      if c:isRed() then
-          table.insert(reds, c)
-      else
-          table.insert(blacks, c)
-      end
-  end
-
-  local targets = self:findPlayerToDiscard("he", false, sgs.Card_MethodGet, nil, true)
-  local n_reds, n_blacks, n_targets = #reds, #blacks, #targets
-  if n_targets == 0 then
-      return
-  elseif n_reds - n_targets >= 2 and n_blacks - n_targets >= 2 and handcards:length() - n_targets >= 5 then
-      return
-  end
-  --[[------------------
-      Haven't finished.
-  ]]--------------------
-  use.card = card
-end
-
-sgs.ai_skill_choice["huaiyi"] = function(self, choices, data)
+  self.huaiyi_choice = nil
   local handcards = self.player:getHandcards()
   local reds, blacks = {}, {}
   local red_value, black_value = 0, 0
   for _,c in sgs.qlist(handcards) do
+      local dummy_use = {
+          isDummy = true,
+      }
+      if c:isKindOf("Peach") then
+        self:useBasicCard(c, dummy_use)
+  --[[
+      elseif c:isKindOf("EquipCard") and not self:getSameEquip(c) then
+          self:useEquipCard(c, dummy_use)
+      elseif c:isKindOf("TrickCard") then
+          self:useTrickCard(c, dummy_use)]]
+      end
+      if dummy_use.card then
+        return --It seems that self.player should use this card first.
+      end
       if c:isRed() then
         red_value = red_value + self:getUseValue(c)
         table.insert(reds, c)
@@ -1141,18 +1262,41 @@ sgs.ai_skill_choice["huaiyi"] = function(self, choices, data)
         table.insert(blacks, c)
       end
   end
-  if self.player:getLostHp() < 2 then--考虑是否会多出玩家数？
-    return (#reds > #blacks and "red" or "black")
-  else
-    return (red_value < black_value and "red" or "black")
+
+  local targets = self:findPlayerToDiscard("he", false, sgs.Card_MethodGet, nil, true)
+  local n_reds, n_blacks, n_targets = #reds, #blacks, #targets
+  if n_targets == 0 then
+    return
   end
---[[换等价新写法
-  if red_value < black_value then
-      return "red"
-  else
-      return "black"
+  if n_reds > n_targets and n_blacks > n_targets then
+    local min_num = math.min(n_reds, n_blacks)
+    if self:getOverflow() - min_num + n_targets < 0 then
+      return
+    end
   end
-  ]]
+
+  if n_reds > n_targets and n_blacks > n_targets then
+    self.huaiyi_choice = n_reds < n_blacks and "red" or "black"
+  elseif n_reds > n_targets and math.abs(n_blacks - n_targets) < 2 then
+    self.huaiyi_choice = "black"
+  elseif n_blacks > n_targets and math.abs(n_reds - n_targets) < 2 then
+    self.huaiyi_choice = "red"
+  elseif self.player:getLostHp() < 2 then
+    self.huaiyi_choice = n_reds > n_blacks and "red" or "black"
+  else
+    self.huaiyi_choice = red_value < black_value and "red" or "black"
+  end
+  use.card = card
+end
+
+sgs.ai_use_priority.HuaiyiCard = 4.2
+
+sgs.ai_skill_choice["huaiyi"] = function(self, choices, data)
+  if self.huaiyi_choice then
+    return self.huaiyi_choice
+  end
+  choices = choices:split("+")
+  return choices[math.random(1, #choices)]
 end
 
 sgs.ai_skill_playerchosen["huaiyi_snatch"] = function(self, targets, max_num, min_num)
@@ -1181,12 +1325,37 @@ sgs.ai_skill_cardchosen.huaiyi = function(self, who, flags)
   local flag_str
   if self.player:getPile("disloyalty"):length() + 1 == self.player:getMaxHp() then
     flag_str = "h"
-  elseif  self.player:getPile("disloyalty"):length() + 2 == self.player:getMaxHp() and math.random(1, 5) > 2  then
+  elseif self.player:getPile("disloyalty"):length() + 2 == self.player:getMaxHp() and math.random(1, 5) > 2  then
     flag_str = "h"
-  elseif math.random(1, 5) > 3 then
+  elseif math.random(1, 5) > 4 then
     flag_str = "h"
   else
     flag_str = "he"
+  end
+  if flag_str == "he" then--藏君主装备
+    for _, equip in sgs.qlist(who:getEquips()) do
+      if equip:isKindOf("LuminousPearl") then
+        local lord = self.room:getLord("wu")
+        if lord and self:isEnemy(lord) then
+          return equip:getEffectiveId()
+        end
+      elseif equip:isKindOf("DragonPhoenix") then
+        local lord = self.room:getLord("shu")
+        if lord and self:isEnemy(lord) then
+          return equip:getEffectiveId()
+        end
+      elseif equip:isKindOf("PeaceSpell") then
+        local lord = self.room:getLord("qun")
+        if lord and self:isEnemy(lord) then
+          return equip:getEffectiveId()
+        end
+      elseif equip:isKindOf("SixDragons") then
+        local lord = self.room:getLord("wei")
+        if lord and self:isEnemy(lord) then
+          return equip:getEffectiveId()
+        end
+      end
+    end
   end
 	return self:askForCardChosen(who, flag_str, "huaiyi_snatch", sgs.Card_MethodGet)
 end
@@ -1572,18 +1741,17 @@ end
 sgs.ai_use_priority.AocaiCard = 20
 
 sgs.ai_skill_cardask["@aocai-view"] = function(self, data, pattern, target, target2)
-	global_room:writeToConsole("进入傲才:" .. self.player:objectName())
+	--global_room:writeToConsole("进入傲才:" .. self.player:objectName())
 	if self.player:property("aocai"):toString() == "" then
 		global_room:writeToConsole("傲才结果:.")
 		return "."
 	end
 	local aocai_list = self.player:property("aocai"):toString():split("+")
 	for _, id in ipairs(aocai_list) do
-        local num_id = tonumber(id)
-        local hcard = sgs.Sanguosha:getCard(num_id)
+    local num_id = tonumber(id)
 		global_room:writeToConsole("傲才结果:" .. num_id)
-        return "$" .. num_id
-    end
+    return "$" .. num_id
+  end
 end
 
 local duwu_skill = {}
@@ -1597,7 +1765,7 @@ end
 sgs.ai_skill_use_func.DuwuCard= function(card, use, self)
   local num_nofriednwith, num_enermy = 0 ,0
   for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-    if self.player:distanceTo(p) <= self.player:getAttackRange() and self:damageIsEffective(p, nil, self.player) then
+    if self.player:inMyAttackRange(p) and self:damageIsEffective(p, nil, self.player) then
       if not self.player:isFriendWith(p) then
         num_nofriednwith = num_nofriednwith + 1
       end
@@ -1607,7 +1775,7 @@ sgs.ai_skill_use_func.DuwuCard= function(card, use, self)
     end
   end
   if ((self.player:getWeapon() and sgs.weapon_range[self.player:getWeapon():getClassName()] > 2) or num_enermy > 2)
-  and self.player:getMark("Global_TurnCount") > 1 then--防止开局就使用
+  and (self.player:getMark("Global_TurnCount") > 1 or string.find(sgs.gameProcess(), ">>>")) then--防止开局就使用
     use.card = card
   end
 	if self.player:getHp() == 1 and num_nofriednwith > 1 then
@@ -1619,40 +1787,73 @@ sgs.ai_card_intention.DuwuCard = 80
 sgs.ai_use_priority.DuwuCard= 3.6
 
 sgs.ai_skill_choice["startcommand_duwu"] = function(self, choices)
-  self.player:speak(choices)
+  global_room:writeToConsole(choices)
   choices = choices:split("+")
   local commands = {"command2", "command3", "command4", "command1", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
   local command_value1 = table.indexOf(commands,choices[1])
   local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.max(command_value1,command_value2)--需要一些额外的标记？
+  local index = math.max(command_value1,command_value2)
   --global_room:writeToConsole("choice:".. choices[index])
   return commands[index]
 end
 
-sgs.ai_skill_choice["docommand_duwu"] = function(self, choices)
-  --[[if index <= 4 then
+sgs.ai_skill_choice["docommand_duwu"] = function(self, choices, data)
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+
+  if index == 1 then
+    if not is_enemy and not is_friend then
+      return "yes"
+    end
+    if is_friend and not self:isWeak() then
+      for _, p in ipairs(self.enemies) do
+        if self:isWeak(p) and self:isEnemy(source, p) then
+          return "yes"
+        end
+      end
+    end
+    if is_enemy then
+      for _, p in ipairs(self.friends) do
+        if self:isWeak(p) and self:isEnemy(source, p) then
+          return "no"
+        end
+      end
+      return "yes"
+    end
+  end
+  if index == 2 then
     return "yes"
   end
-  if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
-      return "yes"
-    else
-      return "no"
-    end
+  if index == 3 and is_enemy then
+    return "yes"
   end
-  if index == 6 then
-    if not self.player:faceUp() then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
+  if index == 4 then
+    if not is_friend and source:canSlashWithoutCrossbow() then
+      local has_peach = false
+      for _, c in sgs.qlist(self.player:getHandcards()) do
+        if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+          has_peach = true
+        end
+      end
+      if has_peach then
+        for _, p in ipairs(self.friends) do
+          if p:getHp() == 1 and self:isWeak(p) and source:canSlash(self.player, nil, true) then
+            return "no"
+          end
+        end
+      end
     end
-  end]]--
-  return "yes"
+    return "yes"
+  end
+  if index == 5 and not self.player:faceUp() then
+    return "yes"
+  end
+  if index == 6 and is_enemy and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
+    return "yes"
+  end
+  return "no"
 end
 
 sgs.ai_skill_playerchosen["command_duwu"] = sgs.ai_skill_playerchosen.damage
@@ -1703,7 +1904,7 @@ end
 
 sgs.ai_skill_choice["transform_xishe"] = function(self, choices)
 	global_room:writeToConsole("袭射变更选择")
-	local importantsklii = {"congjian", "jijiu", "qianhuan", "yigui", "shicai"}--还有哪些？
+	local importantsklii = {"congjian", "jijiu", "qianhuan", "yigui", "shicai", "jinghe"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
 		if table.contains(importantsklii, skill:objectName()) then--重要技能

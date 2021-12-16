@@ -479,8 +479,9 @@ sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, ta
 	cards=sgs.QList2Table(cards)
 	self:sortByKeepValue(cards)
 	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
-		if self:getKeepValue("WoodenOx") > sgs.ai_keep_value.Peach then
-			table.removeOne(cards,self.player:getTreasure())
+		local WoodenOx = self.player:getTreasure()
+		if self:getKeepValue(WoodenOx) > sgs.ai_keep_value.Peach then
+			table.removeOne(cards, WoodenOx)
 		end
 	end
 	for _,card in ipairs(cards) do
@@ -604,7 +605,7 @@ function sgs.ai_weapon_value.DragonPhoenix(self, enemy, player)
 		--(sgs.card_lack[enemy:objectName()]["Jink"] == 1 or getCardsNum("Jink", enemy, self.player) == 0)
 		return 4.5
 	end
-	if player:hasShownSkills("paoxiao|paoxiao_xh") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
+	if player:hasShownSkills("paoxiao|paoxiao_xh|xiongnve|kuangcai") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
 		return 3.5
 	end
 	return 2.5
@@ -753,8 +754,8 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 			else return 0 --@to-do: add the corrsponding value of Treasure
 			end
 		else
-			if self.player:getMark("@qianxi_red") > 0 and card:isRed() and not card:isKindOf("Peach") then return 0 end
-			if self.player:getMark("@qianxi_black") > 0 and card:isBlack() then return 0 end
+			if self.player:getMark("#qianxi+no_suit_red") > 0 and card:isRed() and not card:isKindOf("Peach") then return 0 end
+			if self.player:getMark("#qianxi+no_suit_black") > 0 and card:isBlack() then return 0 end
 			if self:isWeak() then return 5 else return 0 end
 		end
 	end
@@ -767,6 +768,13 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 	end
 
 	table.sort(to_discard, compare_func)
+
+	if #to_discard == 2 then
+		if self.player:getHp() <= 1 and to_discard[1]:isKindOf("Jink") and not self.player:isJilei(to_discard[2])
+		and (to_discard[2]:isKindOf("Peach") or to_discard[2]:isKindOf("Analeptic")) then
+			return to_discard[2]:getEffectiveId()
+		end
+	end
 
 	for _, card in ipairs(to_discard) do
 		if not self.player:isJilei(card) then return {card:getEffectiveId()} end

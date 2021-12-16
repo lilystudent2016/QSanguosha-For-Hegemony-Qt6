@@ -189,44 +189,58 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
   return "."
 end
 
-sgs.ai_skill_choice["startcommand_jieyue"] = function(self, choices)
-  self.player:speak(choices)
-  choices = choices:split("+")
-  local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
-  local command_value1 = table.indexOf(commands,choices[1])
-  local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.max(command_value1,command_value2)--需要一些额外的标记？
-  --global_room:writeToConsole("choice:".. choices[index])
-  return commands[index]
-end
+sgs.ai_skill_choice["startcommand_jieyue"] = sgs.ai_skill_choice.startcommand_to
 
 sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
-  --target->setFlags("JieyueTarget");有标记可使用
-  --[[if index <= 4 then
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+  if index == 1 then
+    if not is_enemy and not is_friend then
+      return "yes"
+    end
+    if is_friend and not self:isWeak(source) then
+      for _, p in ipairs(self.enemies) do
+        if p:getHp() == 1 and self:isWeak(p) and self:isEnemy(source, p) then
+          return "yes"
+        end
+      end
+    end
+  end
+  if index == 5 and not self.player:faceUp() then
     return "yes"
   end
-  if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
+  if is_enemy then
+    if index == 2 then
       return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
+    end
+    if index == 4 then
+      local has_peach = false
+      for _, c in sgs.qlist(self.player:getHandcards()) do
+        if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+          has_peach = true
+        end
+      end
+      if has_peach then
+        for _, p in ipairs(self.friends) do
+          if p:getHp() == 1 and self:isWeak(p) and source:canSlash(self.player, nil, true) then
+            return "no"
+          end
+        end
+      end
+      if not source:canSlash(self.player, nil, true) then
+        return "yes"
+      end
+    end
+    if index == 6 and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
       return "yes"
-    else
-      return "no"
     end
   end
-  if index == 6 then
-    if not self.player:faceUp() then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
-    end
-  end]]--
   return "no"
 end
 
+sgs.ai_skill_playerchosen["command_jieyue"] = sgs.ai_skill_playerchosen.damage
 
 --王平
 local jianglve_skill = {}
@@ -244,33 +258,60 @@ end
 sgs.ai_card_intention.JianglveCard = -120
 sgs.ai_use_priority.JianglveCard = 9.15
 
---[[
-  ["#command1"] = "军令一：对你指定的角色造成1点伤害",
-	["#command2"] = "军令二：摸一张牌，然后交给你两张牌",
-	["#command3"] = "军令三：失去1点体力",
-	["#command4"] = "军令四：本回合不能使用或打出手牌且所有非锁定技失效",
-	["#command5"] = "军令五：叠置，本回合不能回复体力",
-	["#command6"] = "军令六：选择一张手牌和一张装备区里的牌，弃置其余的牌",
-  ]]--
-
 sgs.ai_skill_choice["startcommand_jianglve"] = function(self, choices)
-  self.player:speak(choices)
+  global_room:writeToConsole(choices)
   choices = choices:split("+")
+  if table.contains(choices, "command5") then
+    local faceup, not_faceup = 0, 0
+    for _, friend in ipairs(self.friends_noself) do
+      if self:isFriendWith(friend) then
+        if friend:faceUp() then
+          faceup = faceup + 1
+        else
+          not_faceup = not_faceup + 1
+        end
+      end
+      if not_faceup > faceup and not_faceup > 1 then
+        return "command5"
+      end
+    end
+  end
   local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
   local command_value1 = table.indexOf(commands,choices[1])
   local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.min(command_value1,command_value2)--需要一些额外的标记？
-  --global_room:writeToConsole("choice:".. choices[index])
+  local index = math.min(command_value1,command_value2)
   return commands[index]
 end
 
-sgs.ai_skill_choice["docommand_jianglve"] = function(self, choices)
+sgs.ai_skill_choice["docommand_jianglve"] = function(self, choices, data)
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  if self.player:getActualGeneral1():getKingdom() == "careerist" then
+    return "yes"
+  end
+  if index == 4 then
+    if self.player:hasSkill("xuanhuo") and not source:hasUsed("XuanhuoAttachCard") and source:getHandcardNum() > 5 then
+      return "no"
+    end
+  end
+  if index == 5 then
+    if not self.player:faceUp() then
+      return "yes"
+    end
+    return "no"
+  end
+  if index == 6 then
+    if (self.player:getEquips():length() < 4
+      and self.player:getHandcardNum() < (self.player:hasSkills("xuanhuoattach|paoxiao") and 5 or 4))
+    or (self:isWeak() and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
+      return "yes"
+    end
+    return "no"
+  end
   return "yes"
 end
 
 sgs.ai_skill_playerchosen["command_jianglve"] = sgs.ai_skill_playerchosen.damage
---军令弃牌给牌需要每个军令分开写
-
 
 sgs.ai_skill_choice["jianglve"] = function(self, choices, data)--ai势力召唤
   choices = choices:split("+")
@@ -467,7 +508,7 @@ local function shouldUseXuanhuo(self)
   end
 
   if self.player:getMark("@strategy") >= 1 or self.player:getHandcardNum() > 4
-   or (self.player:getHandcardNum() > 3 and self.player:getCards("e"):length() > 0) then--多余手牌需要弃置时？
+   or (self.player:getHandcardNum() > 3 and self.player:hasEquip()) then--多余手牌需要弃置时？
     self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑符合条件")
     return true
   end
@@ -585,7 +626,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   --Func(self.player, 2)
   local target = getSlashtarget(self)--中间给牌弃牌，可能失去武器或杀导致无返回目标。好像还有目标找错的情况？
   if not target then
-    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":！！眩惑选择无杀目标或无杀！！")
+    self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑选择无杀目标或无杀！！")
     --assert(target)
     goto Pass_target--暂时无杀目标或无杀跳转至目标判定后，需要优化眩惑触发判断和弃牌给牌
   end
@@ -1065,42 +1106,63 @@ end
 
 sgs.ai_skill_invoke.buyi = true
 
-sgs.ai_skill_choice["startcommand_buyi"] = function(self, choices)--还是需要目标的data
-  self.player:speak(choices)
-  choices = choices:split("+")
-  local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
-  local command_value1 = table.indexOf(commands,choices[1])
-  local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.max(command_value1,command_value2)--需要一些额外的标记？
-  --global_room:writeToConsole("choice:".. choices[index])
-  return commands[index]
-end
+sgs.ai_skill_choice["startcommand_buyi"] = sgs.ai_skill_choice.startcommand_to
 
 sgs.ai_skill_choice["docommand_buyi"] = function(self, choices, data)
-  --[[if index <= 4 then
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+  local has_peach = false
+  local count = 0
+  for _, c in sgs.qlist(self.player:getHandcards()) do
+    if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+      has_peach = true
+    end
+    if c:isAvailable(self.player) then
+      count = count + 1
+    end
+  end
+
+  if index == 1 then
+    if not is_enemy and not is_friend then
+      return "yes"
+    end
+    if is_friend and not self:isWeak(source) then
+      for _, p in ipairs(self.enemies) do
+        if p:getHp() == 1 and self:isWeak(p) and self:isEnemy(source, p) then
+          return "yes"
+        end
+      end
+    end
+    if is_enemy then
+      for _, p in ipairs(self.friends) do
+        if self:isWeak(p) and self:isEnemy(source, p) then
+          return "no"
+        end
+      end
+      return "yes"
+    end
+  end
+  if index == 2 and not is_friend then
     return "yes"
   end
-  if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
-      return "yes"
-    else
-      return "no"
-    end
+  if index == 3 and is_enemy and self.player:getHp() > (has_peach and 1 or 2) then
+    return "yes"
   end
-  if index == 6 then
-    if not self.player:faceUp() then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
-    end
-  end]]--
+  if index == 4 and not is_friend and count < 3 then
+    return "yes"
+  end
+  if index == 5 and not self.player:faceUp() then
+    return "yes"
+  end
+  if index == 6 and is_enemy and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
+    return "yes"
+  end
   return "no"
 end
+
+sgs.ai_skill_playerchosen["command_buyi"] = sgs.ai_skill_playerchosen.damage
 
 --陆抗
 sgs.ai_skill_invoke.keshou = function(self, data)
@@ -1237,6 +1299,7 @@ end
 function sgs.ai_slash_prohibit.fudi(self, from, to)--杀禁止
 	if self:isFriend(to, from) then return false end
 	if to:isKongcheng() then return false end
+  if to:getPhase() ~= sgs.Player_NotActive then return false end
   if from:getHp() >= 3 or (to:getHp() - from:getHp() > 1) then return false end
   if from:hasSkills("tieqi|tieqi_xh") then return false end
   self:sort(self.friends_noself,"hp", true)
@@ -1252,6 +1315,9 @@ end
 
 sgs.ai_need_damaged.fudi = function(self, attacker, player)--主动卖血
 	if not attacker or self:isFriend(attacker) then return end
+  if self.player:getPhase() ~= sgs.Player_NotActive then
+    return false
+  end
 	if self:isEnemy(attacker) and attacker:getHp() >= (self.player:getHp() - 1) and self:isWeak(attacker) and self:damageIsEffective(attacker, nil, self.player)
 		and not (attacker:hasShownSkill("buqu")) and sgs.isGoodTarget(attacker, self:getEnemies(attacker), self) then
 		return true
@@ -1286,9 +1352,9 @@ sgs.ai_skill_use_func["WeidiCard"] = function(card, use, self)
 			table.insert(targets, p)
 		end
 	end
-  self:sort(targets, "handcard", true)
-  target = targets[1]
-	if target then
+	if #targets > 0 then
+    self:sort(targets, "handcard", true)
+    target = targets[1]
 		use.card = card
 		if use.to then
 			use.to:append(target)
@@ -1296,54 +1362,112 @@ sgs.ai_skill_use_func["WeidiCard"] = function(card, use, self)
 	end
 end
 
-sgs.ai_skill_choice["startcommand_weidi"] = function(self, choices)
-  self.player:speak(choices)
-  choices = choices:split("+")
-  local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
-  local command_value1 = table.indexOf(commands,choices[1])
-  local command_value2 = table.indexOf(commands,choices[2])
-  local index = math.max(command_value1,command_value2)--需要一些额外的标记？
-  --global_room:writeToConsole("choice:".. choices[index])
-  return commands[index]
-end
+sgs.ai_use_priority.WeidiCard = 5
+
+sgs.ai_skill_choice["startcommand_weidi"] = sgs.ai_skill_choice.startcommand_to
 
 sgs.ai_skill_choice["docommand_weidi"] = function(self, choices, data)
-  --target->setFlags("JieyueTarget");有标记可使用
-  --[[if index <= 4 then
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+  local has_peach = false
+  local valuable_count = 0
+  for _, c in sgs.qlist(self.player:getHandcards()) do
+    if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+      has_peach = true
+    end
+    if self:getUseValue(c) >= sgs.ai_use_value.Peach then
+      valuable_count = valuable_count + 1
+    end
+  end
+
+  if index == 1 then
+    if not is_enemy then
+      return "yes"
+    end
+    if is_enemy and has_peach then
+      return "yes"
+    end
+  end
+  if index == 2 then
+    if not is_friend and self.player:getHandcardNum() < 2 then
+      return "no"
+    end
+    return "yes"
+  end
+  if index == 3 and has_peach and not is_friend then
+    return "yes"
+  end
+  if index == 4 and not is_friend then
+    if source:canSlashWithoutCrossbow() and source:canSlash(self.player, nil, true)
+    and self.player:getHp() == 1 and self:isWeak() then
+      return "no"
+    end
+    if not has_peach and valuable_count < 3 then
+      return "no"
+    end
     return "yes"
   end
   if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
-      return "yes"
-    else
-      return "no"
-    end
-  end
-  if index == 6 then
     if not self.player:faceUp() then
       return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
     end
-  end]]--
+    if is_enemy and valuable_count > 2 then
+      return "yes"
+    end
+  end
+  if index == 6 and is_enemy and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
+    return "yes"
+  end
   return "no"
 end
 
-sgs.ai_skill_exchange.weidi_give = function(self,pattern,max_num,min_num,expand_pile)--未考虑敌友
+sgs.ai_skill_playerchosen["command_weidi"] = sgs.ai_skill_playerchosen.damage
+
+sgs.ai_skill_exchange.weidi_give = function(self,pattern,max_num,min_num,expand_pile)
+  local to
+	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+		if p:hasFlag("WeidiTarget") then
+			to = p
+			break
+		end
+	end
   local weidi_give = {}
 	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
-	self:sortByKeepValue(cards)
-  for _, c in ipairs(cards) do
-    table.insert(weidi_give, c:getEffectiveId())
-    if #weidi_give == max_num then
-      break
+  if self.player:getCardCount(true) - max_num > 1 then--余下较多牌
+    self:sortByUseValue(cards,true)
+  else
+    self:sortByKeepValue(cards)
+  end
+
+  local function weidi_insert(c_id)--判断并防止重复
+    if #weidi_give < max_num and not table.contains(weidi_give, c_id) then
+      table.insert(weidi_give, c_id)
     end
+  end
+
+  if self:isFriend(to) then
+    if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 then
+      weidi_insert(self:getCard("Analeptic"):getEffectiveId())
+    end
+    if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 0 then
+      weidi_insert(self:getCard("Peach"):getEffectiveId())
+    end
+    local c, friend = self:getCardNeedPlayer(cards, {to})
+    if friend and friend:objectName() == to:objectName() then
+      weidi_insert(c:getEffectiveId())
+    end
+    if self:getCardsNum("Jink") > 1 then
+      weidi_insert(self:getCard("Jink"):getEffectiveId())
+    end
+    if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() then
+      weidi_insert(self:getCard("Slash"):getEffectiveId())
+    end
+  end
+  for _, c in ipairs(cards) do
+    weidi_insert(c:getEffectiveId())
   end
 	return weidi_give
 end
@@ -1362,7 +1486,7 @@ end
 sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 	--global_room:writeToConsole("使用挥鞭")
   local can_huibian = false
-  local maixueskills = {"yiji","fangzhu","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能详细配合?
+  local maixueskills = {"yiji","fangzhu","wanggui","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能有优先顺序
   local drawcard_target, recover_target
   local targets = {}
   self:sort(self.friends, "hp")--从小到大排序
@@ -1513,7 +1637,7 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
     local g2name = self.player:getActualGeneral2Name()
     if shouldUseJiananByValue(self, g1name) or shouldUseJiananByValue(self, g2name)
     or self.player:isDuanchang(true) or self.player:isDuanchang(false) then
-      self.room:writeToConsole("五子良将纛准备弃牌")
+      --self.room:writeToConsole("五子良将纛准备弃牌")
       return discard:toString()
     end
   end
@@ -1706,34 +1830,93 @@ sgs.duanliang_egf_suit_value = {
 }
 sgs.ai_suit_priority.duanliang_egf= "club|spade|diamond|heart"
 
+--六龙骖驾
+sgs.ai_use_priority.SixDragons = 2.70
+
 --军令
-function SmartAI:askCommandto(command, to)
-    --[[if index <= 4 then
-    return "yes"
-  end
-  if index == 5 then
-    if self.player:getCards("he"):length() < 4 then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getCards("he"):length() < 6 then
-      return "yes"
+--[[
+  ["#command1"] = "军令一：对你指定的角色造成1点伤害",
+	["#command2"] = "军令二：摸一张牌，然后交给你两张牌",
+	["#command3"] = "军令三：失去1点体力",
+	["#command4"] = "军令四：本回合不能使用或打出手牌且所有非锁定技失效",
+	["#command5"] = "军令五：叠置，本回合不能回复体力",
+	["#command6"] = "军令六：选择一张手牌和一张装备区里的牌，弃置其余的牌",
+]]--
+sgs.ai_skill_choice.startcommand_to = function(self, choices, data)--含目标的通用选择军令
+  local target = data:toPlayer()
+  global_room:writeToConsole(choices)
+  choices = choices:split("+")
+  if table.contains(choices, "command5") and not target:faceUp() then
+    if self:isFriend(target) then
+      return "command5"
     else
-      return "no"
+      for _, command in ipairs(choices) do
+        if command ~= "command5" then
+          return command
+        end
+      end
     end
   end
-  if index == 6 then
-    if not self.player:faceUp() then
-      return "yes"
-    elseif self.player:getHp() < 3 and self:getCardsNum("Peach") == 0 and self.player:getHandcardNum() < 3
-    and math.random(1, 100) / 100 >= 50  then
-      return "yes"
-    else
-      return "no"
+  if table.contains(choices, "command6") and target:getEquips():length() <= 1 and target:getHandcardNum() <= 1 then
+    for _, command in ipairs(choices) do
+      if command ~= "command6" then
+        return command
+      end
     end
-  end]]--
-	return "yes"
+  end
+  if self:isFriend(target) then
+    local commands = {"command1", "command2", "command4", "command3", "command6", "command5"}--索引大小代表优先级，注意不是原顺序
+    local command_value1 = table.indexOf(commands,choices[1])
+    local command_value2 = table.indexOf(commands,choices[2])
+    local index = math.min(command_value1,command_value2)
+    return commands[index]
+  else
+    local commands = {"command2", "command3", "command4", "command1", "command6", "command5"}
+    local command_value1 = table.indexOf(commands,choices[1])
+    local command_value2 = table.indexOf(commands,choices[2])
+    local index = math.max(command_value1,command_value2)
+    return commands[index]
+  end
 end
 
-function SmartAI:doCommandfrom(command, from)
+sgs.ai_skill_choice.docommand_from = function(self, choices, data)
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  return "no"
+end
 
-	return "no"
+--askForExchange(this, "command", 2, 2, "@command-give:"+source->objectName())缺来源信息
+
+sgs.ai_skill_cardask["@command-select"] = function(self, data, pattern, target, target2)
+  local selected_h, selected_e
+  if not self.player:isKongcheng() then
+    local hcards = self.player:getCards("h")
+    hcards = sgs.QList2Table(hcards)
+    if self.player:getPhase() <= sgs.Player_Play then
+      self:sortByUseValue(hcards)
+    else
+      self:sortByKeepValue(hcards, true)
+    end
+    selected_h = hcards[1]
+  end
+  if self.player:hasEquip() then
+    local equips = sgs.QList2Table(self.player:getCards("e"))
+    if self.player:getPhase() <= sgs.Player_Play then
+      self:sortByUseValue(equips)
+    else
+      self:sortByKeepValue(equips, true)
+    end
+    selected_e = equips[1]
+  end
+  if selected_h and selected_e then
+    local selected_cards = {}
+    table.insert(selected_cards, selected_h:getId())
+    table.insert(selected_cards, selected_e:getId())
+    return "$" .. table.concat(selected_cards, "+")
+  elseif selected_h then
+    return "$" .. selected_h:getEffectiveId()
+  elseif selected_e then
+    return "$" .. selected_e:getEffectiveId()
+  end
+  return "."
 end

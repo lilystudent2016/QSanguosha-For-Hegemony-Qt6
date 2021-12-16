@@ -1114,11 +1114,15 @@ end
 sgs.ai_card_intention.ShushenCard = -80
 
 sgs.ai_skill_invoke.shenzhi = function(self, data)
-	if self:getCardsNum("Peach") > 0 then return false end
+	if self:getCardsNum("AllianceFeast") > 0 then return false end
+	if self:getCardsNum("Peach") > 0 and self.player:getMark("GlobalBattleRoyalMode") == 0 then return false end
+	if self.player:hasSkill("rende") and #self.friends_noself > 0
+		and (self.player:getHp() > 1 or self.player:getHandcardNum() > 1) then
+			return false
+	end
 	if self.player:getHandcardNum() >= 5 then return false end
 	if self.player:getHandcardNum() == 3 and self.player:getHp() == 1 then return true end
 	if self.player:getHandcardNum() >= 3 and not self:willSkipPlayPhase() then return false end
-	--(not self.player:containsTrick("indulgence") or self:getCardsNum("Nullification") > 0)
 	if self.player:getHandcardNum() >= self.player:getHp() and self.player:isWounded() then return true end
 	return false
 end

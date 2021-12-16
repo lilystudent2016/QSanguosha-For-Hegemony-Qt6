@@ -1,6 +1,6 @@
 lord_caocao							11
 caocao								7
-simayi								9
+simayi								8
 xiahoudun							8
 zhangliao							8
 xuchu								6
@@ -105,7 +105,7 @@ huangzu								7
 zhonghui							9
 simazhao							9
 sunchen								6
-gongsunyuan							7
+gongsunyuan							8
 mengda								6
 tangzi								7
 zhanglu								6

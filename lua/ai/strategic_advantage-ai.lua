@@ -1160,7 +1160,7 @@ function SmartAI:useCardThreatenEmperor(card, use)
 	local cardPlace = self.room:getCardPlace(card:getEffectiveId())--修改后无法使用装备，考虑手牌区
 	if self.player:getCardCount(false) < 1 + (cardPlace == sgs.Player_PlaceHand and 1 or 0) then return end
 	if not self:hasTrickEffective(card, self.player, self.player) then return end
-	if self.player:hasSkills("qiaobian|qiaobian_egf") and self:getOverflow() > 1 then return end
+	if self.player:hasSkills("qiaobian|qiaobian_egf") and (self.player:getHandcardNum() - self.player:getMaxCards() > 1) then return end
 	use.card = card
 end
 sgs.ai_use_value.ThreatenEmperor = 8
@@ -1288,7 +1288,7 @@ sgs.ai_skill_choice.imperial_order = function(self, choices, data)
 
 	if self.player:getPhase() ~= sgs.Player_NotActive then return "show_head" end
 	if self:needToLoseHp() then return "losehp" end
-	if not self.player:isWounded() and self.player:getCards("he"):length() > 6 then return "losehp" end
+	if not self.player:isWounded() and self.player:getCardCount(true) > 6 then return "losehp" end
 	return "show_head"
 end
 
@@ -1375,7 +1375,7 @@ function sgs.ai_slash_weaponfilter.Halberd(self, to, player)
 end
 
 function sgs.ai_weapon_value.Halberd(self, enemy, player)
-	if player:hasShownSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie") then return 4 end
+	if player:hasShownSkills(sgs.force_slash_skill .. "|" .."paoxiao|paoxiao_xh|baolie|xiongnve|kuangcai") then return 4 end
 	return 1.1
 end
 

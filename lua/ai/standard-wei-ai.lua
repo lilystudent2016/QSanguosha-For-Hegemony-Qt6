@@ -197,15 +197,7 @@ sgs.ai_skill_invoke.ganglie = function(self, data)
 		local zhangjiao = sgs.findPlayerByShownSkillName("guidao")
 		return zhangjiao and self:isFriend(zhangjiao) and not zhangjiao:isNude()
 	end
---[[
-	if self:getDamagedEffects(damage.from, self.player) then
-		if self:isFriend(damage.from) then
-			return true
-		end
-		return false
-	end
-]]--别刚队友
-	return not self:isFriend(damage.from) and self:canAttack(damage.from)
+	return not self:isFriend(damage.from)-- and self:canAttack(damage.from)
 end
 
 sgs.ai_need_damaged.ganglie = function(self, attacker, player)
@@ -397,7 +389,7 @@ sgs.ai_skill_discard.luoyi = function(self, discard_num, min_num, optional, incl
 			for _,enemy in ipairs(self.enemies) do
 				if self.player:canSlash(enemy, card, true) and self:slashIsEffective(card, enemy) and self:objectiveLevel(enemy) > 3 and sgs.isGoodTarget(enemy, self.enemies, self) then
 					if (not enemy:hasArmorEffect("SilverLion") or self.player:hasWeapon("QinggangSword")) and (getCardsNum("Jink", enemy) < 1
-					or (self.player:hasWeapon("Axe") and self.player:getCards("he"):length() > 3))
+					or (self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 3))
 					or (self:getOverflow() > 1)
 					then
 						slashtarget = slashtarget + 1
@@ -416,7 +408,7 @@ sgs.ai_skill_discard.luoyi = function(self, discard_num, min_num, optional, incl
 		end
 	end
 	if (slashtarget+dueltarget) > 0 then
-		self:speak("luoyi")
+		--self:speak("luoyi")
 		return self:askForDiscard("dummy_reason", 1, 1, false, true)
 	end
 	return {}
@@ -873,8 +865,24 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 							target = enemy
 							break
 						end
-						if target then break end
 					end
+					if not target then
+						for _, enemy in sgs.qlist(self.room:getAlivePlayers()) do
+							if not self:isFriend(enemy) and not enemy:containsTrick(judge:objectName()) and self:hasTrickEffective(judge, enemy, self.player) then
+								target = enemy
+								break
+							end
+						end
+					end
+					if not target then
+						for _, enemy in sgs.qlist(self.room:getAlivePlayers()) do
+							if not self.player:isFriendWith(enemy) and not enemy:containsTrick(judge:objectName()) and self:hasTrickEffective(judge, enemy, self.player) then
+								target = enemy
+								break
+							end
+						end
+					end
+					if target then break end
 				end
 			end
 		end
@@ -885,6 +893,7 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 				for _, equip in sgs.qlist(equips) do
 					if equip:isKindOf("OffensiveHorse") then card = equip break
 					elseif equip:isKindOf("Weapon") then card = equip break
+					elseif equip:isKindOf("Treasure") then card = equip break
 					elseif equip:isKindOf("DefensiveHorse") and not self:isWeak(who) then
 						card = equip
 						break
@@ -1024,7 +1033,7 @@ sgs.ai_skill_discard.qiaobian = function(self, discard_num, min_num, optional, i
 		end
 	elseif current_phase == sgs.Player_Draw and not self.player:isSkipped(sgs.Player_Draw) and not self.player:hasShownSkills("tuxi|tuxi_egf") then
 		if self.player:getTreasure() and self.player:getTreasure():isKindOf("JadeSeal") then return {} end
-		if self.player:hasSkills("jieyue|jieyue_egf") and self.player:getMark("JieyueExtraDraw") > 0 then return {} end--新增配合于禁
+		if self.player:getMark("JieyueExtraDraw") > 0 then return {} end--新增配合于禁self.player:hasSkills("jieyue|jieyue_egf") and 
 		self.qiaobian_draw_targets = {}
 		local targets = self:findTuxiTarget()
 		if type(targets) == "table" and #targets == 2 then
@@ -1662,7 +1671,7 @@ sgs.ai_skill_cardask["@xiaoguo"] = function(self, data)
 		if self:needToThrowArmor(currentplayer) then return "." end
 		if currentplayer:getHp() > 2 and (currentplayer:getHandcardNum() > 2 or currentplayer:getCards("e"):length() > 1)then return "." end
 		if currentplayer:getHp() > 1 and (currentplayer:getHandcardNum() > 3 or currentplayer:getCards("e"):length() > 2)then return "." end
-		if currentplayer:hasShownSkills(sgs.lose_equip_skill) and currentplayer:getCards("e"):length() > 0 then return "." end
+		if currentplayer:hasShownSkills(sgs.lose_equip_skill) and currentplayer:hasEquip() then return "." end
 		if currentplayer:hasShownSkill("mingshi")
 			and (not self.player:hasShownOneGeneral() or (self.player:hasShownSkill("xiaoguo") and not self.player:hasShownAllGenerals()) )then return "." end
 		return "$" .. card:getEffectiveId()
@@ -1675,7 +1684,7 @@ sgs.ai_choicemade_filter.cardResponded["@xiaoguo"] = function(self, player, prom
 		local current = self.room:getCurrent()
 		if not current then return end
 		local intention = 10
-		if current:hasShownSkills(sgs.lose_equip_skill) and current:getCards("e"):length() > 0 then intention = 0 end
+		if current:hasShownSkills(sgs.lose_equip_skill) and current:hasEquip() then intention = 0 end
 		if self:needToThrowArmor(current) then return end
 		sgs.updateIntention(player, current, intention)
 	end

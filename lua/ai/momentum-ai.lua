@@ -132,11 +132,11 @@ sgs.ai_skill_playerchosen.qianxi = function(self, targets)
 	local slash = self:getCard("Slash") or sgs.cloneCard("slash")
 
 	for _, target in sgs.qlist(targets) do
-		if self:isEnemy(target) and not target:isKongcheng() then
+		if not self:isFriend(target) and not target:isKongcheng() then
 			table.insert(enemies, target)
 		end
 	end
-	self:sort(self.enemies, "defenseSlash")
+	self:sort(enemies, "defenseSlash")
 
 	if #enemies == 1 then
 		return enemies[1]
