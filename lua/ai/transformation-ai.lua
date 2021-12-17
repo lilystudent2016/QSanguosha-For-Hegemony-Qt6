@@ -608,18 +608,19 @@ sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
 	end
 	if not target then--大部分参考苦肉，暂未考虑给无限定技的队友
 		local can_xiongsuan = false
-		if ((self.player:getHp() > 3 and self.player:getLostHp() <= 1 and self:getOverflow(self.player, false) < 2) or self:getOverflow(self.player, false) < -1)
-		or (self.player:getHp() == 1 and self:getCardsNum("Analeptic") >= 1)  then
+		if (self.player:getHp() > 3 and self:getOverflow(self.player, false) < 2)
+		or (self.player:getHp() > 2 and self:getOverflow(self.player, false) < -1)
+		or (self.player:getHp() == 1 and self:getCardsNum("Analeptic") >= 1) then
 			can_xiongsuan = true
 		end
 		local slash = sgs.cloneCard("slash")
-		if self:hasCrossbowEffect(self.player) then
+		if self:hasCrossbowEffect(self.player) and self.player:getHp() > 1 then
 			for _, enemy in ipairs(self.enemies) do
 				if enemy:hasShownOneGeneral() then
 					if self.player:canSlash(enemy, nil, true) and self:slashIsEffective(slash, enemy)
 						and not (enemy:hasShownSkill("kongcheng") and enemy:isKongcheng())
-						and not (enemy:hasShownSkills("fankui") and not self.player:hasSkill("paoxiao"))
-						and sgs.isGoodTarget(enemy, self.enemies, self) and not self:slashProhibit(slash, enemy) and self.player:getHp() > 1 then
+						and not (enemy:hasShownSkills("fankui") and self.player:hasWeapon("Crossbow"))
+						and sgs.isGoodTarget(enemy, self.enemies, self) and not self:slashProhibit(slash, enemy) then
 							can_xiongsuan = true
 					end
 				end
@@ -627,10 +628,10 @@ sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
 		end
 		if self.player:getHp() > 1 and
 			((self.player:hasSkill("luanji") and self:getAoeValue(sgs.cloneCard("archery_attack")) > 0)
-			or (self.player:hasSkill("shuangxiong") and self.player:getMark("#shuangxiong+no_suit_black") + self.player:getMark("#shuangxiong+no_suit_red") > 0)) then--攻击技能
+			or (self.player:hasSkill("shuangxiong") and self.player:hasFlag("shuangxiong"))) then--攻击技能
 			can_xiongsuan = true
 		end
-		if self.player:hasSkills("chenglve|qianhuan|huashen") and self:getCardsNum("Peach") >= 1 then--卖血技能
+		if self.player:hasSkills("qianhuan|jihun|bushi|chenglve") and self:getCardsNum("Peach") >= 1 then--卖血技能
 			can_xiongsuan = true
 		end
 		if self.player:hasSkill("congjian") then
@@ -1235,13 +1236,18 @@ end
 
 sgs.ai_skill_choice.zhiman = function(self, choices)
 	global_room:writeToConsole("制蛮命令变更")
-	if sgs.ai_AOE_data then--变更只能一次，判断aoe保留变更
+	return "yes"
+end
+
+sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
+	global_room:writeToConsole("制蛮变更选择")
+	if sgs.ai_AOE_data then--变更只能一次，判断aoe保留变更。是否命令变更没有信息判断，只能放这在
 		local use = sgs.ai_AOE_data:toCardUse()
 		local save_transform = false
 		for _, p in sgs.qlist(use.to) do
 			if self.player:isFriendWith(p) and self:playerGetRound(p) > self:playerGetRound(self.player) then
-				local skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
-				for _, skill in ipairs(skills) do
+				local p_skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
+				for _, skill in ipairs(p_skills) do
 					if skill:getFrequency() == sgs.Skill_Limited and (skill:getLimitMark() ~= "" and p:getMark(skill:getLimitMark()) == 0) then--限定技已发动
 						save_transform = true
 						break
@@ -1257,11 +1263,6 @@ sgs.ai_skill_choice.zhiman = function(self, choices)
 			end
 		end
 	end
-	return "yes"
-end
-
-sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
-	global_room:writeToConsole("制蛮变更选择")
 	local importantsklii = {"xuanhuo", "paoxiao", "kuanggu", "tieqi", "jizhi", "shengxi",  "jili", "tongdu"}
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
@@ -2057,7 +2058,8 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 		and sgs.ai_skill_invoke.haoshi_flamemap(self) then
 			return "haoshi_flamemap"
 		end
-		if (self.player:getLostHp() > 1 and not self.player:hasSkill("keji"))--损失血量过大
+		if (self.player:getLostHp() > (self:willSkipPlayPhase() and 0 or 1)
+			and not (self.player:hasSkill("keji") or self.player:getMaxCards() > 3))--需要手牌上限
 		or self.player:hasSkills("yingzi_zhouyu|yingzi_sunce")--已有英姿，不适合好施
 		or self.player:hasTreasure("JadeSeal")--已有玉玺，不适合好施
 		or congcha_draw then--聪察摸牌，不适合好施

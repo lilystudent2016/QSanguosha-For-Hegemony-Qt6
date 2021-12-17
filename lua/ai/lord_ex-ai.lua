@@ -99,7 +99,7 @@ sgs.ai_skill_suit.midao= function(self)
   local card = use.card
   local targets = sgs.QList2Table(use.to)
   local suit = math.random(0, 3)
-  if card:isKindOf("Slash") or card:isKindOf("FireSlash") or card:isKindOf("ThunderSlash") then--杀激昂和仁王盾
+  if card:isKindOf("Slash") then--杀激昂和仁王盾
     for _,p in ipairs(targets) do
       if p:hasShownSkills("jiang") then
         suit = math.random(0, 1)
@@ -121,6 +121,32 @@ sgs.ai_skill_suit.midao= function(self)
       end
     end
   end
+  if (card:isKindOf("Slash") or card:isNDTrick()) then--息兵
+    for _,p in ipairs(targets) do
+      if p:hasShownSkills("xibing") and (self:isFriend(p) or use.to:length() > 1) then
+        suit = math.random(0, 1)
+      end
+      if p:hasShownSkills("xibing") and not self:isFriend(p) and use.to:length() == 1 then
+        suit = math.random(2, 3)
+      end
+    end
+  end
+  if card:isKindOf("BasicCard") or card:isNDTrick() then--贞特
+    for _,p in ipairs(targets) do
+      if p:hasShownSkills("zhente") and not p:setFlags("ZhenteUsed") and self:isFriend(p) then
+        suit = math.random(0, 1)
+      end
+      if p:hasShownSkills("zhente") and not p:setFlags("ZhenteUsed") and not self:isFriend(p) then
+        suit = math.random(2, 3)
+      end
+    end
+  end
+  for _,p in ipairs(targets) do--玉碎
+    if p:hasShownSkills("yusui") and not self:isFriend(p) then
+      suit = math.random(2, 3)
+    end
+  end
+
 	return suit
 end
 
@@ -1204,10 +1230,10 @@ local huaiyi_skill = {
   name = "huaiyi",
   getTurnUseCard = function(self, inclusive)
       if self.player:hasUsed("HuaiyiCard") or self.player:isKongcheng() then
-          return nil
+        return nil
       end
       if self.player:getPile("disloyalty"):length() == self.player:getMaxHp() then
-          return nil
+        return nil
       end
       if self.player:getPile("disloyalty"):length() + 1 == self.player:getMaxHp() and math.random(1, 5) > 1 then
         return nil
@@ -1218,17 +1244,17 @@ local huaiyi_skill = {
           if c:isRed() and not red then
               red = true
               if black then
-                  break
+                break
               end
           elseif c:isBlack() and not black then
               black = true
               if red then
-                  break
+                break
               end
           end
       end
       if red and black then
-          return sgs.Card_Parse("@HuaiyiCard=.&huaiyi")
+        return sgs.Card_Parse("@HuaiyiCard=.&huaiyi")
       end
   end,
 }
@@ -1830,7 +1856,7 @@ sgs.ai_skill_choice["docommand_duwu"] = function(self, choices, data)
     return "yes"
   end
   if index == 4 then
-    if not is_friend and source:canSlashWithoutCrossbow() then
+    if not is_friend and self:slashIsAvailable(source) then
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
         if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血

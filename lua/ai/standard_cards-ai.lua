@@ -514,7 +514,7 @@ function SmartAI:useCardSlash(card, use)
 			  local yongjue_slash = 0
 			  for _, p in ipairs(self.friends) do
 				if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) and self.player:getSlashCount() == 0 then
-				  yongjue_slash = 1--考虑没出牌时？有一张杀
+				  yongjue_slash = 1
 				  break
 				end
 			  end
@@ -524,6 +524,7 @@ function SmartAI:useCardSlash(card, use)
 			end
 			if not enough_pxslash and self:getOverflow() <= 0 and not (target:getHp() == 1 and self:isWeak(target))
 			and not (self.player:hasSkill("jili") and self.player:getMark("jili") + 1 == self.player:getAttackRange()) then
+				self.room:writeToConsole("咆哮屯杀")
 				return false
 			end
 		end
@@ -1401,7 +1402,7 @@ function sgs.ai_weapon_value.Axe(self, enemy, player)
 	end
 	if player:getPhase() == sgs.Player_Play then
 		if player:hasShownSkill("fengshix") and player:getHandcardNum() > 3
-		and player:getHandcardNum() > enemy:getHandcardNum() and not enemy:isNude() then
+		and player:getHandcardNum() > enemy:getHandcardNum() then
 			v = v + 1
 		end
 	end
@@ -2236,7 +2237,7 @@ function SmartAI:getDangerousCard(who)
 		return armor:getEffectiveId()
 	end
 	if armor and armor:isKindOf("PeaceSpell") and self.player:getPlayerNumWithSameKingdom("AI", who:getKingdom()) > 2
-	and (not who:hasSkill("wendao") or who:getPile("heavenly_army"):isEmpty()) then
+	and not who:hasSkill("wendao") then
 		return armor:getEffectiveId()
 	end
 
@@ -2697,7 +2698,7 @@ function SmartAI:useCardCollateral(card, use)
 		end
 	end
 
-	needCrossbow = needCrossbow and self:getCardsNum("Slash") > 2 and not self.player:hasSkill("paoxiao")
+	needCrossbow = needCrossbow and self:getCardsNum("Slash") > 2 and not self.player:hasSkills("paoxiao|kuangcai")
 
 	if needCrossbow then
 		for i = #fromList, 1, -1 do

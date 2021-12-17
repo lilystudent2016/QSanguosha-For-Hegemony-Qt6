@@ -278,6 +278,10 @@ sgs.ai_skill_choice.drowning = function(self, choices, data)
 
 	if not self:damageIsEffective(self.player, sgs.DamageStruct_Thunder, effect.from) then return "damage" end
 
+	if self.player:hasSkill("tianxiang") and getKnownCard(self.player, self.player, "heart", true, "h") > 0 then
+		return "damage"
+	end
+
 	if dangerous then return "throw" end--危险和多装备的详细判断？
 
 	if (self:needToLoseHp(self.player, effect.from) or self:getDamagedEffects(self.player, effect.from)) and not dangerous then return "damage" end
@@ -289,27 +293,51 @@ sgs.ai_skill_choice.drowning = function(self, choices, data)
 			end
 		end
 	end
-	if self.player:getHp() == 1 and not self.player:hasArmorEffect("Breastplate") then return "throw" end--有桃？
 
 	if self.player:hasSkills(sgs.lose_equip_skill) and self.player:getEquips():length() == 1 then
 		return "throw"
 	end
 
 	local value = 0
-	for _, equip in sgs.qlist(self.player:getEquips()) do--直接用保留值重写？
-		if equip:isKindOf("Weapon") then value = value + (self:evaluateWeapon(equip) / 2)
+	for _, equip in sgs.qlist(self.player:getEquips()) do--值是否合适？
+		if equip:isKindOf("Weapon") then value = value + (self:evaluateWeapon(equip) > 8 and 4 or 2)
 		elseif equip:isKindOf("Armor") then
 			value = value + self:evaluateArmor(equip)
 			if self:needToThrowArmor() then value = value - 5
 			elseif equip:isKindOf("Breastplate") and self.player:getHp() <= 1 then value = value + 99
 			elseif equip:isKindOf("PeaceSpell") then value = value + 99
 			end
-		elseif equip:isKindOf("OffensiveHorse") then value = value + 2.5
-		elseif equip:isKindOf("DefensiveHorse") then value = value + 5
-		elseif equip:isKindOf("SixDragons") then value = value + 5.5
+		elseif equip:isKindOf("OffensiveHorse") then value = value + 2
+		elseif equip:isKindOf("DefensiveHorse") then value = value + 3
+		elseif equip:isKindOf("SixDragons") then value = value + 4.5
+		elseif equip:isKindOf("Treasure") then
+			if equip:isKindOf("WoodenOx") then
+				value = value + 2
+				for _,id in sgs.qlist(self.player:getPile("wooden_ox")) do
+					local c = sgs.Sanguosha:getCard(id)
+					value = value + (sgs.ai_keep_value[c:getClassName()] or 0)
+				end
+			else
+				value = value + 4
+			end
 		end
 	end
-	if value < 8 then return "throw" else return "damage" end
+	if self.player:getHp() == 1 and not self.player:hasArmorEffect("Breastplate") then
+		if value > 12 and (self:getAllPeachNum() > 0
+			or (self.player:hasSkill("buqu") and self.player:getPile("scars"):length() <= 4)
+			or (self.player:hasSkill("jizhao") and self.player:getMark("@jizhao") > 0)) then
+				return "damage"
+		else
+			return "throw"
+		end
+	end
+	if value < 7 then--值是否合适？
+		return "throw"
+	elseif value < 12 and self.player:getHp() == 2 then
+		return "throw"
+	else
+		return "damage"
+	end
 end
 
 sgs.ai_nullification.Drowning = function(self, card, from, to, positive, keep)
@@ -810,45 +838,19 @@ sgs.ai_keep_value.LureTiger = 3.22
 
 --FightTogether
 function SmartAI:useCardFightTogether(card, use)
-	self.FightTogether_choice = nil
 	if not card:isAvailable(self.player) then return end
 
-	--@todo: consider hongfa
-
-	local big_kingdoms = self.player:getBigKingdoms("AI")--无法判定暴露野心后野心家同势力的情况，需要新方法
 	local bigs, smalls = {}, {}
-	local isBig, isSmall = false, false
-	for _, p in sgs.qlist(self.room:getAllPlayers()) do
+	local IamBig, IamSmall = false, false
+	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
 		if self:hasTrickEffective(card, p, self.player) then
-			if #big_kingdoms == 1 and big_kingdoms[1]:startsWith("sgs") then
-				if table.contains(big_kingdoms, p:objectName()) then
-					table.insert(bigs, p)
-					if p:objectName() == self.player:objectName() then isBig = true end
-				else
-					if not(p:hasArmorEffect("IronArmor") and not p:isChained()) then
-						table.insert(smalls, p)
-						if p:objectName() == self.player:objectName() then isSmall = true end
-					end
-				end
+			if p:isBigKingdomPlayer() then
+				if p:objectName() == self.player:objectName() then IamBig = true end
+				table.insert(bigs, p)
 			else
-				local kingdom
-				if not p:hasShownOneGeneral() and not(p:hasArmorEffect("IronArmor") and not p:isChained()) then
-					if p:objectName() == self.player:objectName() then isSmall = true end
+				if p:objectName() == self.player:objectName() then IamSmall = true end
+				if not (p:hasArmorEffect("IronArmor") and not p:isChained()) then
 					table.insert(smalls, p)
-					continue
-				elseif p:getRole() == "careerist" then
-					kingdom = "careerist"
-				else
-					kingdom = p:getKingdom()
-				end
-				if table.contains(big_kingdoms, kingdom) then
-					if p:objectName() == self.player:objectName() then isBig = true end
-					table.insert(bigs, p)
-				else
-					if not(p:hasArmorEffect("IronArmor") and not p:isChained()) then
-						if p:objectName() == self.player:objectName() then isSmall = true end
-						table.insert(smalls, p)
-					end
 				end
 			end
 		end
@@ -863,16 +865,22 @@ function SmartAI:useCardFightTogether(card, use)
 		if table.contains(choices, "big") then
 			for _, p in ipairs(bigs) do
 				if self:isFriend(p) then
-					if p:isChained() then v_big = v_big + 1
-					else v_big = v_big - 1 end
+					if p:isChained() then
+						v_big = v_big + 1
+					else
+						v_big = v_big - 1
+					end
 				elseif self:isEnemy(p) then
 					if p:isChained() then
 						v_big = v_big - 1
 					else
 						local gameProcess = sgs.gameProcess()
-						if p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>") then
+						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
+						or (IamSmall and string.find(gameProcess, self.player:getKingdom() .. ">>")) then
 							v_big = v_big + 2
-						else v_big = v_big + 1 end
+						else
+							v_big = v_big + 1
+						end
 					end
 				else
 					v_big = v_big + 0.5
@@ -881,16 +889,22 @@ function SmartAI:useCardFightTogether(card, use)
 		elseif table.contains(choices, "small") then
 			for _, p in ipairs(smalls) do
 				if self:isFriend(p) then
-					if p:isChained() then v_small = v_small + 1
-					else v_small = v_small - 1 end
+					if p:isChained() then
+						v_small = v_small + 1
+					else
+						v_small = v_small - 1
+					end
 				elseif self:isEnemy(p) then
 					if p:isChained() then
 						v_small = v_small - 1
 					else
 						local gameProcess = sgs.gameProcess()
-						if p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>") then
+						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
+						or (IamBig and string.find(gameProcess, self.player:getKingdom() .. ">>")) then
 							v_small = v_small + 2
-						else v_small = v_small + 1 end
+						else
+							v_small = v_small + 1
+						end
 					end
 				else
 					v_small = v_small + 0.5
@@ -908,25 +922,14 @@ function SmartAI:useCardFightTogether(card, use)
 				if use.to and #smalls > 0 then use.to:append(smalls[1]) end
 				return
 			end
-
 		end
 	end
 
-	if not self.FightTogether_choice and not self.player:isCardLimited(card, sgs.Card_MethodRecast) then
+	if not self.player:isCardLimited(card, sgs.Card_MethodRecast) then
 		use.card = card
 		return
 	end
 end
-
---[[
-sgs.ai_skill_choice["fight_together"] = function(self, choices)
-	choices = choices:split("+")
-	if self.FightTogether_choice and table.contains(choices, self.FightTogether_choice) then
-		return self.FightTogether_choice
-	end
-	return choices[#choices]
-end
-]]
 
 sgs.ai_nullification.FightTogether = function(self, card, from, to, positive, keep)
 	local targets = sgs.SPlayerList()
@@ -1220,7 +1223,6 @@ sgs.ai_skill_cardask["@imperial_order-equip"] = function(self)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1 then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
 			or self.player:inHeadSkills("zhiheng") or self.player:inHeadSkills("jianxiong") then
-				global_room:writeToConsole("敕令君主不弃牌")
 				return "."
 		end
 	end
@@ -1254,12 +1256,12 @@ sgs.ai_skill_choice.imperial_order = function(self, choices, data)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1 and table.contains(choices,"show_deputy") then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
 			or self.player:inHeadSkills("zhiheng") or self.player:inHeadSkills("jianxiong") then
-				global_room:writeToConsole("敕令君主")
+				--global_room:writeToConsole("敕令君主")
 				return "show_deputy"
 		end
 	end
 	if self.player:getActualGeneral1():getKingdom() == "careerist" and table.contains(choices,"show_deputy") then--野心家角色
-		global_room:writeToConsole("敕令野心家")
+		--global_room:writeToConsole("敕令野心家")
 		return "show_deputy"
 	end
 

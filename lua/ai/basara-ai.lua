@@ -379,9 +379,9 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	local canShowHead = string.find(choices, "show_head_general")
 	local canShowDeputy = string.find(choices, "show_deputy_general")
 
-	local firstShow = ("luanji|qianhuan"):split("|")
-	local bothShow = ("luanji+shuangxiong|luanji+huoshui|huoji+jizhi|luoshen+fangzhu|guanxing+jizhi"):split("|")
-	local followShow = ("qianhuan|duoshi|rende|cunsi|jieyin|xiongyi|shouyue|hongfa"):split("|")
+	local firstShow = ("luanji|niepan|bazhen|qianhuan|jianglve|jinghe"):split("|")
+	local bothShow = ("luanji+shuangxiong|luanji+huoshui|guanxing+yizhi"):split("|")
+	local followShow = ("qianhuan|duoshi|rende|cunsi|jieyin|xiongyi"):split("|")
 
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") == 1 and canShowHead then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
@@ -488,6 +488,14 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		end
 	end
 
+	if self.player:hasSkill("xibing") and not self.player:hasShownSkill("xibing") then--息兵
+		if self.player:inHeadSkills("xibing") and canShowHead then
+			return "show_head_general"
+		elseif canShowDeputy then
+			return "show_deputy_general"
+		end
+	end
+
 	for _,p in ipairs(self.friends) do
 		if p:hasShownSkill("jieyin") then
 			if canShowHead and self.player:getGeneral():isMale() then
@@ -510,7 +518,13 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		end
 	end
 
-	if self.player:getActualGeneral1():getKingdom() == "careerist" then--野心家可以写详细，最后暴露野心等
+	if self.player:getActualGeneral1():getKingdom() == "careerist" then--野心家发技能相关，留着最后暴露野心？
+		if lord_caocao and self.player:getActualGeneral2():getKingdom() == lord_caocao:getKingdom() then
+			if canShowDeputy then
+				return "show_deputy_general"
+			end
+			return "cancel"
+		end
 		local fazheng = sgs.findPlayerByShownSkillName("xuanhuo")
 		if fazheng and self.player:getActualGeneral2():getKingdom() == fazheng:getKingdom() then
 			if canShowDeputy then
@@ -518,14 +532,15 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 			end
 			return "cancel"
 		end
-		if lord_caocao and self.player:getActualGeneral2():getKingdom() == lord_caocao:getKingdom() then
-			if canShowDeputy then
+		if lord_sunquan and self.player:getActualGeneral2():getKingdom() == lord_sunquan:getKingdom() then
+			if canShowDeputy and not lord_sunquan:getPile("flame_map"):isEmpty() then
 				return "show_deputy_general"
 			end
 			return "cancel"
 		end
-		if lord_sunquan and self.player:getActualGeneral2():getKingdom() == lord_sunquan:getKingdom() then
-			if canShowDeputy and not lord_sunquan:getPile("flame_map"):isEmpty() then
+		local nanhualaoxian = sgs.findPlayerByShownSkillName("jinghe")
+		if nanhualaoxian and self.player:getActualGeneral2():getKingdom() == nanhualaoxian:getKingdom() then
+			if canShowDeputy then
 				return "show_deputy_general"
 			end
 			return "cancel"
@@ -541,6 +556,8 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		if panjun and self.player:willBeFriendWith(panjun) then--暗置只能用willBeFriendWith
 			--global_room:writeToConsole("聪察:队友明置")
 			return "show_both_generals"
+		elseif panjun and self.player:getActualGeneral2():getKingdom() == panjun:getKingdom() and canShowDeputy then--野心家
+			return "show_deputy_general"
 		elseif self.player:getHp() == 1 and (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
 			--global_room:writeToConsole("聪察:敌方不明置")
 			return "cancel"
@@ -940,7 +957,7 @@ sgs.ai_skill_use_func.ShowHeadCard= function(card, use, self)
 	if self.player:getActualGeneral1():getKingdom() == "careerist" and self.player:hasSkill("xuanhuoattach") and not self.player:hasUsed("XuanhuoAttachCard") then
 		return
 	end
-	if self.player:inHeadSkills("paoxiao") and self:getCardsNum("Slash") == 0 then
+	if (self.player:inHeadSkills("paoxiao") or self.player:inHeadSkills("kuangcai")) and self:getCardsNum("Slash") == 0 then
 		return
 	end
 	if self:willShowForAttack() or self:willShowForDefence() then
@@ -973,7 +990,8 @@ end
 
 sgs.ai_skill_use_func.ShowDeputyCard= function(card, use, self)
 	--global_room:writeToConsole("明置副将的武将牌")
-	if (self.player:inDeputySkills("paoxiao") or self.player:inDeputySkills("baolie")) and self:getCardsNum("Slash") == 0 then
+	if (self.player:inDeputySkills("paoxiao") or self.player:inDeputySkills("baolie") or self.player:inDeputySkills("kuangcai"))
+	and self:getCardsNum("Slash") == 0 then
 		return
 	end
 	if self:willShowForAttack() or self:willShowForDefence() then

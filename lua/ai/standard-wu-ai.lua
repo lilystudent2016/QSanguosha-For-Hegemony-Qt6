@@ -453,7 +453,9 @@ kurou_skill.getTurnUseCard = function(self, inclusive)
 	if self.player:getHp() < 1 then return nil end
 	if self.player:getMark("Global_TurnCount") < 2 and not self.player:hasShownOneGeneral() then return nil end
 
-	if ((self.player:getHp() > 3 and self.player:getLostHp() <= 1 and self:getOverflow(self.player, false) < 2) or self:getOverflow(self.player, false) < -1) then
+	if (self.player:getHp() > 3 and self:getOverflow(self.player, false) < 2)
+	or (self.player:getHp() > 2 and self:getOverflow(self.player, false) < -1)
+	or (self.player:getHp() == 1 and self:getCardsNum("Analeptic") >= 1) then
 		return kuroucard
 	end
 
@@ -474,7 +476,7 @@ kurou_skill.getTurnUseCard = function(self, inclusive)
 			if enemy:hasShownOneGeneral() then
 				if self.player:canSlash(enemy, nil, true) and self:slashIsEffective(slash, enemy)
 					and not (enemy:hasShownSkill("kongcheng") and enemy:isKongcheng())
-					and not (enemy:hasShownSkills("fankui") and not self.player:hasSkill("paoxiao"))
+					and not (enemy:hasShownSkills("fankui") and self.player:hasWeapon("Crossbow"))
 					and sgs.isGoodTarget(enemy, self.enemies, self) and not self:slashProhibit(slash, enemy) and self.player:getHp() > 1 then
 					return kuroucard
 				end
@@ -509,7 +511,7 @@ end
 function SmartAI:SuicidebyKurou()
 	local nextplayer = self.player:getNextAlive()
 	local to_death = false
-	if self.player:getMark("GlobalBattleRoyalMode") > 0 then
+	if self.player:getMark("GlobalBattleRoyalMode") > 0 or self.player:isLord() then
 		return false
 	end
 	if self.player:getHp() == 1 and self:getCardsNum("Armor") == 0 and self:getCardsNum("Jink") == 0 and self:getKingdomCount() > 1 then
@@ -1270,6 +1272,7 @@ sgs.xiaoji_keep_value = {
 	Armor = 5,
 	OffensiveHorse = 4.8,
 	DefensiveHorse = 5,
+	SixDragons = 5,
 	Treasure = 5
 }
 
@@ -1357,7 +1360,7 @@ sgs.ai_skill_playerchosen.yinghun_sunjian = function(self, targets)
 		end
 		if not yinghun_friend and #self.enemies > 0 then
 			local weakf = false
-			if self:isWeak() and self.player:getHp() < 2 and self:getCardsNum("Peach") == 0 then
+			if self:isWeak() and self.player:getHp() < 2 and self:getAllPeachNum() < 1 then
 				weakf = true
 			end
 			if not weakf then

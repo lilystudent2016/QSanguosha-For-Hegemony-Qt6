@@ -25,6 +25,7 @@ sgs.ai_skill_invoke.wanggui = true
 sgs.ai_skill_playerchosen.wanggui = sgs.ai_skill_playerchosen.damage
 
 sgs.ai_skill_invoke.xibing =  function(self, data)
+  self.xibing_targetSkill = nil
   if not self:willShowForDefence() then
     return false
   end
@@ -36,66 +37,129 @@ sgs.ai_skill_invoke.xibing =  function(self, data)
   if self:isFriend(target) and (draw_count > 1) then
     return true
   end
-  if self:isEnemy(target) and ((draw_count > 0 and draw_count < 2 + (self:slashIsAvailable(target) and 1 or 0))
-    or target:hasShownSkills(sgs.priority_skill) and target:hasShownAllGenerals() and self.player:hasShownAllGenerals()) then
+	local eachother_shown = target:hasShownAllGenerals() and self.player:hasShownAllGenerals()
+  local xibing_firstskills = --注意有优先顺序
+              "paiyi|suzhi|shilu|huaiyi|luanji|yigui|paoxiao|kuangcai|diaodu|xuanhuo|"..
+              "jixi|qice|zaoyun|jinfa|"..
+							"jizhi|tieqi|kuanggu|jili|tongdu|"..
+							"xiaoji|guose|xuanlue|"..
+							"lijian|wansha|jianchu|qianhuan|"..
+							"zhukou|boyan|anyong|miewu"
+  if self:isEnemy(target) and eachother_shown then
+    local skills = (xibing_firstskills):split("|")
+    for _, skill in ipairs(skills) do
+      if target:hasSkill(skill) then
+        self.xibing_targetSkill = skill
+        return true
+      end
+    end
+  end
+  if target:hasShownSkill("buqu") and target:getPile("scars"):length() > 4 and self:isFriend(target) and eachother_shown then
+    self.xibing_targetSkill = "buqu"
+    return true
+  end
+  local not_firstskill = true
+  for _, p in ipairs(self.enemies) do
+    if p:hasShownSkills(xibing_firstskills) and p:hasShownAllGenerals() then
+      not_firstskill = false
+    end
+  end
+  if not_firstskill then
+    local xibing_secondskills = "|duanliang|qiangxi|juejue|daoshu|wusheng|shengxi|sanyao|"..
+              "zhiheng|qixi|kurou|fanjian|keji|duoshi|tianyi|dimeng|ganlu|"..
+              "shuangxiong|lirang|chuanxin|xiongsuan|weidi|midao|baolie"
+    if self:isEnemy(target) and eachother_shown then
+      local skills = (xibing_secondskills):split("|")
+      for _, skill in ipairs(skills) do
+        if target:hasSkill(skill) then
+          self.xibing_targetSkill = skill
+          return true
+        end
+      end
+    end
+  end
+
+  if not self:isFriend(target) and (draw_count > 0 and draw_count < (self:slashIsAvailable(target) and 3 or 2)) then
     return true
   end
   if draw_count <= 0 then
     return true
   end
-	return false
+  return false
 end
 
 sgs.ai_skill_choice.xibing = function(self, choices, data)
   choices = choices:split("+")
-  local current = self.room:getCurrent()
-  if self:isFriend(current) and table.contains(choices,"cancel") then
+  if not self.xibing_targetSkill and table.contains(choices,"cancel") then
     return "cancel"
   end
-  if self:isEnemy(current) and current:hasShownSkills(sgs.priority_skill) then
-    if table.contains(choices,"cancel") then
-      if #choices == 1 then
-        return "cancel"
-      end
-      if current:canSlash(self.player, nil, true) and self.player:hasSkills(sgs.masochism_skill) and table.contains(choices,"head") then
-        local skills = (sgs.masochism_skill):split("|")
-        table.removeOne(skills,"wanggui")
-        table.insert(skills,"qingguo")
-        for _, skill in ipairs(skills) do
-          if self.player:inHeadSkills(skill) then
-            return "head"
-          end
-        end
-        return "deputy"
-      end
-      if self.player:inDeputySkills("xibing") and table.contains(choices,"head") then
+  self.room:writeToConsole("息兵暗置技能:"..sgs.Sanguosha:translate(self.xibing_targetSkill))
+  local current = self.room:getCurrent()
+  if table.contains(choices,"cancel") then
+    if #choices == 1 then
+      return "cancel"
+    end
+    if self.player:hasSkill("tuntian") and not self.player:getPile("field"):isEmpty() then
+      if current:inDeputySkills("tuntian") then
         return "head"
-      else
-        return "deputy"
-      end
-    else
-      if table.contains(choices,"head") then
-        local skills = (sgs.priority_skill):split("|")--需要判定君主技能等，更详细的技能判断
-        table.removeOne(skills,"jianan")
-        table.removeOne(skills,"shouyue")
-        table.removeOne(skills,"jiahe")
-        table.removeOne(skills,"hongfa")
-        table.removeOne(skills,"buqu")
-        for _, skill in ipairs(skills) do
-          if current:inHeadSkills(skill) then
-            return "head"
-          end
-        end
-        return "deputy"
       end
       return "deputy"
     end
+    if self.player:hasSkill("paiyi") and not self.player:getPile("power_pile"):isEmpty() then
+      return "deputy"
+    end
+    if self.player:hasSkill("xiongnve") and not self.player:getMark("#massacre") > 0 then
+      return "deputy"
+    end
+    if self.player:hasSkill("zisui") and not self.player:getPile("disloyalty"):isEmpty() then
+      if self.player:getPile("disloyalty") >= self.player:getMaxHp() then
+        return "head"
+      end
+      return "deputy"
+    end
+
+    local xibing_defenseskills = {"yiji","fankui","ganglie","fangzhu","shicai","qingguo"}
+    if self.player:hasSkill("jieming") and self:getJiemingChaofeng(self.player) <= -4 then
+      table.insert(xibing_defenseskills,"jieming")
+    end
+    if current:canSlash(self.player, nil, true) and self.player:hasSkills(table.concat(xibing_defenseskills, "|")) and table.contains(choices,"head") then
+      for _, skill in ipairs(xibing_defenseskills) do
+        if self.player:inHeadSkills(skill) then
+          return "head"
+        end
+      end
+      return "deputy"
+    end
+    if self.player:inDeputySkills("xibing") and table.contains(choices,"head") then
+      return "head"
+    else
+      return "deputy"
+    end
+  else
+    if table.contains(choices,"head") then
+      if current:inHeadSkills(self.xibing_targetSkill) then
+        return "head"
+      end
+      return "deputy"
+    end
+    return "deputy"
   end
 	return choices[#choices]
 end
 
 --陆郁生
 sgs.ai_skill_invoke.zhente = function(self, data)
+  if self.player:hasSkill("guzheng") then
+    local lord_sunquan = self.room:getLord(self.player:getKingdom())
+    if lord_sunquan and lord_sunquan:getPile("flame_map"):length() > 1 then
+      return true
+    end
+    for _, p in ipairs(self.friends_noself) do
+      if p:hasShownSkills(sgs.drawcard_skill) then
+        return true
+      end
+    end
+  end
   if not self:willShowForDefence() then
     return false
   end
@@ -144,7 +208,10 @@ end
 
 sgs.ai_skill_playerchosen.zhiwei = function(self, targets)
   local current = self.room:getCurrent()
-  if current:objectName() ~= self.player:objectName() and current:hasShownSkills("luanji|yigui") and current:getHandcardNum() > 2 then
+  if current:objectName() ~= self.player:objectName()
+  and (current:hasShownSkill("yigui") and #(current:property("Huashens"):toString():split("+")) > 3
+      or (current:getHandcardNum() > 3 and (current:hasShownSkill("luanji") or self:hasCrossbowEffect(current)
+          or (current:hasShownSkill("shuangxiong") and current:hasFlag("shuangxiong"))))) then
     return current
   end
   targets = sgs.QList2Table(targets)
@@ -199,6 +266,17 @@ sgs.ai_skill_invoke.chengshang = true
 --祢衡
 sgs.ai_skill_invoke.kuangcai = false
 
+sgs.kuangcai_keep_value = {
+	Peach = 6,
+	Analeptic = 5.8,
+	Jink = 5.7,
+	FireSlash = 5.6,
+	Slash = 5.4,
+	ThunderSlash = 5.5,
+	ExNihilo = 4.7,
+	BefriendAttacking = 5
+}--复制的咆哮，是否合理？
+
 sgs.ai_skill_invoke.shejian =  function(self, data)
   if not self:willShowForDefence() then
     return false
@@ -212,7 +290,7 @@ sgs.ai_skill_invoke.shejian =  function(self, data)
   if card:isKindOf("Slash") and self:hasHeavySlashDamage(use.from, card, self.player) and self:getCardsNum("Jink","h") > 0 then
     return false
   end
-  if (self.player:getHandcardNum() < 3 and self:getCardsNum("Peach","h") == 0)
+  if (self.player:getHandcardNum() < (self:needKongcheng() and 4 or 3) and self:getCardsNum("Peach","h") == 0)
   and target:getHp() <= (self.player:hasSkill("congjian") and 2 or 1) and self:isWeak(target) then
     return true
   end
@@ -399,9 +477,12 @@ sgs.ai_skill_exchange["weimeng_giveback"] = function(self,pattern,max_num,min_nu
 			break
 		end
 	end
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), to:objectName())
 
-  local function weiming_insert(c_id)--判断并防止重复
+  local function weiming_insert(card)--判断并防止重复
+    local c_id = card:getEffectiveId()
     if #weimeng_give < max_num and not table.contains(weimeng_give, c_id) then
+      if not card:hasFlag("visible") then card:setFlags(visibleflag) end--记录已知牌
       table.insert(weimeng_give, c_id)
     end
   end
@@ -411,25 +492,25 @@ sgs.ai_skill_exchange["weimeng_giveback"] = function(self,pattern,max_num,min_nu
 	self:sortByUseValue(cards,true)
   if self:isFriend(to) then
     if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 then
-      weiming_insert(self:getCard("Analeptic"):getEffectiveId())
+      weiming_insert(self:getCard("Analeptic"))
     end
     if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 0 then
-      weiming_insert(self:getCard("Peach"):getEffectiveId())
+      weiming_insert(self:getCard("Peach"))
     end
     local c, friend = self:getCardNeedPlayer(cards, {to})
     if friend and friend:objectName() == to:objectName() then
-      weiming_insert(c:getEffectiveId())
+      weiming_insert(c)
     end
     if self:getCardsNum("Jink") > 1 then
-      weiming_insert(self:getCard("Jink"):getEffectiveId())
+      weiming_insert(self:getCard("Jink"))
     end
     if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() then
-      weiming_insert(self:getCard("Slash"):getEffectiveId())
+      weiming_insert(self:getCard("Slash"))
     end
   end
 
   for _, c in ipairs(cards) do
-    weiming_insert(c:getEffectiveId())
+    weiming_insert(c)
   end
 	return weimeng_give
 end
@@ -601,29 +682,32 @@ sgs.ai_skill_exchange["fenglve_give"] = function(self,pattern,max_num,min_num,ex
 			break
 		end
 	end
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), to:objectName())
 
-  local function fenglve_insert(c_id)--判断并防止重复
+  local function fenglve_insert(card)--判断并防止重复
+    local c_id = card:getEffectiveId()
     if #fenglve_give < max_num and not table.contains(fenglve_give, c_id) then
+      if not card:hasFlag("visible") then card:setFlags(visibleflag) end--记录已知牌
       table.insert(fenglve_give, c_id)
     end
   end
 
   if self:isFriend(to) and self:isWeak(to) then
     if self.player:getHp() > 1 and self:getCardsNum("Analeptic") > 0 then
-      fenglve_insert(self:getCard("Analeptic"):getEffectiveId())
+      fenglve_insert(self:getCard("Analeptic"))
     end
     if not self:isWeak() and self:getCardsNum("Peach") > 0 then
-      fenglve_insert(self:getCard("Peach"):getEffectiveId())
+      fenglve_insert(self:getCard("Peach"))
     end
     if self:getCardsNum("Jink") > 1 then
-      fenglve_insert(self:getCard("Jink"):getEffectiveId())
+      fenglve_insert(self:getCard("Jink"))
     end
   end
   local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
   for _, c in ipairs(cards) do
-    fenglve_insert(c:getEffectiveId())
+    fenglve_insert(c)
   end
 	return fenglve_give
 end

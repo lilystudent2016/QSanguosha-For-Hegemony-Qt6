@@ -362,20 +362,19 @@ sgs.ai_skill_exchange["_enyuan"] = function(self,pattern,max_num,min_num,expand_
   if self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty() then--君张角
     return {}
   end
+  local fazheng = sgs.findPlayerByShownSkillName("enyuan")
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), fazheng:objectName())
   local cards = self.player:getHandcards() -- 获得所有手牌
   cards=sgs.QList2Table(cards) -- 将列表转换为表
   self:sortByUseValue(cards, true) -- 按使用价值从小到大排序
   if cards[1]:isKindOf("Peach") then
-    local fazheng = sgs.findPlayerByShownSkillName("enyuan")
     if self:isFriend(fazheng) then
+      if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end
       return {cards[1]:getId()}
     end
-    --[[local kingdom = self.player:getKingdom()
-    if kingdom == "shu" then
-      return {cards[1]:getId()}
-    end]]--
     return {}
   end
+  if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end--记录已知牌
   return {cards[1]:getId()}
 end
 
@@ -1262,6 +1261,7 @@ sgs.ai_skill_exchange.fudi= function(self,pattern,max_num,min_num,expand_pile)
     end
 
 	local from = self.player:getTag("FudiTarget"):toPlayer()
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), from:objectName())
 
 	local x = self.player:getHp()
 
@@ -1282,13 +1282,15 @@ sgs.ai_skill_exchange.fudi= function(self,pattern,max_num,min_num,expand_pile)
 
 	for _, target in sgs.qlist(targets) do
 		if self:isEnemy(target) and self:damageIsEffective(target, nil, self.player) and not self:getDamagedEffects(target, self.player)
-			and not self:needToLoseHp(target, self.player) then
+		and not self:needToLoseHp(target, self.player) then
+        if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end--记录已知牌
 			return cards[1]:getId()
 		end
 	end
 	for _, target in sgs.qlist(targets) do
 		if self:isFriend(target) and self:damageIsEffective(target, nil, self.player)
-			and (self:getDamagedEffects(target, self.player) or self:needToLoseHp(target, self.player, nil, true)) then
+		and (self:getDamagedEffects(target, self.player) or self:needToLoseHp(target, self.player, nil, true)) then
+      if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end--记录已知牌
 			return cards[1]:getId()
 		end
 	end
@@ -1400,7 +1402,7 @@ sgs.ai_skill_choice["docommand_weidi"] = function(self, choices, data)
     return "yes"
   end
   if index == 4 and not is_friend then
-    if source:canSlashWithoutCrossbow() and source:canSlash(self.player, nil, true)
+    if self:slashIsAvailable(source) and source:canSlash(self.player, nil, true)
     and self.player:getHp() == 1 and self:isWeak() then
       return "no"
     end
@@ -1433,6 +1435,7 @@ sgs.ai_skill_exchange.weidi_give = function(self,pattern,max_num,min_num,expand_
 			break
 		end
 	end
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), to:objectName())
   local weidi_give = {}
 	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
@@ -1442,32 +1445,34 @@ sgs.ai_skill_exchange.weidi_give = function(self,pattern,max_num,min_num,expand_
     self:sortByKeepValue(cards)
   end
 
-  local function weidi_insert(c_id)--判断并防止重复
+  local function weidi_insert(card)--判断并防止重复
+    local c_id = card:getEffectiveId()
     if #weidi_give < max_num and not table.contains(weidi_give, c_id) then
+      if not card:hasFlag("visible") then card:setFlags(visibleflag) end--记录已知牌
       table.insert(weidi_give, c_id)
     end
   end
 
   if self:isFriend(to) then
     if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 then
-      weidi_insert(self:getCard("Analeptic"):getEffectiveId())
+      weidi_insert(self:getCard("Analeptic"))
     end
     if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 0 then
-      weidi_insert(self:getCard("Peach"):getEffectiveId())
+      weidi_insert(self:getCard("Peach"))
     end
     local c, friend = self:getCardNeedPlayer(cards, {to})
     if friend and friend:objectName() == to:objectName() then
-      weidi_insert(c:getEffectiveId())
+      weidi_insert(c)
     end
     if self:getCardsNum("Jink") > 1 then
-      weidi_insert(self:getCard("Jink"):getEffectiveId())
+      weidi_insert(self:getCard("Jink"))
     end
     if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() then
-      weidi_insert(self:getCard("Slash"):getEffectiveId())
+      weidi_insert(self:getCard("Slash"))
     end
   end
   for _, c in ipairs(cards) do
-    weidi_insert(c:getEffectiveId())
+    weidi_insert(c)
   end
 	return weidi_give
 end
@@ -1500,14 +1505,7 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
   end
   if #targets < 2 or not can_huibian then return end
 
-  local need_jieming = false
-  for _, p in ipairs(targets) do
-    if math.min(p:getMaxHp(), 5) - p:getHandcardNum() > 1 then
-      need_jieming = true
-      break
-    end
-  end
-  if not need_jieming then
+  if self:getJiemingChaofeng(self.player) > -4 then
     table.removeOne(maixueskills,"jieming")
     table.insert(maixueskills,"jieming")--放到最后
   end
@@ -1664,6 +1662,13 @@ sgs.ai_skill_choice.jianan_hide = function(self, choices)
   if self.player:isDuanchang(false) then
     v2 = 0
   end
+  if self.player:hasShownSkill("luoshen") then--甄姬值9-4
+    if self.player:inHeadSkills("luoshen") and v2 > 5 then
+      v1 = v1 - 4
+    elseif self.player:inDeputySkills("luoshen") and v1 > 5 then
+      v2 = v2 - 4
+    end
+	end
   if self.player:hasShownSkill("tuntian") then
     if self.player:inHeadSkills("tuntian") then
       v1 = v1 + self.player:getPile("field"):length()

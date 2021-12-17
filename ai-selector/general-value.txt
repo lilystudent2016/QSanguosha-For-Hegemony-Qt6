@@ -5,7 +5,7 @@ xiahoudun							8
 zhangliao							8
 xuchu								6
 guojia								9
-zhenji								8
+zhenji								9
 xiahouyuan							6
 zhanghe								6
 xuhuang								6
@@ -26,7 +26,7 @@ dongzhao							8
 zhuling								6
 lord_liubei							11
 liubei								7
-guanyu								7
+guanyu								8
 zhangfei							9
 zhugeliang							5
 zhaoyun								5
@@ -34,7 +34,7 @@ machao								9
 huangyueying						8
 huangzhong							6
 weiyan								8
-pangtong							7
+pangtong							8
 wolong								7
 liushan								6
 menghuo								6

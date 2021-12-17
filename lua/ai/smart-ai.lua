@@ -158,10 +158,11 @@ function setInitialTables()
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
 							"hongfa|jijiu|luanji|lijian|wansha|jianchu|qianhuan|yigui|fudi|yongsi|"..
 							"paiyi|suzhi|shilu|huaiyi|shicai|congcha|jinfa|"..
-							"zhukou|jinghe|wanggui|boyan|kuangcai|anyong"
-	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|qianhuan|jianxiong|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|wanggui"
+							"zhukou|jinghe|wanggui|boyan|kuangcai|anyong|miewu"
+	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|wanggui"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
-						"tuntian|shoucheng|yicheng|qianhuan|jizhao|hengjiang|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai"
+						"tuntian|shoucheng|yicheng|qianhuan|jizhao|hengjiang|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
+						"xibing|zhente|qiao|shejian|yusui"
 	sgs.usefull_skill = "tiandu|qiaobian|xingshang|xiaoguo|wusheng|guanxing|qicai|jizhi|kuanggu|lianhuan|huoshou|juxiang|shushen|zhiheng|keji|" ..
 						"duoshi|xiaoji|hongyan|haoshi|guzheng|zhijian|shuangxiong|guidao|guicai|xiongyi|mashu|lirang|yizhi|shengxi|" ..
 						"xunxun|wangxi|yingyang|hunshang|biyue"
@@ -175,14 +176,14 @@ function setInitialTables()
 	sgs.need_kongcheng = 	"kongcheng"
 	sgs.save_skill = 		"jijiu|yigui|buyi|aocai"
 	sgs.exclusive_skill = 	"duanchang|buqu"
-	sgs.drawpeach_skill =	"tuxi|qiaobian|elitegeneralflag|huaiyi|jinfa|daoshu"
+	sgs.drawpeach_skill =	"tuxi|qiaobian|elitegeneralflag|huaiyi|jinfa|daoshu|weimeng"
 	sgs.recover_skill =		"rende|kuanggu|zaiqi|jieyin|qingnang|shenzhi|buqu|buyi"
-	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|duoshi|dimeng|luanji|shuangxiong|lirang|" ..
-									"qice|jili|fengying|fengshix|zaoyun|huaiyi|shilu|baolie|lianpian|tongdu|juejue"
-	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|zhendu|qianhuan|keshou|fudi|quanji"
+	sgs.Active_cardneed_skill =		"qiaobian|duanliang|rende|paoxiao|guose|qixi|jieyin|zhiheng|tianyi|duoshi|dimeng|luanji|shuangxiong|lirang|" ..
+									"qice|jili|fengshix|zaoyun|huaiyi|shilu|baolie|lianpian|tongdu|juejue|duannian|jinghe|yanzheng|kuangcai"
+	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|zhendu|qianhuan|keshou|fudi|quanji|shejian"
 	sgs.cardneed_skill =  	sgs.Active_cardneed_skill .. "|" .. sgs.notActive_cardneed_skill
 	sgs.use_lion_skill =	"duanliang|guicai|guidao|lijian|qingcheng|zhiheng|qixi|fenxun|kurou|diaogui|quanji|jinfa|xishe"
-	sgs.need_equip_skill = 	"shensu|beige|huyuan|qingcheng|xiaoji|zhijian|diaodu"
+	sgs.need_equip_skill = 	"shensu|beige|huyuan|qingcheng|xiaoji|zhijian|xuanlue|diaodu"
 	sgs.judge_reason =		"bazhen|EightDiagram|supply_shortage|indulgence|lightning|leiji|beige|tieqi|luoshen|ganglie|tuntian"
 
 	sgs.rule_skill = "transfer|aozhan|companion|halfmaxhp|firstshow|careerman|showhead|showdeputy"
@@ -1441,18 +1442,19 @@ function SmartAI:writeKeepValue(card)
 	if cardPlace == sgs.Player_PlaceEquip then
 		if card:isKindOf("Armor") and self:needToThrowArmor() then return -10
 		elseif self.player:hasSkills(sgs.lose_equip_skill) then
-			if card:isKindOf("OffensiveHorse") then return -10
-			elseif card:isKindOf("Weapon") then return -9.9
+			if card:isKindOf("Crossbow") then
+			elseif card:isKindOf("OffensiveHorse") then return -10
+			elseif card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then return -9.9
 			elseif card:isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):isEmpty() then return -9.8
 			elseif card:isKindOf("DefensiveHorse") then return -9.7
-			elseif (card:isKindOf("LuminousPearl") or card:isKindOf("JadeSeal")) and self:isWeak() then return -9.6
+			elseif (card:isKindOf("LuminousPearl") or card:isKindOf("JadeSeal") or card:isKindOf("Crossbow")) and self:isWeak() then return -9.6
 			elseif self.player:getPhase() <= sgs.Player_Play then return -9.5--回合外别丢防具、玉玺、夜明珠
 			end
 		elseif self.player:hasSkills("bazhen|jgyizhong") and card:isKindOf("Armor") then return -8
 		elseif self:needKongcheng() then return 5.0
 		end
 		local value = 0
-		if card:isKindOf("Armor") then value = self:isWeak() and 5.2 or 3.2--为啥ai以逸待劳总是弃装备？？？
+		if card:isKindOf("Armor") then value = self:isWeak() and 5.2 or 3.2
 		elseif card:isKindOf("DefensiveHorse") then value = self:isWeak() and 4.3 or 3.19
 		elseif card:isKindOf("Weapon") then value = self.player:getPhase() == sgs.Player_Play and self:slashIsAvailable() and 3.39 or 3.2
 		elseif card:isKindOf("JadeSeal") and not self.player:hasSkill("yongsi") then value = 5
@@ -1583,11 +1585,10 @@ function SmartAI:getUseValue(card)
 	if card:getTypeId() == sgs.Card_TypeSkill then
 		return v
 	elseif card:getTypeId() == sgs.Card_TypeEquip then
-		local cardPlace = self.room:getCardPlace(card:getEffectiveId())
-		if cardPlace == sgs.Player_PlaceEquip then
-			if card:isKindOf("Armor") and self:needToThrowArmor() then return -10 end
+		if self.player:hasEquip(card) then
 			if self.player:hasSkills(sgs.lose_equip_skill) then--使用保留值是否合适？
-				if card:isKindOf("OffensiveHorse") then return -10
+				if card:isKindOf("Crossbow") then
+				elseif card:isKindOf("OffensiveHorse") then return -10
 				elseif card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then return -9.9
 				elseif card:isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):isEmpty() then return -9.8
 				elseif card:isKindOf("DefensiveHorse") then return -9.7
@@ -1595,8 +1596,35 @@ function SmartAI:getUseValue(card)
 				elseif self.player:getPhase() <= sgs.Player_Play then return -9.5--回合外别丢防具、玉玺、夜明珠
 				end
 			end
-		end
-		if self.player:hasEquip(card) then
+			if card:isKindOf("Weapon") then
+				for _, c in sgs.qlist(self.player:getHandcards()) do
+					if c:isKindOf("Weapon") and self:evaluateWeapon(c) > self:evaluateWeapon(card) then
+						return -10
+					end
+				end
+				for _, id in sgs.qlist(self.player:getHandPile()) do
+					local c = sgs.Sanguosha:getCard(id)
+					if c:isKindOf("Weapon") and self:evaluateWeapon(c) > self:evaluateWeapon(card) then
+						return -10
+					end
+				end
+			end
+			if card:isKindOf("Armor") then
+				if self:needToThrowArmor() then
+					return -10
+				end
+				for _, c in sgs.qlist(self.player:getHandcards()) do
+					if c:isKindOf("Armor") and self:evaluateArmor(c) > self:evaluateArmor(card) then
+						return -10
+					end
+				end
+				for _, id in sgs.qlist(self.player:getHandPile()) do
+					local c = sgs.Sanguosha:getCard(id)
+					if c:isKindOf("Armor") and self:evaluateArmor(c) > self:evaluateArmor(card) then
+						return -10
+					end
+				end
+			end
 			if card:isKindOf("OffensiveHorse") and self.player:getAttackRange() > 2 then return 5.5 end
 			if card:isKindOf("DefensiveHorse") and self:hasEightDiagramEffect() then return 5.5 end
 			if card:isKindOf("WoodenOx") then
@@ -1655,7 +1683,6 @@ function SmartAI:getUsePriority(card)
 	local class_name = card:getClassName()
 	local v = 0
 	if card:isKindOf("EquipCard") then
-		--if self.player:hasSkills(sgs.lose_equip_skill) then return 10 end--多个装备使用需要区别
 		if self.player:hasSkills("kuanggu|kuanggu_xh") and (card:isKindOf("OffensiveHorse") or card:isKindOf("SixDragons"))
 		and not self.player:getOffensiveHorse() then return 10 end--狂骨-1马
 		if card:isKindOf("Armor") and not self.player:getArmor() then v = (sgs.ai_use_priority[class_name] or 0) + 5.2
@@ -5532,7 +5559,7 @@ function SmartAI:evaluateWeapon(card, player, target)
 	end
 
 
-	if card:isKindOf("Crossbow") and not player:hasShownSkill("paoxiao") and inAttackRange then
+	if card:isKindOf("Crossbow") and not player:hasShownSkills("paoxiao|kuangcai") and inAttackRange then
 		local slash_num = player:objectName() == self.player:objectName() and self:getCardsNum("Slash") or getCardsNum("Slash", player, self.player)
 		local analeptic_num = player:objectName() == self.player:objectName() and self:getCardsNum("Analeptic") or getCardsNum("Analeptic", player, self.player)
 		local peach_num = player:objectName() == self.player:objectName() and self:getCardsNum("Peach") or getCardsNum("Peach", player, self.player)
@@ -5662,7 +5689,7 @@ function SmartAI:useEquipCard(card, use)
 		end
 	end
 
-	if card:isKindOf("Armor") and card:objectName() == "PeaceSpell" then
+	if card:isKindOf("PeaceSpell") then
 		local lord_zhangjiao = sgs.findPlayerByShownSkillName("wendao") --有君张角在其他人（体力为2/有防具）则不装备太平要术
 		if lord_zhangjiao and lord_zhangjiao:isAlive() then
 			if self.player:objectName() ~= lord_zhangjiao:objectName() and (not self.player:getHp() == 2 or self.player:getArmor()) then
@@ -5670,7 +5697,7 @@ function SmartAI:useEquipCard(card, use)
 			end
 		end
 	end
-	if card:isKindOf("Weapon") and card:objectName() == "DragonPhoenix" then
+	if card:isKindOf("DragonPhoenix") then
 		local lord_liubei = sgs.findPlayerByShownSkillName("zhangwu") --有君刘备在（其他势力/已有武器）不装备龙凤剑
 		if lord_liubei and lord_liubei:isAlive() then
 			if not self.player:isFriendWith(lord_liubei) or (self.player:objectName() ~= lord_liubei:objectName() and self.player:getWeapon()) then
@@ -5678,7 +5705,7 @@ function SmartAI:useEquipCard(card, use)
 			end
 		end
 	end
-	if card:isKindOf("Treasure") and card:objectName() == "LuminousPearl" then
+	if card:isKindOf("LuminousPearl") then
 		local lord_sunquan = sgs.findPlayerByShownSkillName("jubao") --有君孙权在（其他势力/已有宝物）不装备夜明珠
 		if lord_sunquan and lord_sunquan:isAlive() then
 			if not self.player:isFriendWith(lord_sunquan) or (self.player:objectName() ~= lord_sunquan:objectName() and self.player:getTreasure()) then
@@ -5727,7 +5754,7 @@ function SmartAI:useEquipCard(card, use)
 				if not friend:getWeapon() then return end
 			end
 		end
-		if self.player:hasSkill("paoxiao") and card:isKindOf("Crossbow") then return end
+		if self.player:hasSkills("paoxiao|kuangcai") and card:isKindOf("Crossbow") then return end
 		if not self:needKongcheng() and not self.player:hasSkills(sgs.lose_equip_skill) and self:getOverflow() <= 0 and not canUseSlash then return end
 		--if (not use.to) and self.player:getWeapon() and not self.player:hasSkills(sgs.lose_equip_skill) then return end
 		if self.player:hasSkill("zhiheng") and not self.player:hasUsed("ZhihengCard") and self.player:getWeapon() and not card:isKindOf("Crossbow") then return end

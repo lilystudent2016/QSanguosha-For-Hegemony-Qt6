@@ -427,7 +427,8 @@ sgs.paoxiao_keep_value = {
 	FireSlash = 5.6,
 	Slash = 5.4,
 	ThunderSlash = 5.5,
-	ExNihilo = 4.7
+	ExNihilo = 4.7,
+	BefriendAttacking = 5
 }
 
 --诸葛亮
