@@ -21,15 +21,21 @@
 
 --孟达
 sgs.ai_skill_invoke.qiuan = function(self, data)
-	if not self:willShowForDefence() then
-    return false
-  end
-  local damage = data:toDamage()
-  if damage.card:isKindOf("AOE") and not self.player:hasSkill("jianxiong") then
-    if self.get_AOE_subcard then self.get_AOE_subcard = nil end
+	local damage = data:toDamage()
+  if damage.card:isKindOf("AOE") then--优先于奸雄
+    if self.get_AOE_subcard then
+      self.get_AOE_subcard = nil
+      return not self.player:hasSkill("jianxiong")
+    end
     return true
   end
-  if self.player:hasSkills(sgs.masochism_skill) and self.player:getHp() > 1 and damage.damage < 2 then
+  if not self:willShowForDefence() then
+    return false
+  end
+  if self.player:hasSkills(sgs.masochism_skill.."|fankui_simazhao") and self.player:getHp() > 1 and damage.damage < 2 then--详细判断，如节命、望归
+    return false
+  end
+  if self.player:hasSkill("wangxi") and damage.from and self:isFriend(damage.from) and damage.damage < 2 then
     return false
   end
 	return true
@@ -266,6 +272,10 @@ sgs.ai_skill_cardchosen.fengshix = function(self, who, flags, method)
   return self:askForCardChosen(who, flags, "fengshix_dismantlement", method)
 end
 
+sgs.ai_cardneed.fengshix = function(to, card, self)
+	return to:getHandcardNum() < 3
+end
+
 --刘琦
 sgs.ai_skill_playerchosen.wenji = function(self, targets)
   local target
@@ -410,7 +420,7 @@ sgs.ai_skill_choice.lixia = function(self, choices, data)
   end
   if self.player:objectName() ~= shixie:objectName() and self:isFriend(shixie) then
     if self:needToThrowArmor(shixie) or ((shixie:hasSkills(sgs.lose_equip_skill) and self:isWeak(shixie)--弃装备技能且不丢防具、宝物，马呢？
-      and (shixie:getEquips():length() - (shixie:getArmor() and 1 or 0) - (shixi:getTreasure() and 1 or 0)) > 0)) then
+      and (shixie:getEquips():length() - (shixie:getArmor() and 1 or 0) - (shixie:getTreasure() and 1 or 0)) > 0)) then
       return "yes"
     end
   end
@@ -474,6 +484,9 @@ end
 
 sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
   sgs.ai_use_priority.QuanjinCard = 2.4
+  if self.player:hasSkill("daoshu") then
+    sgs.ai_use_priority.QuanjinCard = 2.95--盗书之前
+  end
   local target
   local my_hnum = self.player:getHandcardNum()
   local maxcard_num,maxhurt_num= 0,0
@@ -492,9 +505,7 @@ sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
   end
 
   for _,c in sgs.qlist(self.player:getCards("h")) do
-    local dummy_use = {
-        isDummy = true,
-    }
+    local dummy_use = { isDummy = true }
     if c:isKindOf("BasicCard") then--参考怀异的，其他类型牌是否需要写？
         self:useBasicCard(c, dummy_use)
     end
@@ -536,10 +547,6 @@ sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
 			global_room:writeToConsole("使用劝进目标:"..target:objectName().." 其手牌数:"..target:getHandcardNum())
 		end
 	end
-
-  if self.player:hasSkill("daoshu") then
-    sgs.ai_use_priority.QuanjinCard = 2.95--盗书之前
-  end
 end
 
 sgs.ai_skill_choice["startcommand_quanjin"] = sgs.ai_skill_choice.startcommand_to
@@ -638,7 +645,7 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
   self:sort(self.enemies, "hp")
   for _, p in ipairs(self.enemies) do
     if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self:damageIsEffective(p, nil, self.player)
-    and not self:getDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
+    and not self:needDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
     and self.player:distanceTo(p) > 1 and self.player:getHandcardNum() + 1 >= self.player:distanceTo(p) then
       local nearest = 6
       if p:getHp() == 1 and self:isWeak(p) and self.player:getHandcardNum() > 3 then
@@ -655,7 +662,7 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
   if not target then
     for _, p in ipairs(self.enemies) do
       if p:hasShownOneGeneral() and not self.player:isFriendWith(p) and self:damageIsEffective(p, nil, self.player)
-      and not self:getDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
+      and not self:needDamagedEffects(p, self.player) and not self:needToLoseHp(p, self.player)
       and self.player:distanceTo(p) == 2 and self.player:getHandcardNum() > 1 then
         target = p--没有血少的则攻击距离2的
       end
@@ -712,7 +719,7 @@ sgs.ai_skill_invoke.pozhen = function(self, data)
         end
       end
   end
-	return fasle
+	return false
 end
 
 sgs.ai_skill_choice["pozhen-discard"] = function(self, choices, data)
@@ -739,7 +746,7 @@ sgs.ai_skill_invoke.jiancai = function(self, data)
       end
     end
   end
-	return fasle
+	return false
 end
 
 --吴景
@@ -946,7 +953,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
 	  if not target then
 		  target = self.player
 	  end
-  else--4权以下
+  else--4权以下，排异打伤害优先度多少合适？
  	  self:sort(self.enemies, "hp")
 	  if not target then
 		  for _, enemy in ipairs(self.enemies) do
@@ -954,7 +961,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
 				and not self:hasSkills(sgs.masochism_skill, enemy)
         and not enemy:hasSkill("jijiu")
 				and self:damageIsEffective(enemy, nil, self.player)
-				and not (self:getDamagedEffects(enemy, self.player) or self:needToLoseHp(enemy))
+				and not (self:needDamagedEffects(enemy, self.player) or self:needToLoseHp(enemy))
 				and enemy:getHandcardNum() + self.player:getPile("power_pile"):length() - 1 > self.player:getHandcardNum() then
 				  target = enemy
           break
@@ -988,14 +995,16 @@ sgs.paiyi_keep_value = {
 }
 
 function sgs.ai_cardneed.paiyi(to, card, self)
-	if card:isKindOf("Crossbow") then
-		return true
-	end
+  return card:isKindOf("Crossbow")
 end
 
 --司马昭
 sgs.ai_skill_invoke.suzhi = function(self, data)
 	return self:willShowForAttack()
+end
+
+function sgs.ai_cardneed.suzhi(to, card, self)
+	return card:isKindOf("Axe") or isCard("Duel",card, to)
 end
 
 sgs.ai_skill_invoke.fankui_simazhao = function(self, data)
@@ -1126,7 +1135,7 @@ sgs.ai_skill_cardask["@shilu"] = function(self, data, pattern, target, target2, 
   if self:needToThrowArmor() then
     addcard(self.player:getArmor())
   end
-  
+
   if #unpreferedCards == 0 then
     return "."
   end
@@ -1136,10 +1145,57 @@ end
 sgs.ai_skill_invoke.xiongnve = function(self, data)
   if data:toString() == "attack" then
     self.xiongnve_choice = nil
-    --return true
+    local name = sgs.ai_skill_choice.xiongnve_attack(self, self.player:property("massacre_pile"):toString())
+    if name and self.xiongnve_choice then
+      global_room:writeToConsole("凶虐进攻选择:"..name.."|"..self.xiongnve_choice)
+      return true
+    end
   end
-  if data:toString() == "defence" and (self:isWeak() or self.player:getHp() < 2 or self.player:getMark("#massacre") > #self.enemies*2) then
-    return true
+  if data:toString() == "defence"  then
+    if self:isWeak() or self.player:getHp() < 2 then
+      return true
+    end
+    if self.player:getLostHp() > 1 or self.player:getHp() < 3 then
+      local useless_num = 0
+      local generals = self.player:property("massacre_pile"):toString():split("+")
+      local xiongnve_kingdom = {["wei"] = {}, ["shu"] = {}, ["wu"] = {}, ["qun"] = {}, ["careerist"] = {}, ["double"] = {}}
+      for _, name in ipairs(generals) do
+        local general = sgs.Sanguosha:getGeneral(name)
+        if not general:isDoubleKingdoms() then
+          table.insert(xiongnve_kingdom[general:getKingdom()],name)
+        else
+          table.insert(xiongnve_kingdom["double"],name)
+        end
+      end
+      local kingdoms = {wei = 0, shu = 0, wu = 0, qun = 0, careerist = 0}--计算势力的人数，正是敌人，负是队友
+      for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+        if p:hasShownOneGeneral() then--非暗将
+          local p_kingdom = p:getKingdom()
+          if p_kingdom == "god" then
+            p_kingdom = "careerist"
+          end
+          kingdoms[p_kingdom] = kingdoms[p_kingdom] + (self:isFriend(p) and -1 or 1)
+        end
+      end
+      for key, value in pairs(kingdoms) do
+        if value == 0 and #xiongnve_kingdom[key] > 0 then
+          useless_num = useless_num + #xiongnve_kingdom[key]
+        end
+        if value > 0 and #xiongnve_kingdom[key] > math.min(value*2, 5) then
+          useless_num = useless_num + #xiongnve_kingdom[key] - value
+        end
+      end
+      for _, name in ipairs(xiongnve_kingdom["double"]) do
+        local general = sgs.Sanguosha:getGeneral(name)
+			  local double_kingdoms = general:getKingdoms()
+        if kingdoms[double_kingdoms[1]] == 0 and kingdoms[double_kingdoms[2]] == 0 then
+          useless_num = useless_num + 1
+        end
+      end
+      if useless_num > 1 then
+        return true
+      end
+    end
   end
 	return false
 end
@@ -1156,6 +1212,7 @@ sgs.ai_skill_choice.xiongnve_attack = function(self, generals)
 		end
 	end
   local kingdoms = {wei = 0, shu = 0, wu = 0, qun = 0, careerist = 0}--计算势力的人数，正是敌人，负是队友
+  local kingdom_players = {wei = {}, shu = {}, wu = {}, qun = {}, careerist = {}}--各国家成员
 	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 		if not p:isRemoved() and p:hasShownOneGeneral() then--非暗将和掉虎
 			local p_kingdom = p:getKingdom()
@@ -1163,25 +1220,119 @@ sgs.ai_skill_choice.xiongnve_attack = function(self, generals)
 				p_kingdom = "careerist"
 			end
 			kingdoms[p_kingdom] = kingdoms[p_kingdom] + (self:isFriend(p) and -1 or 1)
+      table.insert(kingdom_players[p_kingdom], p)
 		end
 	end
-  local max_friend_kingom
-	local max_enemy_kingdom
-	local f_num, e_num = 0,0
-	for key, value in pairs(kingdoms) do
-		if key and value > e_num then
-			max_enemy_kingdom = key
-			e_num = value
-		end
-		if key and value < f_num then
-			max_friend_kingom = key
-			f_num = value
-		end
-	end
-  if (self:getCardsNum("Crossbow", 'he') > 0 or self:hasCrossbowEffect()) then
-    
+  local function double_first(kingodm)
+    for _, name in ipairs(xiongnve_kingdom["double"]) do
+      local general = sgs.Sanguosha:getGeneral(name)
+			local double_kingdoms = general:getKingdoms()
+      if kingdoms[double_kingdoms[1]] >= 0 and kingdoms[double_kingdoms[2]] >= 0
+      and (double_kingdoms[1] == kingodm or double_kingdoms[2] == kingodm) then
+        return name
+      end
+    end
+    if #xiongnve_kingdom[kingodm] > 0 then
+      return xiongnve_kingdom[kingodm][1]
+    end
+    return nil
   end
-	return generals[math.random(1,#generals)]
+
+  if self:getCardsNum("Slash") > 1 then
+    local max_slash_kingdom
+    local slash_enemy
+    local e_num = 0
+    local slash = sgs.cloneCard("slash")
+    self:sort(self.enemies, "hp")
+    for _, enemy in ipairs(self.enemies) do
+      if self.player:canSlash(enemy) and not self:slashProhibit(slash ,enemy) and self:slashIsEffective(slash, enemy) then
+        local enemy_kingdom = enemy:getKingdom()
+        if enemy_kingdom == "god" then
+          enemy_kingdom = "careerist"
+        end
+        if kingdoms[enemy_kingdom] > e_num and double_first(enemy_kingdom) then
+          max_slash_kingdom = enemy_kingdom
+          slash_enemy = enemy
+          e_num = kingdoms[enemy_kingdom]
+        end
+      end
+    end
+    if max_slash_kingdom then
+      if self:hasCrossbowEffect() or self:getCardsNum("Crossbow", 'he') > 0 then--self.player:hasSkills(sgs.force_slash_skill)
+        self.xiongnve_choice = "adddamage"
+      else
+        self.xiongnve_choice = "nolimit"
+      end
+      return double_first(max_slash_kingdom)
+    end
+  end
+	if self:getCardsNum("AOE") > 0 then
+    local max_aoe_kingdom
+    local e_num = 0
+    local aoe = self:getCard("SavageAssault")
+    if aoe and self:getAoeValue(aoe) > 0 then
+      for _, enemy in ipairs(self.enemies) do
+        if self:aoeIsEffective(aoe, enemy, self.player) then
+          local enemy_kingdom = enemy:getKingdom()
+          if enemy_kingdom == "god" then
+            enemy_kingdom = "careerist"
+          end
+          if kingdoms[enemy_kingdom] > e_num and double_first(enemy_kingdom) then
+            max_aoe_kingdom = enemy_kingdom
+            e_num = kingdoms[enemy_kingdom]
+          end
+        end
+      end
+    end
+    if max_aoe_kingdom then
+      self.xiongnve_choice = "adddamage"
+      return double_first(max_aoe_kingdom)
+    end
+    aoe = self:getCard("ArcheryAttack")
+    if aoe and self:getAoeValue(aoe) > 0 then
+      for _, enemy in ipairs(self.enemies) do
+        if self:aoeIsEffective(aoe, enemy, self.player) then
+          local enemy_kingdom = enemy:getKingdom()
+          if enemy_kingdom == "god" then
+            enemy_kingdom = "careerist"
+          end
+          if kingdoms[enemy_kingdom] > e_num and double_first(enemy_kingdom) then
+            max_aoe_kingdom = enemy_kingdom
+            e_num = kingdoms[enemy_kingdom]
+          end
+        end
+      end
+    end
+    if max_aoe_kingdom then
+      self.xiongnve_choice = "adddamage"
+      return double_first(max_aoe_kingdom)
+    end
+  end
+  local burningcamps = self:getCard("BurningCamps")
+	if burningcamps and burningcamps:isAvailable(self.player) then
+    local np = self.player:getNextAlive()
+    if #xiongnve_kingdom[np:getKingdom()] > 0 then
+      local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
+			self:useCardBurningCamps(burningcamps, dummyuse)
+			if dummyuse.card then
+				self.xiongnve_choice = "adddamage"
+				return xiongnve_kingdom[np:getKingdom()][1]
+			end
+    end
+  end
+  local duel = self:getCard("Duel")
+  if duel and duel:isAvailable(self.player) then
+		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
+		self:useCardDuel(duel, dummyuse)
+		if not dummyuse.to:isEmpty() then
+			local duel_t = dummyuse.to:first()
+			if duel_t:getHp() == 1 and self:isWeak(duel_t) and #xiongnve_kingdom[duel_t:getKingdom()] > 0 then
+				self.xiongnve_choice = "adddamage"
+				return #xiongnve_kingdom[duel_t:getKingdom()][1]
+			end
+		end
+	end
+  return generals[math.random(1,#generals)]
 end
 
 sgs.ai_skill_choice.xiongnve = function(self, choices, data)
@@ -1204,25 +1355,66 @@ sgs.ai_skill_choice.xiongnve_defence = function(self, generals)
 			table.insert(xiongnve_kingdom["double"],name)
 		end
 	end
-  local key
-  local vtable_num = 10
-  for kingdom, kingdom_general in pairs(xiongnve_kingdom) do
-    if kingdom ~= "double" and #kingdom_general > 0 then
-      if self.player:getPlayerNumWithSameKingdom("AI", kingdom) < vtable_num then
-        key = kingdom
-        vtable_num = #kingdom_general
+  local kingdoms = {wei = 0, shu = 0, wu = 0, qun = 0, careerist = 0}--计算势力的人数，正是敌人，负是队友
+  for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+    if p:hasShownOneGeneral() then--非暗将
+      local p_kingdom = p:getKingdom()
+      if p_kingdom == "god" then
+        p_kingdom = "careerist"
       end
+      kingdoms[p_kingdom] = kingdoms[p_kingdom] + (self:isFriend(p) and -1 or 1)
     end
   end
-  if key then
+  for key, value in pairs(kingdoms) do
+    if value == 0 and #xiongnve_kingdom[key] > 0 then
+      return xiongnve_kingdom[key][1]
+    end
+  end
+  for key, value in pairs(kingdoms) do
+    if value > 0 and #xiongnve_kingdom[key] > math.min(value*2, 5) then
+      return xiongnve_kingdom[key][1]
+    end
+  end
+  for key, value in pairs(kingdoms) do
+    if value < 0 and #xiongnve_kingdom[key] > 0 then
+      return xiongnve_kingdom[key][1]
+    end
+  end
+  local kingdom
+  local vtable_num = 10
+  for key, value in pairs(kingdoms) do
+    if #xiongnve_kingdom[key] > 0 and math.abs(value) < vtable_num then
+      vtable_num = math.abs(value)
+      kingdom = key
+    end
+  end
+  if kingdom then
     --global_room:writeToConsole("凶虐减伤选择:"..key)
-    return xiongnve_kingdom[key][1]
+    return xiongnve_kingdom[kingdom][1]
   end
   if #xiongnve_kingdom["double"] > 0 then
+    for _, name in ipairs(xiongnve_kingdom["double"]) do
+      local general = sgs.Sanguosha:getGeneral(name)
+      local double_kingdoms = general:getKingdoms()
+      if kingdoms[double_kingdoms[1]] == 0 and kingdoms[double_kingdoms[2]] == 0 then
+        return name
+      end
+    end
+    for _, name in ipairs(xiongnve_kingdom["double"]) do
+      local general = sgs.Sanguosha:getGeneral(name)
+      local double_kingdoms = general:getKingdoms()
+      if kingdoms[double_kingdoms[1]] <= 0 and kingdoms[double_kingdoms[2]] <= 0 then
+        return name
+      end
+    end
     return xiongnve_kingdom["double"][1]
   end
 
 	return generals[math.random(1,#generals)]
+end
+
+function sgs.ai_cardneed.xiongnve(to, card, self)
+	return card:isKindOf("Halberd")
 end
 
 --公孙渊
@@ -1266,16 +1458,15 @@ sgs.ai_skill_use_func["HuaiyiCard"] = function(card, use, self)
   local reds, blacks = {}, {}
   local red_value, black_value = 0, 0
   for _,c in sgs.qlist(handcards) do
-      local dummy_use = {
-          isDummy = true,
-      }
+      local dummy_use = { isDummy = true }
       if c:isKindOf("Peach") then
         self:useBasicCard(c, dummy_use)
+      elseif c:isKindOf("Snatch") then
+          self:useTrickCard(c, dummy_use)
   --[[
       elseif c:isKindOf("EquipCard") and not self:getSameEquip(c) then
           self:useEquipCard(c, dummy_use)
-      elseif c:isKindOf("TrickCard") then
-          self:useTrickCard(c, dummy_use)]]
+      ]]
       end
       if dummy_use.card then
         return --It seems that self.player should use this card first.
@@ -1419,7 +1610,7 @@ end
 
 function sgs.ai_cardneed.baolie(to, card, self)
   if to:getHp() <= 2 then
-    return card:isKindOf("Slash") or card:isKindOf("Analeptic")
+    return card:isKindOf("Slash") or card:isKindOf("Analeptic") or to:hasWeapon("Spear")
   end
 	return card:isKindOf("Halberd")--方天画戟
 end
@@ -1609,7 +1800,7 @@ sgs.ai_skill_playerchosen["daming_slash"] = function(self, targets)--复制的ze
 	for _, target in ipairs(targetlist) do
 		if self:isEnemy(target) and not self:slashProhibit(tslash ,target) and sgs.isGoodTarget(target, targetlist, self) then
 			if self:slashIsEffective(tslash, target) then
-				if self:getDamagedEffects(target, self.player, true) or self:needLeiji(target, self.player) then
+				if self:needDamagedEffects(target, self.player, true) or self:needLeiji(target, self.player) then
 					table.insert(forbidden, target)
 				elseif self:needToLoseHp(target, self.player, true, true) then
 					table.insert(arrBestHp, target)
@@ -1626,7 +1817,7 @@ sgs.ai_skill_playerchosen["daming_slash"] = function(self, targets)--复制的ze
 		if not self:slashProhibit(tslash, target) then
 			if self:slashIsEffective(tslash, target) then
 				if self:isFriend(target) and (self:needToLoseHp(target, self.player, true, true)
-					or self:getDamagedEffects(target, self.player, true) or self:needLeiji(target, self.player)) then
+					or self:needDamagedEffects(target, self.player, true) or self:needLeiji(target, self.player)) then
 						return target
 				end
 			else
@@ -1646,6 +1837,10 @@ sgs.ai_skill_playerchosen["daming_slash"] = function(self, targets)--复制的ze
 	end
 
 	return targetlist[1]
+end
+
+function sgs.ai_cardneed.daming(to, card, self)
+	return card:getTypeId() == sgs.Card_TypeTrick and self:getUseValue(card) < sgs.ai_use_value.Peach
 end
 
 sgs.ai_skill_invoke.xiaoni = function(self, data)
@@ -1947,6 +2142,8 @@ sgs.ai_skill_choice["transform_xishe"] = function(self, choices)
   return "yes"
 end
 
+sgs.ai_cardneed.xishe = sgs.ai_cardneed.equip
+
 --刘巴
 sgs.ai_skill_invoke.tongdu = true
 
@@ -1993,7 +2190,7 @@ sgs.ai_skill_invoke.juejue = function(self, data)--暂不考虑紫砂
       enemy_weak = enemy_weak + 1
     end
   end
-  if self:getOverflow() > 1 and self.player:getHp() > 1 then
+  if self:getOverflow() > (self.player:getMark("@halfmaxhp") < 1 and 1 or 3) and self.player:getHp() > 1 then
     if enemy_weak > 2 or enemy_weak > friend_weak  then
       return true
     end
@@ -2010,7 +2207,7 @@ sgs.ai_skill_cardask["@juejue-discard"] = function(self, data, pattern, target, 
     return "."
   end
   local current = self.room:getCurrent()--万一绝决过程中朱灵死了，是否会空值？
-  if not self:damageIsEffective(self.player, nil, current) or self:getDamagedEffects(self.player, current) or self:needToLoseHp(self.player, current) then
+  if not self:damageIsEffective(self.player, nil, current) or self:needDamagedEffects(self.player, current) or self:needToLoseHp(self.player, current) then
     return "."
   end
   if self.player:getHp() > 2 or self:getCardsNum("Peach") > 0

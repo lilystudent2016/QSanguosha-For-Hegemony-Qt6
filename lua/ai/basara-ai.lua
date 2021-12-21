@@ -311,7 +311,7 @@ sgs.ai_skill_choice["GameRule:TurnStart"] = function(self, choices, data)--旧�
 	end
 	for _, skill in ipairs(followShow) do
 		if not self.player:hasShownOneGeneral() then
-			for _,p in sgs.qlist(self.room:getOtherPlayers(player)) do
+			for _,p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 				if p:hasShownSkill(skill) and p:getKingdom() == self.player:getKingdom() then
 					if canShowHead and canShowDeputy and showRate > 0.2 then
 						local cho = { "GameRule_AskForGeneralShowHead", "GameRule_AskForGeneralShowDeputy"}
@@ -585,7 +585,7 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	end
 	for _, skill in ipairs(followShow) do
 		if not self.player:hasShownOneGeneral() then
-			for _,p in sgs.qlist(self.room:getOtherPlayers(player)) do
+			for _,p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 				if p:hasShownSkill(skill) and p:getKingdom() == self.player:getKingdom() then
 					if canShowHead and canShowDeputy and showRate > 0.2 then
 						return "show_both_generals"
@@ -623,6 +623,35 @@ sgs.ai_skill_choice["changetolord"] = function(self, choices, data)
 	global_room:writeToConsole(self.player:objectName().. ":变身君主选择" .. choices)
 	return "yes"
 end
+
+--查看下家的副将
+function sgs.viewNextPlayerDeputy()
+	if sgs.GetConfig("ViewNextPlayerDeputyGeneral", true) then
+		for _, player in sgs.qlist(global_room:getPlayers()) do
+			local np = player:getNextAlive()
+			np:setMark(("KnownBoth_%s_%s"):format(player:objectName(), np:objectName()), 1)
+			local names = {}
+			if player:getTag("KnownBoth_" .. np:objectName()):toString() ~= "" then
+				names = player:getTag("KnownBoth_" .. np:objectName()):toString():split("+")
+			else
+				if np:hasShownGeneral1() then
+					table.insert(names, np:getActualGeneral1Name())
+				else
+					table.insert(names, "anjiang")
+				end
+				if np:hasShownGeneral2() then
+					table.insert(names, np:getActualGeneral2Name())
+				else
+					table.insert(names, "anjiang")
+				end
+			end
+			names[2] = np:getActualGeneral2Name()
+			player:setTag("KnownBoth_" .. np:objectName(), sgs.QVariant(table.concat(names, "+")))
+			global_room:writeToConsole(np:objectName().."查看下家的副将:"..table.concat(names, "+"))
+		end
+	end
+end
+
 
 --鏖战桃
 local aozhan_skill = {}
@@ -762,11 +791,44 @@ end
 sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 	sgs.ai_use_priority.FirstShowCard = 0.1--挟天子之前
 	--global_room:writeToConsole("先驱判断开始")
+	local target
+	local not_shown = {}
+	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+		if not p:hasShownAllGenerals() then
+			table.insert(not_shown, p)
+		end
+	end
+	if #not_shown > 0 then
+		for _, p in ipairs(not_shown) do
+			if not self:isFriend(p) and not self:isEnemy(p) then
+				target = p
+				break
+			end
+		end
+		if not target then
+			for _, p in ipairs(not_shown) do
+				if not p:hasShownOneGeneral() and self:isEnemy(p) then
+					target = p
+					break
+				end
+			end
+		end
+		if not target then
+			for _, p in ipairs(not_shown) do
+				if self:isFriend(p) and not p:hasShownGeneral1() then
+					target = p
+					break
+				end
+			end
+		end
+		if not target then
+			target = not_shown[1]
+		end
+	end
+
 	if self.player:getHandcardNum() <= 1 and self:slashIsAvailable() then
 		for _,c in sgs.qlist(self.player:getHandcards()) do
-			local dummy_use = {
-				isDummy = true,
-			}
+			local dummy_use = { isDummy = true }
 			if c:isKindOf("BasicCard") then
 				self:useBasicCard(c, dummy_use)
 			elseif c:isKindOf("EquipCard") then
@@ -780,6 +842,9 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 		end
 		sgs.ai_use_priority.FirstShowCard = 2.4--杀之后
 		use.card = card
+		if target and use.to then
+			use.to:append(target)
+		end
 		return
 	end
 
@@ -792,9 +857,7 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 	end
 	if self.player:getHandcardNum() <= 2 and self:getCardsNum("Peach") == 0 and freindisweak then
 		for _,c in sgs.qlist(self.player:getHandcards()) do
-			local dummy_use = {
-				isDummy = true,
-			}
+			local dummy_use = { isDummy = true }
 			if c:isKindOf("BasicCard") then
 				self:useBasicCard(c, dummy_use)
 			elseif c:isKindOf("EquipCard") then
@@ -808,15 +871,50 @@ sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 		end
 		sgs.ai_use_priority.FirstShowCard = 0.9--桃之后
 		use.card = card
+		if target and use.to then
+			use.to:append(target)
+		end
 		return
 	end
 end
 
 sgs.ai_skill_choice["firstshow_see"] = function(self, choices)
 	choices = choices:split("+")
+	if table.contains(choices, "head_general") then
+		return "head_general"
+	end
 	return choices[#choices]
+end
 
-	--暂不考虑详细
+sgs.ai_choicemade_filter.skillChoice.firstshow_see = function(self, from, promptlist)
+	local choice = promptlist[#promptlist]
+	for _, to in sgs.qlist(self.room:getOtherPlayers(from)) do
+		if to:hasFlag("XianquTarget") then
+			to:setMark(("KnownBoth_%s_%s"):format(from:objectName(), to:objectName()), 1)
+			local names = {}
+			if from:getTag("KnownBoth_" .. to:objectName()):toString() ~= "" then
+				names = from:getTag("KnownBoth_" .. to:objectName()):toString():split("+")
+			else
+				if to:hasShownGeneral1() then
+					table.insert(names, to:getActualGeneral1Name())
+				else
+					table.insert(names, "anjiang")
+				end
+				if to:hasShownGeneral2() then
+					table.insert(names, to:getActualGeneral2Name())
+				else
+					table.insert(names, "anjiang")
+				end
+			end
+			if choice == "head_general" then
+				names[1] = to:getActualGeneral1Name()
+			else
+				names[2] = to:getActualGeneral2Name()
+			end
+			from:setTag("KnownBoth_" .. to:objectName(), sgs.QVariant(table.concat(names, "+")))
+			break
+		end
+	end
 end
 
 --野心家标记
@@ -860,10 +958,8 @@ sgs.ai_skill_use_func.CareermanCard= function(card, use, self)
 			end
 		end
 		if should_draw then
-				for _,c in sgs.qlist(self.player:getHandcards()) do
-				local dummy_use = {
-					isDummy = true,
-				}
+			for _,c in sgs.qlist(self.player:getHandcards()) do
+				local dummy_use = { isDummy = true }
 				if c:isKindOf("BasicCard") then
 					self:useBasicCard(c, dummy_use)
 				elseif c:isKindOf("EquipCard") then
@@ -900,7 +996,36 @@ sgs.ai_skill_choice["careerman"] = function(self, choices)
 	return "draw2cards"--默认情况case2
 end
 
-sgs.ai_skill_playerchosen["careerman"] = sgs.ai_skill_playerchosen.damage
+sgs.ai_skill_playerchosen["careerman"] = function(self, targets)
+	local not_shown = sgs.QList2Table(targets)
+	local target
+	for _, p in ipairs(not_shown) do
+		if not self:isFriend(p) and not self:isEnemy(p) then
+			target = p
+			break
+		end
+	end
+	if not target then
+		for _, p in ipairs(not_shown) do
+			if not p:hasShownOneGeneral() and self:isEnemy(p) then
+				target = p
+				break
+			end
+		end
+	end
+	if not target then
+		for _, p in ipairs(not_shown) do
+			if self:isFriend(p) and not p:hasShownGeneral1() then
+				target = p
+				break
+			end
+		end
+	end
+	if not target then
+		target = not_shown[1]
+	end
+	return target
+end
 
 function sgs.ai_cardsview.careerman(self, class_name, player, cards)
 	if class_name == "Peach" then

@@ -120,6 +120,9 @@ qice_skill.getTurnUseCard = function(self)
 		if card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
 			has_peach = true
 		end
+		if card:isKindOf("ThreatenEmperor") and self.player:isBigKingdomPlayer() then--手牌多可以aoe的时候？
+			return
+		end
 		if card:isAvailable(self.player) then
 			if card:isKindOf("EquipCard") and not self:getSameEquip(card) and handcardnum > 1 then
 				local use = sgs.CardUseStruct(card, self.player, self.player, true)
@@ -1083,17 +1086,15 @@ yigui_skill.getTurnUseCard = function(self)
 				end
 			end
 		end
-		for key, value in pairs(kingdoms) do
-			if #yigui_kingdom[key] > value and key == max_enemy_kingdom then
-				local to = getYiguiTargetByKingdom(key, "handcard")
-				if to then
-					self.yigui_to = sgs.PlayerList()
-					self.yigui_to:append(to)
-					soul_name = yigui_kingdom[key][1]
-					class_string = "befriend_attacking"
-					global_room:writeToConsole("役鬼远交近攻3")
-					return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
-				end
+		if #yigui_kingdom[max_enemy_kingdom] > kingdoms[max_enemy_kingdom] and #yigui_kingdom[max_enemy_kingdom] > 0 then
+			local to = getYiguiTargetByKingdom(max_enemy_kingdom, "handcard")
+			if to then
+				self.yigui_to = sgs.PlayerList()
+				self.yigui_to:append(to)
+				soul_name = yigui_kingdom[max_enemy_kingdom][1]
+				class_string = "befriend_attacking"
+				global_room:writeToConsole("役鬼远交近攻3")
+				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
 	end
@@ -1214,7 +1215,7 @@ sgs.ai_skill_invoke.zhiman = function(self, data)
 		return true
 	end
 	if self:hasSkill(sgs.masochism_skill, target) and self.player:canGetCard(target, "e")
-	and self:getDamagedEffects(target, self.player) and not self:isWeak(target) then
+	and self:needDamagedEffects(target, self.player) and not self:isWeak(target) then
 		global_room:writeToConsole("制蛮防止卖血")
 		return true
 	end
@@ -1299,7 +1300,7 @@ sgs.ai_choicemade_filter.cardChosen.zhiman = function(self, player, promptlist)
 	local intention = 10
 	local id = promptlist[3]
 	local card = sgs.Sanguosha:getCard(id)
-	local target = findPlayerByObjectName(promptlist[5])
+	local target = self.room:findPlayerbyobjectName(promptlist[5])
 	if self:needToThrowArmor(target) and self.room:getCardPlace(id) == sgs.Player_PlaceEquip and card:isKindOf("Armor") then
 		intention = -intention
 	elseif self:doNotDiscard(target) then intention = -intention
@@ -1447,7 +1448,7 @@ sgs.ai_choicemade_filter.cardChosen.xuanlue = function(self, player, promptlist)
 	local intention = 10
 	local id = promptlist[3]
 	local card = sgs.Sanguosha:getCard(id)
-	local target = findPlayerByObjectName(promptlist[5])
+	local target = self.room:findPlayerbyobjectName(promptlist[5])
 	if self:needToThrowArmor(target) and self.room:getCardPlace(id) == sgs.Player_PlaceEquip and card:isKindOf("Armor") then
 		intention = -intention
 	elseif self:doNotDiscard(target) then intention = -intention
@@ -1459,7 +1460,7 @@ sgs.ai_choicemade_filter.cardChosen.xuanlue = function(self, player, promptlist)
 	sgs.updateIntention(player, target, intention)
 end
 
-sgs.ai_cardneed.xuanlue = sgs.ai_cardneed.weapon
+sgs.ai_cardneed.xuanlue = sgs.ai_cardneed.equip
 
 local yongjin_skill = {}
 yongjin_skill.name = "yongjin"
@@ -1517,7 +1518,7 @@ sgs.ai_skill_use_func.YongjinCard = function(card, use, self)
 	equip_count = equip_count + math.min(Treasure_needcount,Treasure_count)
 
 	local weak_count = 0
-	local hasSilverLion = fasle
+	local hasSilverLion = false
 	for _, p in ipairs(self.friends) do
 		if self:isWeak(p) then
 			weak_count = weak_count + 1
@@ -1773,7 +1774,7 @@ sgs.ai_skill_invoke.diancai = function(self, data)
 end
 
 sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
-	global_room:writeToConsole("典财变更选择")
+	--global_room:writeToConsole("典财变更选择")
 	local importantsklii = {"xiaoji", "xuanlue", "tianxiang", "guose", "yingzi_zhouyu", "zhukou"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
@@ -1945,7 +1946,7 @@ sgs.ai_skill_use_func.FlameMapCard = function(card,use,self)
 				use.card = sgs.Card_Parse("@FlameMapCard=" .. self.player:getArmor():getEffectiveId() .. "&showforviewhas")
 				return
 			end
-			if self.player:getArmor() and self:evaluateArmor(self.player:getArmor(), who) < -5 then
+			if self.player:getArmor() and self:evaluateArmor(self.player:getArmor()) < -5 then
 				sgs.ai_use_priority.FlameMapCard = 20
 				--self.player:speak("有返回：" .. self.player:getArmor():getLogName())
 				use.card = sgs.Card_Parse("@FlameMapCard=" .. self.player:getArmor():getEffectiveId() .. "&showforviewhas")

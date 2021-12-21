@@ -22,9 +22,6 @@ sgs.ai_skill_invoke.xunxun = function(self, data)
 	if not (self:willShowForDefence() or self:willShowForAttack()) then
 		return false
 	end
-	--[[
-	if self.player:getTreasure() and self.player:getTreasure():isKindOf("JadeSeal") then return false end
-	]]--
 	return true
 end
 
@@ -48,7 +45,7 @@ function sgs.ai_skill_invoke.wangxi(self, data)
 		if self:isFriend(target) then
 			if not self:needKongcheng(target) then return true end
 		else
-			if not (target:getPhase() ~= sgs.Player_NotActive and (target:hasShownSkills(sgs.Active_cardneed_skill) or target:hasWeapon("Crossbow")))
+			if not (target:getPhase() ~= sgs.Player_NotActive and (target:hasShownSkills(sgs.Active_cardneed_skill) or self:hasCrossbowEffect(target)))
 				and not (target:getPhase() == sgs.Player_NotActive and target:hasShownSkills(sgs.notActive_cardneed_skill))
 				or self:needKongcheng(target) then
 				return true
@@ -79,7 +76,9 @@ function sgs.ai_cardneed.wangxi(to, card)
 end
 
 sgs.wangxi_keep_value = {
-	Crossbow = 6
+	Crossbow = 6,
+	SavageAssault = 5.2,
+	ArcheryAttack = 5.2
 }
 
 --臧霸
@@ -166,6 +165,10 @@ end
 
 sgs.ai_playerchosen_intention.qianxi = 60
 
+function sgs.ai_cardneed.qianxi(to, card, self)
+	return card:isKindOf("Slash") or card:isKindOf("Analeptic") or (card:isRed() and getKnownCard(to, self.player, "red", false) < 2)
+end
+
 --糜夫人
 sgs.ai_skill_invoke.guixiu = true
 
@@ -246,11 +249,12 @@ sgs.ai_skill_choice.yingyang = function(self, choices, data)
 	local f_num, t_num = pindian.from_number, pindian.to_number
 	local amFrom = self.player:objectName() == from:objectName()
 
-	local table_pindian_friends = { "tianyi", "shuangren" }
+	local table_pindian_friends = { "tianyi", "fenglve", "fenglvezongheng" }
 	if reason == "quhu" then
-		if amFrom and self.player:hasSkill("jieming") then
-			if f_num > 8 then return "jia3"
-			elseif self:getJiemingChaofeng(player) <= -6 then return "jian3"
+		local xunyu = sgs.findPlayerByShownSkillName("jieming")
+		if not amFrom and xunyu and self:isFriend(xunyu) then
+			if self:getJiemingDrawNum(xunyu) >= 3 then return "jia3"
+			elseif f_num > 8 then return "jian3"
 			end
 		end
 		return "jia3"
@@ -264,28 +268,6 @@ end
 sgs.ai_skill_invoke.hunshang = true
 
 sgs.ai_skill_invoke.yingzi_sunce = function(self, data)
-	--[[
-	if not self:willShowForAttack() and not self:willShowForDefence() then
-		return false
-	end
-	if self.player:hasFlag("haoshi") then
-		local invoke = self.player:getTag("haoshi_yingzi_sunce"):toBool()
-		self.player:removeTag("haoshi_yingzi_sunce")
-		if not invoke then return false end
-		local extra = self.player:getMark("haoshi_num")
-		if self.player:hasShownOneGeneral() and not self.player:hasShownSkill("yingzi_sunce") and self.player:getMark("HalfMaxHpLeft") > 0 then
-			extra = extra + 1
-		end
-		if self.player:hasShownOneGeneral() and not self.player:isWounded()	and not self.player:hasShownSkill("yingzi_sunce") and player:getMark("CompanionEffect") > 0 then
-			extra = extra + 2
-		end
-		if self.player:getHandcardNum() + extra <= 1 or self.haoshi_target then
-			self.player:setMark("haoshi_num", extra)
-			return true
-		end
-		return false
-	end
-	]]--
 	return true
 end
 
@@ -312,7 +294,7 @@ sgs.ai_skill_use_func.DuanxieCard = function(card, use, self)
 	self:sort(self.enemies, "defense")
 	local target
 	for _, enemy in ipairs(self.enemies) do
-		if not enemy:isChained() and not self:getDamagedEffects(enemy) and not self:needToLoseHp(enemy) and sgs.isGoodTarget(enemy, self.enemies, self) then
+		if not enemy:isChained() and not self:needDamagedEffects(enemy) and not self:needToLoseHp(enemy) and sgs.isGoodTarget(enemy, self.enemies, self) then
 			target = enemy
 			break
 		end

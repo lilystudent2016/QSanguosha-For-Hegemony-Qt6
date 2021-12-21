@@ -285,14 +285,14 @@ end
 sgs.ai_card_intention.JingheCard = -90
 sgs.ai_use_priority.JingheCard = 9.23--远交近攻和无中生有之后，更详细的判断？如配合敕令
 
-sgs.ai_skill_choice.jinghe_skill = function(self, choices, data)--有一个data存选技能的目标信息就好了
+sgs.ai_skill_choice.jinghe_skill = function(self, choices, data)
 	--"leiji_tianshu+yinbing+huoqi+guizhu+xianshou+lundao+guanyue+yanzheng+cancel"
 	global_room:writeToConsole("共修选择"..self.player:objectName()..":"..choices)
 	local current = self.room:getCurrent()
 	local objnames = current:getTag("JingheTargets"):toString():split("+")
 	local targets = {}
 	for _, friend in ipairs(self.friends_noself) do
-		if table.contains(objnames, friend:objectName()) then--判断已获得技能？
+		if table.contains(objnames, friend:objectName()) and self:playerGetRound(friend) > self:playerGetRound(self.player) then--判断位次
 			table.insert(targets, friend)
 		end
 	end
@@ -381,18 +381,18 @@ sgs.ai_skill_playerchosen.leiji_tianshu = function(self, targets)
 		local value = 0
 		local damage = {}
 		damage.to = enemy
-		damage.from = player
+		damage.from = self.player
 		damage.nature = sgs.DamageStruct_Thunder
 		damage.damage = 2
 		if not self:damageIsEffective_(damage) then return 99 end
 		if enemy:hasShownSkill("hongyan") then return 99 end
-		if self:cantbeHurt(enemy, player, 2) or self:objectiveLevel(enemy) < 3
+		if self:cantbeHurt(enemy, self.player, 2) or self:objectiveLevel(enemy) < 3
 			or (enemy:isChained() and not self:isGoodChainTarget_(damage)) then return 100 end
 		if not sgs.isGoodTarget(enemy, self.enemies, self) then value = value + 50 end
 		if enemy:hasArmorEffect("SilverLion") then value = value + 20 end
 		if enemy:hasShownSkills(sgs.exclusive_skill) then value = value + 10 end
 		if enemy:hasShownSkills(sgs.masochism_skill) then value = value + 5 end
-		if enemy:isChained() and self:isGoodChainTarget_(damage) and #(self:getChainedEnemies(player)) > 1 then value = value - 25 end
+		if enemy:isChained() and self:isGoodChainTarget_(damage) and #(self:getChainedEnemies(self.player)) > 1 then value = value - 25 end
 		if enemy:isLord() then value = value - 5 end
 		value = value + enemy:getHp() + sgs.getDefenseSlash(enemy, self) * 0.01
 		return value
@@ -402,7 +402,7 @@ sgs.ai_skill_playerchosen.leiji_tianshu = function(self, targets)
 		return getCmpValue(a) < getCmpValue(b)
 	end
 
-	local enemies = self:getEnemies(player)
+	local enemies = self.enemies
 	table.sort(enemies, cmp)
 	for _, enemy in ipairs(enemies) do
 		if getCmpValue(enemy) < 100 then return enemy end
@@ -431,6 +431,10 @@ end
 
 --阴兵
 sgs.ai_skill_invoke.yinbing = true
+
+function sgs.ai_cardneed.yinbing(to, card, self)
+	return card:isKindOf("Axe") or (self:hasCrossbowEffect(to) and isCard("Slash", card, to))
+end
 
 --活气
 local huoqi_skill = {}
@@ -603,4 +607,8 @@ sgs.ai_skill_playerchosen.yanzheng_damage = function(self, targets, max_num, min
 		end
 	end
 	return result
+end
+
+function sgs.ai_cardneed.yanzheng(to, card, self)
+	return to:getHandcardNum() < 2
 end

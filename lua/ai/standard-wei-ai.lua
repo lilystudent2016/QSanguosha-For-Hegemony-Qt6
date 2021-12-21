@@ -22,7 +22,7 @@
 --曹操
 sgs.ai_skill_invoke.jianxiong = function(self, data)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1
-	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("jianxiong") then--君主
+	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("jianxiong") and not self:isWeak() then--君主
 		return false
 	end
 	if not self:willShowForMasochism() then return false end
@@ -209,9 +209,9 @@ sgs.ai_need_damaged.ganglie = function(self, attacker, player)
 	return false
 end
 
-function ganglie_discard(self, discard_num, min_num, optional, include_equip, skillName)
+local function ganglie_discard(self, discard_num, min_num, optional, include_equip, skillName)
 	local xiahou = sgs.findPlayerByShownSkillName(skillName)
-	if xiahou and (not self:damageIsEffective(self.player, sgs.DamageStruct_Normal, xiahou) or self:getDamagedEffects(self.player, xiahou)) then return {} end
+	if xiahou and (not self:damageIsEffective(self.player, sgs.DamageStruct_Normal, xiahou) or self:needDamagedEffects(self.player, xiahou)) then return {} end
 	if xiahou and self:needToLoseHp(self.player, xiahou) then return {} end
 	local to_discard = {} --copy from V2
 	local cards = sgs.QList2Table(self.player:getHandcards())
@@ -255,7 +255,7 @@ sgs.ai_choicemade_filter.skillInvoke.ganglie = function(self, player, promptlist
 	local damage = self.room:getTag("CurrentDamageStruct"):toDamage()
 	if damage.from and damage.to then
 		if promptlist[#promptlist] == "yes" then
-			if not self:getDamagedEffects(damage.from, player) and not self:needToLoseHp(damage.from, player) then
+			if not self:needDamagedEffects(damage.from, player) and not self:needToLoseHp(damage.from, player) then
 				sgs.updateIntention(damage.to, damage.from, 40)
 			end
 		elseif self:canAttack(damage.from) then
@@ -319,7 +319,13 @@ function SmartAI:findTuxiTarget()
 	end
 
 	for _, enemy in ipairs(self.enemies) do
-		if enemy:hasShownSkills("jijiu|qingnang|leiji|jieyin|beige|kanpo|liuli|qiaobian|zhiheng|guidao|tianxiang|lijian") then
+		if enemy:hasShownSkills(sgs.notActive_cardneed_skill) then
+			if add_player(enemy) == draw_num then return targets end
+		end
+	end
+
+	for _, enemy in ipairs(self.enemies) do
+		if enemy:hasShownSkills(sgs.Active_cardneed_skill) then
 			if add_player(enemy) == draw_num then return targets end
 		end
 	end
@@ -345,7 +351,7 @@ function SmartAI:findTuxiTarget()
 		end
 	end
 ]]
-	if #targets >=1 then--新突袭，配合于禁
+	if #targets >=1 then--新突袭，配合于禁、公孙渊
 		return targets
 	end
 end
@@ -369,7 +375,7 @@ sgs.ai_skill_playerchosen.tuxi = function(self)
 	if type(targets) == "table" and #targets > 0 then
 		local result = {}
 		for _,name in pairs(targets)do
-			table.insert(result,findPlayerByObjectName(name))
+			table.insert(result,self.room:findPlayerbyobjectName(name))
 		end
 		return result
 	end
@@ -415,7 +421,6 @@ sgs.ai_skill_discard.luoyi = function(self, discard_num, min_num, optional, incl
 end
 
 function sgs.ai_cardneed.luoyi(to, card, self)
-	local slash_num = 0
 	local target
 	local slash = sgs.cloneCard("slash")
 
@@ -431,7 +436,7 @@ function sgs.ai_cardneed.luoyi(to, card, self)
 	end
 
 	self:sort(self.enemies, "defenseSlash")
-	for _, enemy in ipairs(self.enemies) do
+	for _, enemy in ipairs(self:getEnemies(to)) do
 		if to:canSlash(enemy) and not self:slashProhibit(slash ,enemy) and self:slashIsEffective(slash, enemy) and sgs.getDefenseSlash(enemy, self) <= 2 then
 			target = enemy
 			break
@@ -439,7 +444,7 @@ function sgs.ai_cardneed.luoyi(to, card, self)
 	end
 
 	if need_slash and target and isCard("Slash", card, to) then return true end
-	return isCard("Duel",card, to)
+	return isCard("Duel",card, to) or card:isKindOf("Axe")
 end
 
 sgs.luoyi_keep_value = {
@@ -488,7 +493,6 @@ sgs.ai_skill_invoke.yiji = function(self)
 	for _, friend in ipairs(self.friends) do
 		if not self:needKongcheng(friend, true) then return true end
 	end
-	return
 end
 
 sgs.ai_skill_askforyiji.yiji = function(self, card_ids)
@@ -1033,7 +1037,7 @@ sgs.ai_skill_discard.qiaobian = function(self, discard_num, min_num, optional, i
 		end
 	elseif current_phase == sgs.Player_Draw and not self.player:isSkipped(sgs.Player_Draw) and not self.player:hasShownSkills("tuxi|tuxi_egf") then
 		if self.player:getTreasure() and self.player:getTreasure():isKindOf("JadeSeal") then return {} end
-		if self.player:getMark("JieyueExtraDraw") > 0 then return {} end--新增配合于禁self.player:hasSkills("jieyue|jieyue_egf") and 
+		if self.player:getMark("JieyueExtraDraw") > 0 or self.player:hasSkill("zisui") then return {} end--新增配合于禁、公孙渊
 		self.qiaobian_draw_targets = {}
 		local targets = self:findTuxiTarget()
 		if type(targets) == "table" and #targets == 2 then
@@ -1232,7 +1236,7 @@ function sgs.ai_skill_invoke.jushou(self, data)
 		end
 	end
 
-	return self:isWeak()
+	return self:isWeak() or self.player:getMark("#xiongnve_avoid") > 0
 end
 
 --据守选择一张手牌中的能弃置的非装备牌或能使用的装备牌
@@ -1375,14 +1379,14 @@ end
 sgs.ai_skill_use_func.QuhuCard = function(QHCard, use, self)
 
 	if #self.enemies == 0 then return end
-	local max_card = self:getMaxCard()
+	local max_card = self:getMaxNumberCard()
 	local max_point = max_card:getNumber()
 	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
 	self:sort(self.enemies, "handcard")
 
 	for _, enemy in ipairs(self.enemies) do
 		if enemy:getHp() > self.player:getHp() and not enemy:isKongcheng() then
-			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_max_card = self:getMaxNumberCard(enemy)
 			local enemy_number = enemy_max_card and enemy_max_card:getNumber() or 0
 			if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_number = math.min(enemy_number + 3, 13) end
 			local allknown = false
@@ -1429,8 +1433,6 @@ sgs.ai_skill_use_func.QuhuCard = function(QHCard, use, self)
 	end
 end
 
-table.insert(sgs.ai_choicemade_filter.cardUsed, quhu_filter)
-
 sgs.ai_cardneed.quhu = sgs.ai_cardneed.bignumber
 sgs.ai_skill_playerchosen.quhu = sgs.ai_skill_playerchosen.damage
 sgs.ai_playerchosen_intention.quhu = 80
@@ -1471,7 +1473,7 @@ sgs.ai_skill_playerchosen.jieming = function(self, targets)
 end
 
 sgs.ai_need_damaged.jieming = function(self, attacker, player)
-	return player:hasShownSkill("jieming") and self:getJiemingChaofeng(player) <= -6
+	return player:hasShownSkill("jieming") and self:getJiemingDrawNum(player) >= 3
 end
 
 sgs.ai_playerchosen_intention.jieming = function(self, from, to)
@@ -1496,7 +1498,7 @@ function SmartAI:toTurnOver(player, n, reason) -- @todo: param of toTurnOver
 		end
 	end
 	if n > 1 then
-		if ( player:getPhase() ~= sgs.Player_NotActive and (player:hasShownSkills(sgs.Active_cardneed_skill) or player:hasWeapon("Crossbow")) )
+		if ( player:getPhase() ~= sgs.Player_NotActive and (player:hasShownSkills(sgs.Active_cardneed_skill) or self:hasCrossbowEffect(player)) )
 		or ( player:getPhase() == sgs.Player_NotActive and player:hasShownSkills(sgs.notActive_cardneed_skill) ) then
 		return false end
 	end
@@ -1508,6 +1510,11 @@ end
 
 sgs.ai_skill_playerchosen.fangzhu = function(self, targets)
 	if not self:willShowForMasochism() then return {} end
+
+	local function can_losehp(p)
+		return not p:isRemoved() and (not p:hasSkill("hongfa") or p:getPile("heavenly_army"):isEmpty())
+	end
+
 	self:sort(self.friends_noself, "handcard")
 	local target = nil
 	local n = self.player:getLostHp()
@@ -1538,14 +1545,14 @@ sgs.ai_skill_playerchosen.fangzhu = function(self, targets)
 		else
 			self:sort(self.enemies)
 			for _, enemy in ipairs(self.enemies) do
-				if self:toTurnOver(enemy, n, "fangzhu") and enemy:hasShownSkills(sgs.priority_skill) and (not enemy:isRemoved() or enemy:isNude()) then
+				if self:toTurnOver(enemy, n, "fangzhu") and enemy:hasShownSkills(sgs.priority_skill) and (can_losehp(enemy) or enemy:isNude()) then
 					target = enemy
 					break
 				end
 			end
 			if not target then
 				for _, enemy in ipairs(self.enemies) do
-					if self:toTurnOver(enemy, n, "fangzhu") and (not enemy:isRemoved() or enemy:isNude()) then
+					if self:toTurnOver(enemy, n, "fangzhu") and (can_losehp(enemy) or enemy:isNude()) then
 						target = enemy
 						break
 					end
@@ -1667,7 +1674,7 @@ sgs.ai_skill_cardask["@xiaoguo"] = function(self, data)
 		end
 	elseif self:isEnemy(currentplayer) then
 		if not self:damageIsEffective(currentplayer) then return "." end
-		if self:getDamagedEffects(currentplayer) or self:needToLoseHp(currentplayer, self.player) then return "." end
+		if self:needDamagedEffects(currentplayer) or self:needToLoseHp(currentplayer, self.player) then return "." end
 		if self:needToThrowArmor(currentplayer) then return "." end
 		if currentplayer:getHp() > 2 and (currentplayer:getHandcardNum() > 2 or currentplayer:getCards("e"):length() > 1)then return "." end
 		if currentplayer:getHp() > 1 and (currentplayer:getHandcardNum() > 3 or currentplayer:getCards("e"):length() > 2)then return "." end
@@ -1700,7 +1707,7 @@ sgs.ai_skill_cardask["@xiaoguo-discard"] = function(self, data)
 	if not self:damageIsEffective(player, sgs.DamageStruct_Normal, yuejin) then
 		return "."
 	end
-	if self:getDamagedEffects(self.player, yuejin) then
+	if self:needDamagedEffects(self.player, yuejin) then
 		return "."
 	end
 	if self:needToLoseHp(player, yuejin) then

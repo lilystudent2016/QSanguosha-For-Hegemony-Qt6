@@ -116,13 +116,6 @@ fengying_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.FengyingCard = function(card, use, self)
-  if self:getCardsNum("ThreatenEmperor") > 0 then
-    local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
-		self:useCardThreatenEmperor(sgs.cloneCard("threaten_emperor"), dummyuse)
-		if dummyuse.card then--如果有挟天子且可以使用
-      return
-    end
-  end
   local draw_count = 0
   for _, p in ipairs(self.friends) do
     if self.player:isFriendWith(p) then
@@ -130,6 +123,21 @@ sgs.ai_skill_use_func.FengyingCard = function(card, use, self)
     end
   end
   if draw_count > 3 or self.player:getHp() == 1 then
+    if self.player:getHandcardNum() > 1 then
+      for _,c in sgs.qlist(self.player:getHandcards()) do
+				local dummy_use = { isDummy = true }
+				if c:isKindOf("BasicCard") then
+					self:useBasicCard(c, dummy_use)
+				elseif c:isKindOf("EquipCard") then
+					self:useEquipCard(c, dummy_use)
+				elseif c:isKindOf("TrickCard") then
+					self:useTrickCard(c, dummy_use)
+				end
+				if dummy_use.card then
+					return--先用光牌
+				end
+      end
+    end
     if self.player:getHandcardNum() == 1 then
       sgs.ai_use_priority.FengyingCard = 2
     end
@@ -241,6 +249,10 @@ sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
 end
 
 sgs.ai_skill_playerchosen["command_jieyue"] = sgs.ai_skill_playerchosen.damage
+
+function sgs.ai_cardneed.jieyue(to, card)
+	return to:isKongcheng()
+end
 
 --王平
 local jianglve_skill = {}
@@ -811,8 +823,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   if can_paoxiao and not (has_baolie or has_Crossbow) then--咆哮
     return "paoxiao"
   end
-  if can_kuanggu and ((has_Crossbow and (yongjue_slash + self:getCardsNum("Slash") > 2))
-    or (self.player:getHp() < 2 and target:isKongcheng())) then
+  if can_kuanggu and ((has_Crossbow and enough_pxslash) or (self.player:getHp() < 2 and sgs.getDefenseSlash(target, self) <= 2)) then
     return "kuanggu"
   end
   if need_tieqi then
@@ -1281,7 +1292,7 @@ sgs.ai_skill_exchange.fudi= function(self,pattern,max_num,min_num,expand_pile)
 	if targets:isEmpty() then return {} end
 
 	for _, target in sgs.qlist(targets) do
-		if self:isEnemy(target) and self:damageIsEffective(target, nil, self.player) and not self:getDamagedEffects(target, self.player)
+		if self:isEnemy(target) and self:damageIsEffective(target, nil, self.player) and not self:needDamagedEffects(target, self.player)
 		and not self:needToLoseHp(target, self.player) then
         if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end--记录已知牌
 			return cards[1]:getId()
@@ -1289,7 +1300,7 @@ sgs.ai_skill_exchange.fudi= function(self,pattern,max_num,min_num,expand_pile)
 	end
 	for _, target in sgs.qlist(targets) do
 		if self:isFriend(target) and self:damageIsEffective(target, nil, self.player)
-		and (self:getDamagedEffects(target, self.player) or self:needToLoseHp(target, self.player, nil, true)) then
+		and (self:needDamagedEffects(target, self.player) or self:needToLoseHp(target, self.player, nil, true)) then
       if not cards[1]:hasFlag("visible") then cards[1]:setFlags(visibleflag) end--记录已知牌
 			return cards[1]:getId()
 		end
@@ -1325,6 +1336,10 @@ sgs.ai_need_damaged.fudi = function(self, attacker, player)--主动卖血
 		return true
 	end
 	return false
+end
+
+function sgs.ai_cardneed.fudi(to, card, self)
+	return to:isKongcheng() and not self:needKongcheng(to)
 end
 
 sgs.ai_skill_invoke.congjian = function(self, data)
@@ -1491,7 +1506,7 @@ end
 sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 	--global_room:writeToConsole("使用挥鞭")
   local can_huibian = false
-  local maixueskills = {"yiji","fangzhu","wanggui","wangxi","jieming","shicai","bushi","zhiyu"}--不同卖血技能有优先顺序
+  local maixueskills = {"fangzhu","yiji","wangxi","shicai","bushi","zhiyu"}--不同卖血技能有优先顺序，是否可以用need_damage判断
   local drawcard_target, recover_target
   local targets = {}
   self:sort(self.friends, "hp")--从小到大排序
@@ -1505,9 +1520,41 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
   end
   if #targets < 2 or not can_huibian then return end
 
-  if self:getJiemingChaofeng(self.player) > -4 then
-    table.removeOne(maixueskills,"jieming")
-    table.insert(maixueskills,"jieming")--放到最后
+  local xunyu = sgs.findPlayerByShownSkillName("jieming")
+  if xunyu and xunyu:getSeemingKingdom() == "wei" then
+    local jieming_dnum= self:getJiemingDrawNum(self.player)
+    if jieming_dnum >= 3 then
+      table.insert(maixueskills, 1, "jieming")--3牌以上放到首位
+    elseif jieming_dnum == 2 then
+      table.insert(maixueskills, 3, "jieming")--2牌放到3位
+    elseif jieming_dnum == 1 then
+      table.insert(maixueskills, 5, "jieming")--1牌放到5位
+    end
+  end
+  local huaxin = sgs.findPlayerByShownSkillName("wanggui")
+  if huaxin and huaxin:getSeemingKingdom() == "wei" and not huaxin:hasFlag("WangguiUsed") then
+    local wanggui_dnum = 0
+    if huaxin:hasShownAllGenerals() then
+      wanggui_dnum = self.player:getPlayerNumWithSameKingdom("AI", "wei")
+    else
+      wanggui_dnum = -1
+    end
+    if wanggui_dnum == -1 then
+      if #self.enemies > 0 then
+        for _, p in ipairs(self.enemies) do
+          if self:isWeak(p) then
+            table.insert(maixueskills, 1, "wanggui")--虚弱打伤害放到首位
+          end
+        end
+        table.insert(maixueskills, 5, "wanggui")
+      end
+    elseif wanggui_dnum >= 3 then
+      table.insert(maixueskills, 1, "wanggui")
+    elseif wanggui_dnum == 2 then
+      table.insert(maixueskills, 3, "wanggui")
+    elseif wanggui_dnum == 1 then
+      table.insert(maixueskills, 5, "wanggui")
+    end
   end
 
   if self.player:getHp() == 1 and self:isWeak() then--保君主
@@ -1542,7 +1589,7 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
     end
   end
 
-  for _, skill in ipairs(maixueskills) do--还可以细化条件，如队友被乐等
+  for _, skill in ipairs(maixueskills) do--还可以细化条件，如放逐
     for _, p in ipairs(targets) do
       if p:hasShownSkill(skill) and not drawcard_target and not self:willSkipPlayPhase(p)
       and (p:getHp() > (targets[#targets]:getHp() > 3 and 2 or 1) or (self:getAllPeachNum() +  getKnownCard(p, self.player, "Analeptic", true, "he") > 1)) then
@@ -1772,7 +1819,7 @@ sgs.ai_skill_choice.jianan_skill = function(self, skills)
 end
 
 function sgs.ai_cardneed.elitegeneralflag(to, card)
-	return to:isKongcheng() and not to:hasShownSkills("yiji|fankui|jieming|jianxiong|wangxi|zhiyu|bushi|shicai")
+	return to:isNude()
 end
 
 --突袭
@@ -1823,10 +1870,6 @@ duanliang_egf_skill.getTurnUseCard = function(self)
 
 	assert(skillcard)
 	return skillcard
-end
-
-sgs.ai_cardneed.duanliang_egf = function(to, card, self)
-	return card:isBlack() and card:getTypeId() ~= sgs.Card_TypeTrick and getKnownCard(to, self.player, "black", false) < 2
 end
 
 sgs.duanliang_egf_suit_value = {

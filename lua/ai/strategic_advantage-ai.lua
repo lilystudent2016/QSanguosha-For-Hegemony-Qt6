@@ -49,6 +49,8 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			if not oneJink and isCard("Jink", c, self.player) then
 				oneJink = true
 				continue
+			elseif self:hasCrossbowEffect() and c:isKindOf("Slash") then
+				continue
 			elseif self.player:getMark("GlobalBattleRoyalMode") > 0
 				and (isCard("Analeptic", c, self.player) or isCard("BurningCamps", c, self.player) or isCard("Breastplate", c, self.player)) then
 				continue
@@ -58,16 +60,6 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			table.insert(cards, c)
 		end
 	end
---[[咆哮等不给杀？
-	if self.player:getMark("GlobalBattleRoyalMode") > 0 then
-		for _, card in ipairs(cards) do
-			if card:isKindOf("BurningCamps") or card:isKindOf("Analeptic") or card:isKindOf("Breastplate") then--鏖战火烧联营、酒和护心镜不能给
-				table.removeOne(cards, card)
-				global_room:writeToConsole("鏖战火烧联营、酒和护心镜不能给")
-			end
-		end
-	end
-]]
 	local card_list = {}
 	local target
 	local card_str
@@ -216,7 +208,7 @@ function SmartAI:useCardDrowning(card, use)
 	for _, enemy in ipairs(self.enemies) do
 		if card:targetFilter(players, enemy, self.player) and not players:contains(enemy) and enemy:hasEquip()
 			and self:hasTrickEffective(card, enemy) and self:damageIsEffective(enemy, sgs.DamageStruct_Thunder, self.player) and self:canAttack(enemy)
-			and not self:getDamagedEffects(enemy, self.player) and not self:needToLoseHp(enemy, self.player) and not self:needToThrowArmor(enemy)
+			and not self:needDamagedEffects(enemy, self.player) and not self:needToLoseHp(enemy, self.player) and not self:needToThrowArmor(enemy)
 			and not (enemy:hasArmorEffect("PeaceSpell") and (enemy:getHp() > 1 or self:needToLoseHp(enemy, self.player)))--太平考虑张鲁？
 			and not (enemy:hasArmorEffect("Breastplate") and enemy:getHp() == 1) then
 			local dangerous
@@ -284,7 +276,7 @@ sgs.ai_skill_choice.drowning = function(self, choices, data)
 
 	if dangerous then return "throw" end--危险和多装备的详细判断？
 
-	if (self:needToLoseHp(self.player, effect.from) or self:getDamagedEffects(self.player, effect.from)) and not dangerous then return "damage" end
+	if (self:needToLoseHp(self.player, effect.from) or self:needDamagedEffects(self.player, effect.from)) and not dangerous then return "damage" end
 
 	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
 		for _,id in sgs.qlist(self.player:getPile("wooden_ox")) do
@@ -402,7 +394,7 @@ function SmartAI:useCardBurningCamps(card, use)
 	if players:isEmpty() then return end
 	local shouldUse
 	for i = 0 , players:length() - 1 do
-		player = findPlayerByObjectName(players:at(i):objectName())
+		player = self.room:findPlayerbyobjectName(players:at(i):objectName())
 		if not self:hasTrickEffective(card, player, self.player) then
 			continue
 		end
@@ -724,7 +716,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 		self:sort(enemys_copy, "hp")
 		local to
 		for _, p in ipairs(enemys_copy) do
-			if p:getHp() == 1 and ((can_duelc and self:hasTrickEffective(duel, p, self.player)) or (can_fireattack and self:hasTrickEffective(fire_attack, p, self.player))
+			if p:getHp() == 1 and ((can_duel and self:hasTrickEffective(duel, p, self.player)) or (can_fireattack and self:hasTrickEffective(fire_attack, p, self.player))
 				or (can_slash and self.player:canSlash(p, slash, true) and not self:slashProhibit(slash, p)
 				and self:slashIsEffective(slash, p) and sgs.isGoodTarget(p, enemys_copy, self)
 				and not (self.player:hasFlag("slashTargetFix") and not p:hasFlag("SlashAssignee")))) then
@@ -979,7 +971,7 @@ sgs.ai_use_priority.FightTogether = 8.9
 sgs.ai_keep_value.FightTogether = 3.24
 
 --AllianceFeast
-function findPlayerByObjectName(name)
+--[[function findPlayerbyobjectName(name)
 	local players = nil
 	players = global_room:getAllPlayers()
 	for _,p in sgs.qlist(players) do
@@ -988,7 +980,7 @@ function findPlayerByObjectName(name)
 		end
 	end
 end
-
+]]
 function SmartAI:useCardAllianceFeast(card, use)--效果修改，已重写
 	if not card:isAvailable(self.player) then return end
 	local hegnullcards = self.player:getCards("HegNullification")
@@ -1017,7 +1009,7 @@ function SmartAI:useCardAllianceFeast(card, use)--效果修改，已重写
 				value = value + 0.5
 				if self.player:hasShownSkills(sgs.cardneed_skill) then value = value + 0.5 end
 			end
-			local target = findPlayerByObjectName(kingdom)
+			local target = self.room:findPlayerbyobjectName(kingdom)
 			if self:isFriend(target) then
 				value = value + 0.5
 				if target:hasShownSkills(sgs.cardneed_skill) then value = value + 0.5 end
@@ -1065,7 +1057,7 @@ function SmartAI:useCardAllianceFeast(card, use)--效果修改，已重写
 	if winner then
 		local target
 		if winner:startsWith("sgs") then
-			target = findPlayerByObjectName(winner)
+			target = self.room:findPlayerbyobjectName(winner)
 		else
 			for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 				if p:hasShownOneGeneral() and p:getRole() ~= "careerist" and p:getKingdom() == winner and self:hasTrickEffective(card, p, self.player) then

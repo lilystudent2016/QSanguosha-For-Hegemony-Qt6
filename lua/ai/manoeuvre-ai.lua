@@ -24,6 +24,23 @@ sgs.ai_skill_invoke.wanggui = true
 
 sgs.ai_skill_playerchosen.wanggui = sgs.ai_skill_playerchosen.damage
 
+sgs.ai_need_damaged.wanggui = function(self, attacker, player)
+  if not player:hasShownSkill("wanggui") or player:hasFlag("WangguiUsed") then
+    return false
+  end
+  if player:hasShownAllGenerals() and self.player:getPlayerNumWithSameKingdom("AI", player:getKingdom()) > 2 then
+    return true
+  end
+  if player:hasShownOneGeneral() then
+    for _, p in ipairs(self:getEnemies(player)) do
+      if p:getHp() == 1 and self:isWeak(p) then
+        return true
+      end
+    end
+  end
+	return false
+end
+
 sgs.ai_skill_invoke.xibing =  function(self, data)
   self.xibing_targetSkill = nil
   if not self:willShowForDefence() then
@@ -112,23 +129,23 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       return "deputy"
     end
     if self.player:hasSkill("zisui") and not self.player:getPile("disloyalty"):isEmpty() then
-      if self.player:getPile("disloyalty") >= self.player:getMaxHp() then
+      if self.player:getPile("disloyalty"):length() >= self.player:getMaxHp() then
         return "head"
       end
       return "deputy"
     end
 
     local xibing_defenseskills = {"yiji","fankui","ganglie","fangzhu","shicai","qingguo"}
-    if self.player:hasSkill("jieming") and self:getJiemingChaofeng(self.player) <= -4 then
+    if self.player:hasSkill("jieming") and self:getJiemingDrawNum(self.player) >= 2 then
       table.insert(xibing_defenseskills,"jieming")
     end
     if current:canSlash(self.player, nil, true) and self.player:hasSkills(table.concat(xibing_defenseskills, "|")) and table.contains(choices,"head") then
       for _, skill in ipairs(xibing_defenseskills) do
         if self.player:inHeadSkills(skill) then
-          return "head"
+          return "deputy"
         end
       end
-      return "deputy"
+      return "head"
     end
     if self.player:inDeputySkills("xibing") and table.contains(choices,"head") then
       return "head"
@@ -266,6 +283,10 @@ sgs.ai_skill_invoke.chengshang = true
 --祢衡
 sgs.ai_skill_invoke.kuangcai = false
 
+function sgs.ai_cardneed.kuangcai(to, card, self)
+	return card:isKindOf("Slash") or card:isKindOf("Analeptic") or card:isKindOf("Halberd") or to:hasWeapon("Spear")
+end
+
 sgs.kuangcai_keep_value = {
 	Peach = 6,
 	Analeptic = 5.8,
@@ -297,6 +318,10 @@ sgs.ai_skill_invoke.shejian =  function(self, data)
 	return false
 end
 
+function sgs.ai_cardneed.shejian(to, card, self)
+	return to:isKongcheng() and not self:needKongcheng(to)
+end
+
 --冯熙
 sgs.ai_skill_invoke.yusui =  function(self, data)
   if not self:willShowForDefence() then
@@ -307,7 +332,8 @@ sgs.ai_skill_invoke.yusui =  function(self, data)
   or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
     return false
   end
-  if (self.yusui_target:getHp() - math.max(self.player:getHp()-1, 1) > 1)
+  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_targetr:getPile("heavenly_army"):isEmpty()
+  if (self.yusui_target:getHp() - math.max(self.player:getHp()-1, 1) > 1 and can_losehp)
   or (self.yusui_target:getHandcardNum() >= self.yusui_target:getMaxHp() and self.yusui_target:getHandcardNum() <= self.yusui_target:getMaxHp() + 2) then
     return true
   end
@@ -316,7 +342,8 @@ end
 
 sgs.ai_skill_choice.yusui = function(self, choices, data)--没有来源的data，暂时用self
   choices = choices:split("+")
-  if (self.yusui_target:getHp() - self.player:getHp() > 1) then
+  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_targetr:getPile("heavenly_army"):isEmpty()
+  if (self.yusui_target:getHp() - self.player:getHp() > 1) and can_losehp then
     self.yusui_target = nil
     return "losehp"
   end
@@ -324,7 +351,7 @@ sgs.ai_skill_choice.yusui = function(self, choices, data)--没有来源的data�
     self.yusui_target = nil
     return "discard"
   end
-  if (self.yusui_target:getHp() - self.player:getHp() == 1) then--自己会掉1血
+  if (self.yusui_target:getHp() - self.player:getHp() == 1) and can_losehp then--自己会掉1血
     self.yusui_target = nil
     return "losehp"
   end
@@ -580,19 +607,19 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
 	if #self.enemies == 0 and #self.friends_noself == 0 then return end
   self.fenglve_card = nil
   sgs.ai_use_priority.FenglveCard = 0.5--是否合适？
-	local max_card = self:getMaxCard()
+	local max_card = self:getMaxNumberCard()
 	local max_point = max_card:getNumber()
 	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
 
   self:sort(self.friends_noself, "handcard", true)
   for _, friend in ipairs(self.friends_noself) do--拆判定区多于1的队友
     if not friend:isKongcheng() and friend:getJudgingArea():length() > (self:needToThrowArmor(friend) and 0 or 1) then
-      local friend_min_card = self:getMinCard(friend)
+      local friend_min_card = self:getMinNumberCard(friend)
       local friend_number = friend_min_card and friend_min_card:getNumber() or 0
       if friend_min_card and friend:hasShownSkill("yingyang") then friend_number = math.max(friend_number - 3, 1) end
       if friend_min_card and max_point> friend_number then
         local hcards = sgs.QList2Table(self.player:getHandcards())
-        self:sortByUseValue(cards,true)
+        self:sortByUseValue(hcards,true)
         for _, c in ipairs(hcards) do
           if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
             sgs.ai_use_priority.FenglveCard = 4.2
@@ -627,7 +654,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
 	self:sort(self.enemies, "handcard")
 	for _, enemy in ipairs(self.enemies) do
 		if not enemy:isKongcheng() and enemy:getCardCount(true) > 2 then
-			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_max_card = self:getMaxNumberCard(enemy)
 			local enemy_number = enemy_max_card and enemy_max_card:getNumber() or 0
 			if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_number = math.min(enemy_number + 3, 13) end
 			local allknown = false
@@ -652,7 +679,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
 end
 
 function sgs.ai_skill_pindian.fenglve(minusecard, self, requestor)
-  local max_card = self:getMaxCard()
+  local max_card = self:getMaxNumberCard()
   if not self:isFriend(requestor) and self.player:getCardCount(true) < 5 then
     local max_point = max_card:getNumber()
     for _, card in sgs.qlist(self.player:getHandcards()) do
@@ -664,7 +691,7 @@ function sgs.ai_skill_pindian.fenglve(minusecard, self, requestor)
 		end
   end
   if self:isFriend(requestor) and (self.player:getJudgingArea():length() > 0 or self:needToThrowArmor()) then
-    return self:getMinCard()
+    return self:getMinNumberCard()
   end
 	return max_card
 end
@@ -732,7 +759,7 @@ end
 sgs.ai_skill_use_func.FenglveZonghengCard = function(FLCard, use, self)
 	if #self.enemies == 0 and #self.friends_noself == 0 then return end
   sgs.ai_use_priority.FenglveZonghengCard = 0.5
-	local max_card = self:getMaxCard()
+	local max_card = self:getMaxNumberCard()
 	local max_point = max_card:getNumber()
 	if self.player:hasShownSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
 
@@ -741,12 +768,12 @@ sgs.ai_skill_use_func.FenglveZonghengCard = function(FLCard, use, self)
   end
   for _, friend in ipairs(self.friends_noself) do--拆队友乐，判断闪电？
     if not friend:isKongcheng() and friend:containsTrick("indulgence") and self:getOverflow(friend) > 0 then
-      local friend_min_card = self:getMinCard(friend)
+      local friend_min_card = self:getMinNumberCard(friend)
       local friend_number = friend_min_card and friend_min_card:getNumber() or 0
       if friend_min_card and friend:hasShownSkill("yingyang") then friend_number = math.max(friend_number - 3, 1) end
       if friend_min_card and max_point> friend_number then
         local hcards = sgs.QList2Table(self.player:getHandcards())
-        self:sortByUseValue(cards,true)
+        self:sortByUseValue(hcards, true)
         for _, c in ipairs(hcards) do
           if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
             sgs.ai_use_priority.FenglveCard = 4.2
@@ -779,7 +806,7 @@ sgs.ai_skill_use_func.FenglveZonghengCard = function(FLCard, use, self)
 	self:sort(self.enemies, "handcard")
 	for _, enemy in ipairs(self.enemies) do
 		if not enemy:isKongcheng() and enemy:getCardCount(true) > 1 then
-			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_max_card = self:getMaxNumberCard(enemy)
 			local enemy_number = enemy_max_card and enemy_max_card:getNumber() or 0
 			if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_number = math.min(enemy_number + 3, 13) end
 			local allknown = false
@@ -804,7 +831,7 @@ sgs.ai_skill_use_func.FenglveZonghengCard = function(FLCard, use, self)
 end
 
 function sgs.ai_skill_pindian.fenglvezongheng(minusecard, self, requestor)
-  local max_card = self:getMaxCard()
+  local max_card = self:getMaxNumberCard()
   if not self:isFriend(requestor) and self.player:getCardCount(true) < 4 then
     local max_point = max_card:getNumber()
     for _, card in sgs.qlist(self.player:getHandcards()) do
@@ -816,7 +843,7 @@ function sgs.ai_skill_pindian.fenglvezongheng(minusecard, self, requestor)
 		end
   end
   if self:isFriend(requestor) and (self.player:getJudgingArea():length() > 0 or self:needToThrowArmor()) then
-    return self:getMinCard()
+    return self:getMinNumberCard()
   end
 	return max_card
 end

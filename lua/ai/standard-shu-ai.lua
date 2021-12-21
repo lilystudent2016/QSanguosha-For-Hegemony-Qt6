@@ -386,7 +386,7 @@ wusheng_skill.getTurnUseCard = function(self, inclusive)
 end
 
 function sgs.ai_cardneed.wusheng(to, card)
-	return to:getHandcardNum() < 3 and card:isRed()
+	return (to:getHandcardNum() < 3 and card:isRed()) or card:isKindOf("Crossbow")
 end
 
 sgs.ai_suit_priority.wusheng = "club|spade|diamond|heart"
@@ -412,11 +412,20 @@ function sgs.ai_cardneed.paoxiao(to, card, self)
 			if c:isKindOf("Slash") then slash_num = slash_num +1 end
 		end
 	end
+	local now_weapon = to:getWeapon()
+	local need_weapon = true
+	local slash = sgs.cloneCard("slash")
+	for _, enemy in ipairs(self:getEnemies(to)) do
+		if to:canSlash(enemy) and not self:slashProhibit(slash ,enemy) and self:slashIsEffective(slash, enemy) then
+			need_weapon = false
+			break
+		end
+	end
 
-	if not has_weapon then
-		return card:isKindOf("Weapon") and not card:isKindOf("Crossbow")
+	if need_weapon then
+		return card:isKindOf("Weapon") and sgs.weapon_range[card:getClassName()] > (now_weapon and sgs.weapon_range[now_weapon:getClassName()] or 1)
 	else
-		return to:hasWeapon("Spear") or card:isKindOf("Slash") or (slash_num > 1 and card:isKindOf("Analeptic"))
+		return to:hasWeapon("Spear") or card:isKindOf("Slash") or (slash_num > 1 and card:isKindOf("Analeptic")) or card:isKindOf("Halberd")
 	end
 end
 
@@ -678,6 +687,9 @@ function sgs.ai_cardneed.kuanggu(to, card, self)
 		return true
 	end
 	if card:isKindOf("Crossbow") then
+		return true
+	end
+	if self:hasCrossbowEffect(to) and isCard("Slash", card, to) then
 		return true
 	end
 end
@@ -1086,7 +1098,7 @@ sgs.ai_skill_invoke.lieren = function(self, data)
 		if card:isKindOf("Jink") or card:isKindOf("Peach") then return end
 	end
 
-	if (self.player:getHandcardNum() >= self.player:getHp() or self:getMaxCard():getNumber() > 10
+	if (self.player:getHandcardNum() >= self.player:getHp() or self:getMaxNumberCard():getNumber() > 10
 		or (self:needKongcheng() and self.player:getHandcardNum() == 1) or not self:hasLoseHandcardEffective())
 		and not self:doNotDiscard(damage.to, "h", true) and not (self.player:getHandcardNum() == 1 and self:doNotDiscard(damage.to, "e", true)) then
 			return true
@@ -1101,7 +1113,7 @@ function sgs.ai_skill_pindian.lieren(minusecard, self, requestor)
 	if requestor:objectName() == self.player:objectName() then
 		return cards[1]:getId()
 	end
-	return self:getMaxCard(self.player):getId()
+	return self:getMaxNumberCard(self.player):getId()
 end
 
 --甘夫人

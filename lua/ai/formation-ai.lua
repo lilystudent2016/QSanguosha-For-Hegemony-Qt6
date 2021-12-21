@@ -222,7 +222,7 @@ function SmartAI:isTiaoxinTarget(enemy)
 		then return true end
 	if sgs.card_lack[enemy:objectName()]["Slash"] == 1
 		or self:needLeiji(self.player, enemy)
-		or self:getDamagedEffects(self.player, enemy, true)
+		or self:needDamagedEffects(self.player, enemy, true)
 		or self:needToLoseHp(self.player, enemy, true, true)
 		then return true end
 	if self.player:hasSkill("xiangle") and (enemy:getHandcardNum() < 2 or getKnownCard(enemy, self.player, "BasicCard") < 2
@@ -276,17 +276,17 @@ sgs.ai_skill_cardask["@tiaoxin-slash"] = function(self, data, pattern, target)
 		for _, slash in ipairs(cards) do
 			if self:isFriend(target) and self:slashIsEffective(slash, target) then
 				if self:needLeiji(target, self.player) then return slash:toString() end
-				if self:getDamagedEffects(target, self.player) then return slash:toString() end
+				if self:needDamagedEffects(target, self.player) then return slash:toString() end
 				if self:needToLoseHp(target, self.player, nil, true) then return slash:toString() end
 			end
 			if not self:isFriend(target) and self:slashIsEffective(slash, target)
-				and not self:getDamagedEffects(target, self.player, true) and not self:needLeiji(target, self.player) then
+				and not self:needDamagedEffects(target, self.player, true) and not self:needLeiji(target, self.player) then
 					return slash:toString()
 			end
 		end
 		for _, slash in ipairs(cards) do
 			if not self:isFriend(target) then
-				if not self:needLeiji(target, self.player) and not self:getDamagedEffects(target, self.player, true) then return slash:toString() end
+				if not self:needLeiji(target, self.player) and not self:needDamagedEffects(target, self.player, true) then return slash:toString() end
 				if not self:slashIsEffective(slash, target) then return slash:toString() end
 			end
 		end
@@ -536,7 +536,7 @@ end
 --何太后
 local function will_discard_zhendu(self)
 	local current = self.room:getCurrent()
-	local need_damage = self:getDamagedEffects(current, self.player) or self:needToLoseHp(current, self.player)
+	local need_damage = self:needDamagedEffects(current, self.player) or self:needToLoseHp(current, self.player)
 	if self:isFriend(current) and not self.player:hasSkill("congjian") and not current:hasSkill("congjian") then
 		if current:getMark("drank") > 0 and not need_damage then return -1 end
 		if (getKnownCard(current, self.player, "Slash") > 0 or (getCardsNum("Slash", current, self.player) >= 1 and current:getHandcardNum() >= 2))
@@ -584,6 +584,10 @@ sgs.ai_skill_discard.zhendu = function(self)
 		end
 	end
 	return {}
+end
+
+function sgs.ai_cardneed.zhendu(to, card, self)
+	return to:isKongcheng() and not self:needKongcheng(to)
 end
 
 sgs.ai_skill_invoke.qiluan = true
@@ -739,19 +743,27 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 	local aux_func = function(card)
 		local place = self.room:getCardPlace(card:getEffectiveId())
 		if place == sgs.Player_PlaceEquip then
-			if card:isKindOf("SilverLion") and self.player:isWounded() then return -2 end
-
+			local few_hnum = self.player:getHandcardNum() < discard_num + 2 and not self:needKongcheng()
 			if card:isKindOf("Weapon") then
-				if self.player:getHandcardNum() < discard_num + 2 and not self:needKongcheng() then return 0
-				else return 2 end
+				return few_hnum and 0 or 2
 			elseif card:isKindOf("OffensiveHorse") then
-				if self.player:getHandcardNum() < discard_num + 2 and not self:needKongcheng() then return 0
-				else return 1 end
+				return few_hnum and 0 or 1
 			elseif card:isKindOf("DefensiveHorse") then return 3
 			elseif card:isKindOf("Armor") then
-				if self.player:hasSkill("bazhen") then return 0
-				else return 4 end
-			else return 0 --@to-do: add the corrsponding value of Treasure
+				if self.player:getHp() == 1 and card:isKindOf("Breastplate") then
+					return 99
+				end
+				return self:needToThrowArmor() and -2 or 4
+			elseif card:isKindOf("Treasure") then
+				if card:isKindOf("WoodenOx") then
+					if self.player:getPile("wooden_ox"):isEmpty() then
+						return few_hnum and 0 or 2
+					else
+						return 4
+					end
+				end
+				return few_hnum and 1 or 4
+			else return 0
 			end
 		else
 			if self.player:getMark("#qianxi+no_suit_red") > 0 and card:isRed() and not card:isKindOf("Peach") then return 0 end

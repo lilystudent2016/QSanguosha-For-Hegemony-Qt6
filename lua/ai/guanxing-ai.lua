@@ -297,7 +297,7 @@ local function GuanXing(self, cards)
 				end
 			end
 			if not insert and not willSkipPlayPhase and self.player:hasSkills("tianyi|quhu") then
-				local maxcard = self:getMaxCard(self.player)
+				local maxcard = self:getMaxNumberCard(self.player)
 				has_big = maxcard and maxcard:getNumber() > 10
 				if not has_big and gcard:getNumber() > 10 then
 					insert = true

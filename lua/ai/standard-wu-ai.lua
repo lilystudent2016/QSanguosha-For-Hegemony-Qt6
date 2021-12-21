@@ -650,7 +650,7 @@ local cards = sgs.QList2Table(self.player:getHandcards())
     local suit_table = { "spade", "club", "heart", "diamond" }
     local equip_val_table = { 1.2, 1.5, 0.5, 1, 1.3 }
     for _, enemy in ipairs(self.enemies) do
-        if enemy:getHandcardNum() > 2 and not enemy:isRemoved() then
+        if enemy:getHandcardNum() > 2 and not enemy:isRemoved() and (not enemy:hasSkill("hongfa") or enemy:getPile("heavenly_army"):isEmpty()) then
             local max_suit_num, max_suit = 0, {}
             for i = 0, 3, 1 do
                 local suit_num = getKnownCard(enemy, self.player, suit_table[i + 1])
@@ -741,6 +741,9 @@ sgs.ai_skill_invoke.fanjian_show = function(self, data)--弃置全部闪时判�
 	if self.player:isRemoved() then
 		return false
 	end
+	if self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty() then--君张角
+		return false
+	  end
     local suit = self.player:getMark("FanjianSuit")
     local count = 0
     for _, card in sgs.qlist(self.player:getHandcards()) do
@@ -905,14 +908,14 @@ sgs.ai_skill_use["@@liuli"] = function(self, prompt, method)
 
 	local isJinkEffected
 	for _, jink in ipairs(self:getCards("Jink")) do
-		if self.room:isJinkEffected(user, jink) then isJinkEffected = true break end
+		if self.room:isJinkEffected(self.player, jink) then isJinkEffected = true break end
 	end
 
 	local liuli = {}
 
 	if not self:damageIsEffective(self.player, nature, source) then liuli[2] = "."
 	elseif self:needToLoseHp(self.player, source, true) then liuli[2] = "."
-	elseif self:getDamagedEffects(self.player, source, true) then liuli[2] = "." end
+	elseif self:needDamagedEffects(self.player, source, true) then liuli[2] = "." end
 
 	self:sort(others, "defense")
 	for _, player in ipairs(others) do
@@ -920,7 +923,7 @@ sgs.ai_skill_use["@@liuli"] = function(self, prompt, method)
 			if self:isEnemy(player) then
 				if not (source and source:objectName() == player:objectName()) then
 					if self:slashIsEffective(slash, player, false, source) then
-						if not self:getDamagedEffects(player, source, true) then
+						if not self:needDamagedEffects(player, source, true) then
 							if self:hasHeavySlashDamage(source, slash, player) then
 								if not source or self:isFriend(source, player) then
 									local ret = doLiuli(player)
@@ -949,7 +952,7 @@ sgs.ai_skill_use["@@liuli"] = function(self, prompt, method)
 							local ret = doLiuli(player)
 							if ret ~= "." then liuli[3] = ret end
 						elseif not self:hasHeavySlashDamage(source, slash, player) then
-							if self:getDamagedEffects(player, source, true) or self:needToLoseHp(player, source, true, true) then
+							if self:needDamagedEffects(player, source, true) or self:needToLoseHp(player, source, true, true) then
 								local ret = doLiuli(player)
 								if ret ~= "." then liuli[4] = ret end
 							end
@@ -1530,7 +1533,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 			if friend:isChained() and dmg.nature ~= sgs.DamageStruct_Normal and not self:isGoodChainTarget(friend, dmg.from, dmg.nature, dmg.damage, dmg.card) then
 			elseif friend:getHp() >= 2 and dmg.damage < 2
 					and (friend:hasShownSkills("yiji|shuangxiong|zaiqi|jianxiong|fangzhu")
-						or self:getDamagedEffects(friend, dmg.from or self.room:getCurrent())
+						or self:needDamagedEffects(friend, dmg.from or self.room:getCurrent())
 						or self:needToLoseHp(friend)
 						or (friend:getHandcardNum() < 3 and friend:hasShownSkill("rende"))) then
 				return "@TianxiangCard=" .. card_id .. "&tianxiang->" .. friend:objectName()
@@ -1565,7 +1568,8 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 	self:sort(self.enemies, "hp")
 
 	for _, enemy in ipairs(self.enemies) do
-		if enemy:isAlive() and not enemy:isRemoved() then
+		if enemy:isAlive() and not enemy:isRemoved()
+		and (self.tianxiang_choice == 1 or (not enemy:hasSkill("hongfa") or enemy:getPile("heavenly_army"):isEmpty())) then
 			if enemy:getHp() <=2 or enemy:getHandcardNum() <= 2 or self:canAttack(enemy, dmg.from or self.room:getCurrent(), dmg.nature) then
 				if enemy:hasShownSkill("jijiu") and enemy:getHp() <= 2 then
 					self.tianxiang_choice = 2
@@ -1597,7 +1601,7 @@ sgs.ai_skill_use["@@tianxiang"] = function(self, data, method)
 			end
 		end
 		if #targets == 0 and dmg.from then table.insert(targets, dmg.from) end
-		if #targets == 0 then table.insert(targets, room:nextPlayer(self.player)) end
+		if #targets == 0 then table.insert(targets, self.player:getNextAlive()) end
 		if #targets > 0 then
 			self:sort(targets, "hp")
 			targets = sgs.reverse(targets)
@@ -1610,12 +1614,13 @@ end
 
 sgs.ai_skill_choice.tianxiang = function(self, choices, data)
 	choices = choices:split("+")
+	--"damage%from:%1%to:%2","losehp%to:%1%log:%2"
 	return choices[self.tianxiang_choice]
 end
 
 sgs.ai_card_intention.TianxiangCard = function(self, card, from, tos)
 	local to = tos[1]
-	if self:getDamagedEffects(to) or self:needToLoseHp(to) then return end
+	if self:needDamagedEffects(to) or self:needToLoseHp(to) then return end
 	local intention = 10
 	if HasBuquEffect(to) then intention = 0
 	elseif (to:getHp() >= 2 and to:hasShownSkills("yiji|shuangxiong|zaiqi|yinghun_sunjian|yinghun_sunce|jianxiong|fangzhu"))
@@ -1661,7 +1666,7 @@ sgs.ai_skill_use_func.TianyiCard = function(TYCard, use, self)
 			cards:append(c)
 		end
 	end
-	local max_card = self:getMaxCard(self.player, cards)
+	local max_card = self:getMaxNumberCard(self.player, cards)
 	if not max_card then return end
 	local max_point = max_card:getNumber()
 	if self.player:hasSkill("yingyang") then max_point = math.min(max_point + 3, 13) end
@@ -1705,7 +1710,7 @@ sgs.ai_skill_use_func.TianyiCard = function(TYCard, use, self)
 	if slashcount >= 1 and slash and dummy_use.card then
 		for _, enemy in ipairs(self.enemies) do
 			if not (enemy:hasShownSkill("kongcheng") and enemy:getHandcardNum() == 1) and not enemy:isKongcheng() then
-				local enemy_max_card = self:getMaxCard(enemy)
+				local enemy_max_card = self:getMaxNumberCard(enemy)
 				local enemy_max_point = enemy_max_card and enemy_max_card:getNumber() or 100
 				if enemy_max_card and enemy:hasShownSkill("yingyang") then enemy_max_point = math.min(enemy_max_point + 3, 13) end
 				if max_point > enemy_max_point then
@@ -1732,7 +1737,7 @@ sgs.ai_skill_use_func.TianyiCard = function(TYCard, use, self)
 			for index = #self.friends_noself, 1, -1 do
 				local friend = self.friends_noself[index]
 				if not friend:isKongcheng() then
-					local friend_min_card = self:getMinCard(friend)
+					local friend_min_card = self:getMinNumberCard(friend)
 					local friend_min_point = friend_min_card and friend_min_card:getNumber() or 100
 					if friend:hasShownSkill("yingyang") then friend_min_point = math.max(1, friend_min_point - 3) end
 					if max_point > friend_min_point then
@@ -1799,8 +1804,8 @@ function sgs.ai_skill_pindian.tianyi(minusecard, self, requestor)
 		self:sortByKeepValue(cards)
 		return cards[1]
 	end
-	local maxcard = self:getMaxCard()
-	return self:isFriend(requestor) and self:getMinCard() or (maxcard:getNumber() < 6 and minusecard or maxcard)
+	local maxcard = self:getMaxNumberCard()
+	return self:isFriend(requestor) and self:getMinNumberCard() or (maxcard:getNumber() < 6 and minusecard or maxcard)
 end
 
 sgs.ai_cardneed.tianyi = function(to, card, self)
@@ -2201,6 +2206,16 @@ sgs.ai_card_intention.ZhijianCard = -80
 sgs.ai_use_priority.ZhijianCard = sgs.ai_use_priority.RendeCard + 0.1
 sgs.ai_cardneed.zhijian = sgs.ai_cardneed.equip
 
+local function getBestHp(player)
+	local arr = {ganlu = 1, yinghun_sunjian = 2, hunshang = 1}
+	for skill, dec in pairs(arr) do
+		if player:hasSkill(skill) then
+			return math.max( (player:isLord() and 3 or 2) ,player:getMaxHp() - dec)
+		end
+	end
+	return player:getMaxHp()
+end
+
 sgs.ai_skill_exchange.guzheng = function(self, pattern, max_num, min_num, expand_pile)
 	local card_ids = self.player:property("guzheng_allCards"):toString():split("+")
 	local who = self.room:getCurrent()
@@ -2345,22 +2360,6 @@ sgs.ai_skill_exchange.guzheng = function(self, pattern, max_num, min_num, expand
 	end
 end
 
-function getBestHp(player)
-	local arr = {ganlu = 1, yinghun = 2, nosmiji = 1, xueji = 1, baobian = math.max(0, player:getMaxHp() - 3)}
-	--if player:hasSkill("hunzi") and player:getMark("hunzi") == 0 then return 2 end
-	for skill,dec in pairs(arr) do
-		if player:hasSkill(skill) then
-			return math.max( (player:isLord() and 3 or 2) ,player:getMaxHp() - dec)
-		end
-	end
-	--if player:hasSkills("quanji+zhonghuizili") and player:getMark("zhonghuizili") == 0 then return (player:getMaxHp() - 1) end
-	return player:getMaxHp()
-end
---[[旧
-sgs.ai_skill_invoke["_Guzheng"] = function(self, data)
-	return not (self:needKongcheng() and self.player:isKongcheng())
-end
-]]
 sgs.ai_skill_choice.guzheng = function(self, choices, data)
 	return "yes"
 end

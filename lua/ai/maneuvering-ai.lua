@@ -183,7 +183,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 		return true
 	end
 	if self.player:hasSkill("wushuang") then
-		if getKnownCard(target, player, "Jink", true, "he") >= 2 then return false end
+		if getKnownCard(target, target, "Jink", true, "he") >= 2 then return false end
 		return getCardsNum("Jink", target, self.player) < 2
 	end
 	if self.player:hasSkills("tieqi|tieqi_xh") then
@@ -342,7 +342,7 @@ end
 
 function SmartAI:isGoodChainPartner(player)
 	player = player or self.player
-	if HasBuquEffect(player) or HasNiepanEffect(player) or self:needToLoseHp(player) or self:getDamagedEffects(player) then
+	if HasBuquEffect(player) or HasNiepanEffect(player) or self:needToLoseHp(player) or self:needDamagedEffects(player) then
 		return true
 	end
 	return false
@@ -461,7 +461,7 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 
 	if card and F_count == 1 and E_count == 1 and the_enemy and the_enemy:isKongcheng() and the_enemy:getHp() == 1 then
 		for _, c in ipairs(self:getCards("Slash")) do
-			if not c:isKindOf("NatureSlash") and not self:slashProhibit(c, the_enemy, source) then return end
+			if not c:isKindOf("NatureSlash") and not self:slashProhibit(c, the_enemy, from) then return end--空返回？
 		end
 	end
 
@@ -491,13 +491,13 @@ function SmartAI:useCardIronChain(card, use)
 	for _, enemy in ipairs(self.enemies) do
 		if not enemy:isChained()
 			and self:hasTrickEffective(card, enemy, self.player) and self:objectiveLevel(enemy) > 3
-			and not self:getDamagedEffects(enemy) and not self:needToLoseHp(enemy) and sgs.isGoodTarget(enemy, self.enemies, self) then
+			and not self:needDamagedEffects(enemy) and not self:needToLoseHp(enemy) and sgs.isGoodTarget(enemy, self.enemies, self) then
 			table.insert(enemytargets, enemy)
 		end
 	end
 
 	local chainSelf = self:hasTrickEffective(card, self.player, self.player) and not self.player:isChained()
-						and (self:needToLoseHp(self.player, nil, nil, true) or self:getDamagedEffects(self.player))
+						and (self:needToLoseHp(self.player, nil, nil, true) or self:needDamagedEffects(self.player))
 						and (self:getCardId("FireSlash") or self:getCardId("ThunderSlash")
 							or (self:getCardId("Slash") and self.player:hasWeapon("Fan"))
 							or (self:getCardId("FireAttack") and self.player:getHandcardNum() > 2))
@@ -631,10 +631,10 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 			damage = damage - 1
 		end]]
 		return self:objectiveLevel(enemy) > 3 and not enemy:isKongcheng()--and damage > 0
-				and self:damageIsEffective(enemy, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(enemy, self.player, damage)
+				and self:damageIsEffective(enemy, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(enemy, self.player)--, damage
 				and self:hasTrickEffective(fire_attack, enemy)
 				and sgs.isGoodTarget(enemy, self.enemies, self)
-				and (not (enemy:hasShownSkill("jianxiong") and not self:isWeak(enemy)) and not self:getDamagedEffects(enemy, self.player)
+				and (not (enemy:hasShownSkill("jianxiong") and not self:isWeak(enemy)) and not self:needDamagedEffects(enemy, self.player)
 						and not (enemy:isChained() and not self:isGoodChainTarget(enemy, nil, nil, nil, fire_attack)))
 	end
 

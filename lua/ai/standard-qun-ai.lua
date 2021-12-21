@@ -224,6 +224,10 @@ sgs.ai_skill_invoke.wushuang = function(self, data)
 	return false
 end
 
+sgs.ai_cardneed.wushuang = function(to, card, self)
+	return isCard("Duel", card, to) or isCard("Slash", card, to) or card:isKindOf("Halberd")
+end
+
 --貂蝉
 function SmartAI:getLijianCard()
 	local card_id
@@ -696,7 +700,7 @@ sgs.ai_skill_cardask["@luanwu-slash"] = function(self)
 			if not self.player:canSlash(friend, slash) then continue end
 			if self:isFriend(friend) and not self:hasHeavySlashDamage(self.player, slash, friend)
 				and not self:slashProhibit(slash, friend) and self:slashIsEffective(slash, friend)
-				and (self:getDamagedEffects(friend, self.player, true) or self:needToLoseHp(friend, self.player, true))
+				and (self:needDamagedEffects(friend, self.player, true) or self:needToLoseHp(friend, self.player, true))
 				and not table.contains(targets, friend:objectName()) then
 				table.insert(targets, friend:objectName())
 			end
@@ -790,10 +794,14 @@ sgs.ai_skill_cardchosen.jianchu = function(self, who, flags, method)
 	end
 end
 
+function sgs.ai_cardneed.jianchu(to, card, self)
+	return card:isKindOf("Slash") or card:isKindOf("Analeptic")
+end
+
 --张角
 sgs.ai_skill_cardask["@guidao-card"]=function(self, data)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1
-	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("guidao") then--君主
+	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("guidao") and not self:isWeak() then--君主
 		return "."
 	end
 	if not (self:willShowForAttack() or self:willShowForDefence() ) then return "." end
@@ -911,7 +919,7 @@ end
 
 sgs.ai_skill_playerchosen.leiji = function(self, targets)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1
-	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("leiji") then--君主
+	and not self.player:hasShownGeneral1() and self.player:inHeadSkills("leiji") and not self:isWeak() then--君主
 		return nil
 	end
 	self:updatePlayers()
@@ -920,18 +928,18 @@ sgs.ai_skill_playerchosen.leiji = function(self, targets)
 		local value = 0
 		local damage = {}
 		damage.to = enemy
-		damage.from = player
+		damage.from = self.player
 		damage.nature = sgs.DamageStruct_Thunder
 		damage.damage = 2
 		if not self:damageIsEffective_(damage) then return 99 end
 		if enemy:hasShownSkill("hongyan") then return 99 end
-		if self:cantbeHurt(enemy, player, 2) or self:objectiveLevel(enemy) < 3
+		if self:cantbeHurt(enemy, self.player, 2) or self:objectiveLevel(enemy) < 3
 			or (enemy:isChained() and not self:isGoodChainTarget_(damage)) then return 100 end
 		if not sgs.isGoodTarget(enemy, self.enemies, self) then value = value + 50 end
 		if enemy:hasArmorEffect("SilverLion") then value = value + 20 end
 		if enemy:hasShownSkills(sgs.exclusive_skill) then value = value + 10 end
 		if enemy:hasShownSkills(sgs.masochism_skill) then value = value + 5 end
-		if enemy:isChained() and self:isGoodChainTarget_(damage) and #(self:getChainedEnemies(player)) > 1 then value = value - 25 end
+		if enemy:isChained() and self:isGoodChainTarget_(damage) and #(self:getChainedEnemies(self.player)) > 1 then value = value - 25 end
 		if enemy:isLord() then value = value - 5 end
 		value = value + enemy:getHp() + sgs.getDefenseSlash(enemy, self) * 0.01
 		return value
@@ -941,7 +949,7 @@ sgs.ai_skill_playerchosen.leiji = function(self, targets)
 		return getCmpValue(a) < getCmpValue(b)
 	end
 
-	local enemies = self:getEnemies(player)
+	local enemies = self:getEnemies(self.player)
 	table.sort(enemies, cmp)
 	for _, enemy in ipairs(enemies) do
 		if getCmpValue(enemy) < 100 then return enemy end
@@ -1112,7 +1120,7 @@ sgs.ai_skill_playerchosen.shuangren = function(self, targets)
 	if self.player:getMark("shuangxiong") > 0 and self.player:hasSkill("shuangxiong") then return nil end
 
 	self:sort(self.enemies, "handcard")
-	local max_card = self:getMaxCard()
+	local max_card = self:getMaxNumberCard()
 	local max_point = max_card:getNumber()
 
 	local slash = sgs.cloneCard("slash")
@@ -1127,7 +1135,7 @@ sgs.ai_skill_playerchosen.shuangren = function(self, targets)
 
 	if dummy_use.card and not dummy_use.to:isEmpty() then
 		for _, enemy in sgs.qlist(dummy_use.to) do
-			local enemy_max_card = self:getMaxCard(enemy)
+			local enemy_max_card = self:getMaxNumberCard(enemy)
 			local enemy_max_point = enemy_max_card and enemy_max_card:getNumber() or 100
 			if max_point > enemy_max_point then
 				self.shuangren_card = max_card:getEffectiveId()
@@ -1145,8 +1153,8 @@ sgs.ai_skill_playerchosen.shuangren = function(self, targets)
 end
 
 function sgs.ai_skill_pindian.shuangren(minusecard, self, requestor)
-	local maxcard = self:getMaxCard()
-	return self:isFriend(requestor) and self:getMinCard() or (maxcard:getNumber() < 6 and minusecard or maxcard)
+	local maxcard = self:getMaxNumberCard()
+	return self:isFriend(requestor) and self:getMinNumberCard() or (maxcard:getNumber() < 6 and minusecard or maxcard)
 end
 
 sgs.ai_skill_playerchosen["shuangren_slash"] = sgs.ai_skill_playerchosen.zero_card_as_slash
@@ -1170,6 +1178,10 @@ sgs.ai_playerchosen_intention.sijian = function(self, from, to)
 		intention = 0
 	end
 	sgs.updateIntention(from, to, intention)
+end
+
+function sgs.ai_cardneed.sijian(to, card, self)
+	return to:isKongcheng() and not self:needKongcheng(to)
 end
 
 --潘凤
@@ -1361,9 +1373,9 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 end
 
 sgs.ai_skill_choice.qingcheng = function(self, choices)
-	global_room:writeToConsole("倾城选择:"..choices)
+	--global_room:writeToConsole("倾城选择:"..choices)
 	if self.qingcheng then
-		global_room:writeToConsole("倾城预选:"..self.qingcheng)
+		--global_room:writeToConsole("倾城预选:"..self.qingcheng)
 		return self.qingcheng
 	end
 	local choice_table = choices:split("+")

@@ -130,6 +130,7 @@ zhonghui dengai									25 24
 simazhao simayi									25 24
 simazhao xunchen								23 22
 gongsunyuan zhangliao							23 22
+sunchen caoren									16 15
 zhangliao zhanghe								5 5
 zhangliao xiahouyuan							5 5
 zhanghe xiahouyuan								5 5
