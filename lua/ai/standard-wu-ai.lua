@@ -31,19 +31,25 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 	local unpreferedCards = {}
 	local cards = sgs.QList2Table(self.player:getHandcards())
 	local unlimited
-	if self.player:hasTreasure("LuminousPearl") and self.player:ownSkill("zhiheng") then unlimited = true end
+	if self.player:hasTreasure("LuminousPearl") and (self.player:inHeadSkills("zhiheng") or self.player:inDeputySkills("zhiheng")) then--self.player:ownSkill("zhiheng")
+		unlimited = true
+	end
 	local show = "&zhiheng"
 	if not self.player:ownSkill("zhiheng") then show = "" end
 	local skill = sgs.Sanguosha:getSkill("zhiheng")
 	if self.player:hasTreasure("LuminousPearl") and ((self.player:getHeadSkillList(true, false, false):contains(skill) and not self.player:hasShownGeneral1())
 		or (self.player:getDeputySkillList(true, false, false):contains(skill) and not self.player:hasShownGeneral2())) then show = "" end
 
-	if (self:getCardsNum("Crossbow", 'he') > 0 or self:hasCrossbowEffect()) and #self.enemies > 0 and self.player:getCardCount(true) >= 4 then
+	local has_Crossbow = self:getCardsNum("Crossbow") > 0
+	if (has_Crossbow or self:hasCrossbowEffect()) and #self.enemies > 0 and self.player:getCardCount(true) >= 4 then
 		local zcards = sgs.QList2Table(self.player:getCards("he"))
 		self:sortByUseValue(zcards, true)
 		for _, zcard in ipairs(zcards) do
-			if not isCard("Peach", zcard, self.player) and (self.player:getOffensiveHorse() or zcard:isKindOf("OffensiveHorse")) and not self.player:isJilei(zcard)
-			and not zcard:isKindOf("Crossbow") and not isCard("Slash", zcard, self.player) then--别把杀和连弩弃了
+			if not isCard("Peach", zcard, self.player) and not isCard("Slash", zcard, self.player)
+			and not isCard("BefriendAttacking", zcard, self.player) and not isCard("AllianceFeast", zcard, self.player)
+			and (self.player:getOffensiveHorse() or zcard:isKindOf("OffensiveHorse") or not has_Crossbow)
+			and not zcard:isKindOf("Crossbow") and not self.player:isJilei(zcard)
+			then--别把杀和连弩弃了
 				table.insert(unpreferedCards, zcard:getEffectiveId())
 				if #unpreferedCards >= self.player:getMaxHp() and not unlimited then break end
 			end
@@ -68,7 +74,8 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 		local zcards = sgs.QList2Table(self.player:getCards("he"))
 		self:sortByUseValue(zcards, true)
 		for _, zcard in ipairs(zcards) do
-			if not isCard("Peach", zcard, self.player) and not isCard("ExNihilo", zcard, self.player) then
+			if not isCard("Peach", zcard, self.player) and not isCard("ExNihilo", zcard, self.player)
+			and not isCard("BefriendAttacking", zcard, self.player) and not isCard("AllianceFeast", zcard, self.player) then
 				local shouldUse = true
 				if isCard("Slash", zcard, self.player) and not use_slash then
 					local dummy_use = { isDummy = true , to = sgs.SPlayerList()}
@@ -116,7 +123,7 @@ sgs.ai_skill_use_func.ZhihengCard = function(c, use, self)
 
 	if #unpreferedCards == 0 then
 		local use_slash_num = 0
-		self:sortByKeepValue(cards)
+		self:sortByUseValue(cards, true)
 		for _, card in ipairs(cards) do
 			if card:isKindOf("Slash") then
 				local will_use = false
@@ -1283,13 +1290,13 @@ sgs.ai_cardneed.xiaoji = sgs.ai_cardneed.equip
 
 --孙坚
 sgs.ai_skill_playerchosen.yinghun_sunjian = function(self, targets)
-	if not self:willShowForAttack() and not self:willShowForDefence() then
-		return nil
-	end
-
+	Global_room:writeToConsole("进入英魂")
 	local x = self.player:getLostHp()
 	local n = x - 1
-	--self:updatePlayers()
+	self:updatePlayers()
+	if #self.friends_noself == 0 and (x == 1 or #self.enemies == 0) then
+		return nil
+	end
 
 	local yinghun_friend = nil
 	local AssistTarget = self:AssistTarget()
@@ -1378,14 +1385,14 @@ sgs.ai_skill_playerchosen.yinghun_sunjian = function(self, targets)
 				self:sort(self.enemies)
 				for _, enemy in ipairs(self.enemies) do
 					if enemy:getCardCount(true) == n
-						and not self:doNotDiscard(enemy, "nil", true, n) then
+						and not self:doNotDiscard(enemy, "he", true, n) then
 						self.yinghunchoice = "d1tx"
 						return enemy
 					end
 				end
 				for _, enemy in ipairs(self.enemies) do
 					if enemy:getCardCount(true) >= n
-						and not self:doNotDiscard(enemy, "nil", true, n)
+						and not self:doNotDiscard(enemy, "he", true, n)
 						and enemy:hasShownSkills(sgs.cardneed_skill) then
 						self.yinghunchoice = "d1tx"
 						return enemy
@@ -1409,21 +1416,20 @@ sgs.ai_skill_playerchosen.yinghun_sunjian = function(self, targets)
 	end
 	if yinghun_friend then
 		self.yinghunchoice = "dxt1"
-		global_room:writeToConsole("英魂队友:"..sgs.Sanguosha:translate(yinghun_friend:getGeneralName()).."/"..sgs.Sanguosha:translate(yinghun_friend:getGeneral2Name()))
+		Global_room:writeToConsole("英魂队友:"..sgs.Sanguosha:translate(yinghun_friend:getGeneralName()).."/"..sgs.Sanguosha:translate(yinghun_friend:getGeneral2Name()))
 		return yinghun_friend
 	end
 	if x > 1 and #self.enemies > 0 then
 		for _, enemy in ipairs(self.enemies) do
 			if enemy:getCardCount(true) <= n and (self:getDangerousCard(enemy) or self:getValuableCard(enemy))
-				and not self:doNotDiscard(enemy, "nil", true, n) then
+				and not self:doNotDiscard(enemy, "he", true, n) then
 				self.yinghunchoice = "d1tx"
 				return enemy
 			end
 		end
 		self:sort(self.enemies, "handcard")
 		for _, enemy in ipairs(self.enemies) do
-			if enemy:getCardCount(true) >= n
-				and not self:doNotDiscard(enemy, "nil", true, n) then
+			if enemy:getCardCount(true) >= n and not self:doNotDiscard(enemy, "he", true, n) then
 				self.yinghunchoice = "d1tx"
 				return enemy
 			end

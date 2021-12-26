@@ -29,7 +29,7 @@ transfer_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
-	--global_room:writeToConsole("合纵连横判断开始:" ..self.player:objectName())
+	--Global_room:writeToConsole("合纵连横判断开始:" ..self.player:objectName())
 	local friends_shown, friends_other = {}, {}
 	local targets = sgs.PlayerList()
 	for _, friend in ipairs(self.friends_noself) do
@@ -50,6 +50,8 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 				oneJink = true
 				continue
 			elseif self:hasCrossbowEffect() and c:isKindOf("Slash") then
+				continue
+			elseif self.player:isBigKingdomPlayer() and c:isKindOf("ThreatenEmperor") then
 				continue
 			elseif self.player:getMark("GlobalBattleRoyalMode") > 0
 				and (isCard("Analeptic", c, self.player) or isCard("BurningCamps", c, self.player) or isCard("Breastplate", c, self.player)) then
@@ -81,13 +83,13 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 				for _, card in ipairs(cards) do
 					if card:isKindOf("ThreatenEmperor") then--大势力留下挟天子
 						table.removeOne(cards, card)
-						global_room:writeToConsole("大势力留下挟天子")
+						Global_room:writeToConsole("大势力留下挟天子")
 					end
 				end
 				has_TE = false
 			end
 		if has_TE then--同时有火烧和挟天子时目标是否合适？
-			--global_room:writeToConsole("合纵连横判断挟天子:" ..self.player:objectName())
+			--Global_room:writeToConsole("合纵连横判断挟天子:" ..self.player:objectName())
 			local anjiang = 0
 			for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 				if sgs.isAnjiang(p) then anjiang = anjiang + 1 end
@@ -105,13 +107,13 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 				end
 			end
 		elseif has_BC then
-			--global_room:writeToConsole("合纵连横判断火烧连营:" ..self.player:objectName())
+			--Global_room:writeToConsole("合纵连横判断火烧连营:" ..self.player:objectName())
 			local gameProcess = sgs.gameProcess(true)
 			if string.find(gameProcess, self.player:getKingdom() .. ">>>") then--必须要>个数多的在前，因为只会find第一个>
 				for _, card in ipairs(cards) do
 					if card:isKindOf("BurningCamps") then--大国？火烧联营不能给
 						table.removeOne(cards, card)
-						global_room:writeToConsole(">>>大优势，火烧联营不能给")
+						Global_room:writeToConsole(">>>大优势，火烧联营不能给")
 					end
 				end
 			elseif string.find(gameProcess, self.player:getKingdom() .. ">>")  then
@@ -120,7 +122,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 						local np = p:getNextAlive()
 						if not self:isFriend(np) and (not np:isChained() or self:isGoodChainTarget(np, p, sgs.DamageStruct_Fire)) then
 							target = p
-							global_room:writeToConsole(">>小优势")
+							Global_room:writeToConsole(">>小优势")
 							break
 						end
 					end
@@ -138,7 +140,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			end
 		end
 		if target and #cards > 0 then
-			--global_room:writeToConsole("合纵连横含重要卡牌对象:" .. target:objectName())
+			--Global_room:writeToConsole("合纵连横含重要卡牌对象:" .. target:objectName())
 			for _, card in ipairs(cards) do
 				table.insert(card_list, card:getEffectiveId())
 				if #card_list == 3 then
@@ -148,7 +150,7 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			card_str = "@TransferCard=" .. table.concat(card_list, "+")
 			use.card = sgs.Card_Parse(card_str)
 			if use.to then use.to:append(target) end
-			--global_room:writeToConsole("合纵连横含重要卡牌:" .. card_str)
+			--Global_room:writeToConsole("合纵连横含重要卡牌:" .. card_str)
 			--self.player:speak("发动合纵连横")
 			return
 		end
@@ -166,15 +168,15 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 	assert(sgs.Card_Parse(card_str))
 
 	if #friends_shown > 0 then
-		--global_room:writeToConsole("有明置的友方")
+		--Global_room:writeToConsole("有明置的友方")
 		self:sortByUseValue(cards)
 		if #friends_shown > 0 then
 			local c, p = self:getCardNeedPlayer(cards, friends_shown, "transfer")
 			if p then
 				use.card = sgs.Card_Parse(card_str)
 				if use.to then use.to:append(p) end
-				--global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
-				--global_room:writeToConsole("合纵连横卡牌:" .. card_str)
+				--Global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
+				--Global_room:writeToConsole("合纵连横卡牌:" .. card_str)
 				--self.player:speak("发动合纵连横")
 				return
 			end
@@ -182,13 +184,13 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 	end
 
 	if #friends_other > 0 then
-		--global_room:writeToConsole("有暗置的友方")
+		--Global_room:writeToConsole("有暗置的友方")
 		local c, p = self:getCardNeedPlayer(cards, friends_other, "transfer")
 		if p then
 			use.card = sgs.Card_Parse(card_str)
 			if use.to then use.to:append(p) end
-			--global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
-			--global_room:writeToConsole("合纵连横卡牌:" .. card_str)
+			--Global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
+			--Global_room:writeToConsole("合纵连横卡牌:" .. card_str)
 			--self.player:speak("发动合纵连横")
 			return
 		end
@@ -868,7 +870,8 @@ function SmartAI:useCardFightTogether(card, use)
 					else
 						local gameProcess = sgs.gameProcess()
 						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
-						or (IamSmall and string.find(gameProcess, self.player:getKingdom() .. ">>")) then
+						or (IamSmall and string.find(gameProcess, self.player:getKingdom() .. ">>"))
+						or self.player:hasSkill("fenming") then
 							v_big = v_big + 2
 						else
 							v_big = v_big + 1
@@ -892,7 +895,8 @@ function SmartAI:useCardFightTogether(card, use)
 					else
 						local gameProcess = sgs.gameProcess()
 						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
-						or (IamBig and string.find(gameProcess, self.player:getKingdom() .. ">>")) then
+						or (IamBig and string.find(gameProcess, self.player:getKingdom() .. ">>"))
+						or self.player:hasSkill("fenming") then
 							v_small = v_small + 2
 						else
 							v_small = v_small + 1
@@ -971,16 +975,6 @@ sgs.ai_use_priority.FightTogether = 8.9
 sgs.ai_keep_value.FightTogether = 3.24
 
 --AllianceFeast
---[[function findPlayerbyobjectName(name)
-	local players = nil
-	players = global_room:getAllPlayers()
-	for _,p in sgs.qlist(players) do
-		if p:objectName() == name then
-			return p
-		end
-	end
-end
-]]
 function SmartAI:useCardAllianceFeast(card, use)--效果修改，已重写
 	if not card:isAvailable(self.player) then return end
 	local hegnullcards = self.player:getCards("HegNullification")
@@ -1230,7 +1224,7 @@ sgs.ai_skill_cardask["@imperial_order-equip"] = function(self)
 			for _, card in ipairs(cards) do
 				if not self:willShowForAttack() and ((card:isKindOf("Weapon") and self.player:getHandcardNum() < 3) or card:isKindOf("OffensiveHorse")) then
 					return card:getEffectiveId()
-				elseif not self:willShowForDefence() and ((card:isKindOf("Armor") and self.player:getHp() > 1) or card:isKindOf("DefensiveHorse")) then
+				elseif not self:willShowForDefence() and ((card:isKindOf("Vine") and self.player:getHp() > 1) or card:isKindOf("DefensiveHorse")) then
 					return card:getEffectiveId()
 				end
 			end
@@ -1248,12 +1242,12 @@ sgs.ai_skill_choice.imperial_order = function(self, choices, data)
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") <= 1 and table.contains(choices,"show_deputy") then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")
 			or self.player:inHeadSkills("zhiheng") or self.player:inHeadSkills("jianxiong") then
-				--global_room:writeToConsole("敕令君主")
+				--Global_room:writeToConsole("敕令君主")
 				return "show_deputy"
 		end
 	end
 	if self.player:getActualGeneral1():getKingdom() == "careerist" and table.contains(choices,"show_deputy") then--野心家角色
-		--global_room:writeToConsole("敕令野心家")
+		--Global_room:writeToConsole("敕令野心家")
 		return "show_deputy"
 	end
 

@@ -45,14 +45,14 @@ qice_skill.getTurnUseCard = function(self)
 				end
 			end
 			for key, value in pairs(kingdoms) do
-				--global_room:writeToConsole("奇策联军国家:"..key.."|"..value)
+				--Global_room:writeToConsole("奇策联军国家:"..key.."|"..value)
 				if key and value > 0 then
 					table.insert(kingdoms_num,value)--移除没有的国别
 				end
 			end
 			if #kingdoms_num > 0 then
 				target_num = 1 + math.min(table.unpack(kingdoms_num))
-				global_room:writeToConsole("奇策联军最小目标数:".. target_num)
+				Global_room:writeToConsole("奇策联军最小目标数:".. target_num)
 			end
 			return false
 		elseif use_card:isKindOf("AwaitExhausted") then
@@ -166,7 +166,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["god_salvation"] and self.qicenum["god_salvation"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 3
 			end
-			global_room:writeToConsole("奇策鏖战桃园")
+			Global_room:writeToConsole("奇策鏖战桃园")
 			return sgs.Card_Parse(str .. "god_salvation")
 		end
 		if table.contains(available_tricks,"alliance_feast") and not known_null then
@@ -176,7 +176,7 @@ qice_skill.getTurnUseCard = function(self)
 				if self.qicenum["alliance_feast"] and self.qicenum["alliance_feast"] == handcardnum then
 					sgs.ai_use_priority.QiceCard = 8
 				end
-				global_room:writeToConsole("奇策鏖战联军")
+				Global_room:writeToConsole("奇策鏖战联军")
 				return sgs.Card_Parse(str .. "alliance_feast")
 			end
 		end
@@ -188,7 +188,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["god_salvation"] and self.qicenum["god_salvation"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 3--调虎离山是4.9
 			end
-			global_room:writeToConsole("奇策桃园")
+			Global_room:writeToConsole("奇策桃园")
 			return sgs.Card_Parse(str .. "god_salvation")
 		end
 	end
@@ -200,7 +200,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["alliance_feast"] and self.qicenum["alliance_feast"] == handcardnum and self:getAllPeachNum() < 1 then
 				sgs.ai_use_priority.QiceCard = 8--优先度是否合适？
 			end
-			global_room:writeToConsole("奇策联军")
+			Global_room:writeToConsole("奇策联军")
 			return sgs.Card_Parse(str .. "alliance_feast")
 		end
 	end
@@ -214,7 +214,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["burning_camps"] and self.qicenum["burning_camps"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 1.5
 			end
-			global_room:writeToConsole("奇策火烧1")
+			Global_room:writeToConsole("奇策火烧1")
 			return sgs.Card_Parse(str .. "burning_camps")
 		end
 	end
@@ -252,7 +252,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["archery_attack"] and self.qicenum["archery_attack"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 1.5
 			end
-			global_room:writeToConsole("奇策万箭")
+			Global_room:writeToConsole("奇策万箭")
 			return sgs.Card_Parse(str .. "archery_attack")
 		end
 		if not has_peach and self:getAoeValue(clones) > 0
@@ -262,7 +262,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["savage_assault"] and self.qicenum["savage_assault"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 1.5
 			end
-			global_room:writeToConsole("奇策南蛮")
+			Global_room:writeToConsole("奇策南蛮")
 			return sgs.Card_Parse(str .. "savage_assault")
 		end
 	end
@@ -289,7 +289,7 @@ qice_skill.getTurnUseCard = function(self)
 			if self.qicenum["burning_camps"] and self.qicenum["burning_camps"] == handcardnum then
 				sgs.ai_use_priority.QiceCard = 1.5
 			end
-			global_room:writeToConsole("奇策火烧2")
+			Global_room:writeToConsole("奇策火烧2")
 			return sgs.Card_Parse(str .. "burning_camps")
 		end
 	end
@@ -304,7 +304,7 @@ qice_skill.getTurnUseCard = function(self)
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useCardDuel(sgs.cloneCard("duel"), dummyuse)
 		if not dummyuse.to:isEmpty() and can_duel then
-			global_room:writeToConsole("奇策决斗")
+			Global_room:writeToConsole("奇策决斗")
 			return sgs.Card_Parse(str .. "duel")
 		end
 	end
@@ -320,7 +320,7 @@ qice_skill.getTurnUseCard = function(self)
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useCardDrowning(sgs.cloneCard("drowning"), dummyuse)
 		if not dummyuse.to:isEmpty() and can_drowning then
-			global_room:writeToConsole("奇策水淹七军")
+			Global_room:writeToConsole("奇策水淹七军")
 			return sgs.Card_Parse(str .. "drowning")
 		end
 	end
@@ -329,7 +329,7 @@ qice_skill.getTurnUseCard = function(self)
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useCardBefriendAttacking(sgs.cloneCard("befriend_attacking"), dummyuse)
 		if dummyuse.card then
-			global_room:writeToConsole("奇策远交近攻")
+			Global_room:writeToConsole("奇策远交近攻")
 			return sgs.Card_Parse(str .. "befriend_attacking")
 		end
 	end
@@ -359,7 +359,7 @@ qice_skill.getTurnUseCard = function(self)
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useTrickCard(sgs.cloneCard(qice_trick), dummyuse)--useTrickCard通用。。
 		if dummyuse.card then--解决不了ai用挟天子bug，建议去掉挟天子
-			global_room:writeToConsole("奇策一般选择")
+			Global_room:writeToConsole("奇策一般选择")
 			return sgs.Card_Parse(str .. qice_trick)
 		end
 	end
@@ -373,7 +373,7 @@ sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local qicecard = sgs.Sanguosha:cloneCard(userstring, card:getSuit(), card:getNumber())
 	self:useTrickCard(qicecard, use)--确保锦囊能使用
 	if use.card then
-		global_room:writeToConsole("奇策卡使用")
+		Global_room:writeToConsole("奇策卡使用")
 		use.card = card
 	end
 end
@@ -425,7 +425,7 @@ end
 
 
 sgs.ai_skill_choice["transform_qice"] = function(self, choices)
-	global_room:writeToConsole("奇策变更选择")
+	Global_room:writeToConsole("奇策变更选择")
 	local importantsklii = {"yiji", "guicai", "fangzhu", "luoshen", "jieming", "jieyue", "shicai", "wanggui"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
@@ -539,7 +539,7 @@ local xiongsuan_skill = {}
 xiongsuan_skill.name = "xiongsuan"
 table.insert(sgs.ai_skills, xiongsuan_skill)
 xiongsuan_skill.getTurnUseCard = function(self)
-	--global_room:writeToConsole("进入凶算")
+	--Global_room:writeToConsole("进入凶算")
 	--不考虑自杀了
 	if self.player:getMark("@fierce") < 1 or not self.player:canDiscard(self.player, "h") then return end
 	if self.player:getMark("Global_TurnCount") < 2 and not self.player:hasShownOneGeneral() then return end
@@ -554,7 +554,7 @@ xiongsuan_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
-	--global_room:writeToConsole("使用凶算")
+	--Global_room:writeToConsole("使用凶算")
 	local target
 	for _, friend in ipairs(self.friends) do
 		if self:isFriendWith(friend) and friend:hasSkill("xiongyi") and friend:getMark("@arise") < 1 and friend:getHp() > 1 then
@@ -596,7 +596,6 @@ sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
 				if getCardsNum("Jink", player, self.player) == 0 then
 					local lost_value = 0
 					if player:hasShownSkills(sgs.masochism_skill) then lost_value = player:getHp() / 2 end
-					local hp = math.max(player:getHp(), 1)
 					if self:isFriend(player) then bad = bad + (lost_value + 1) / hp
 					else good = good + (lost_value + 1) / hp
 					end
@@ -649,7 +648,7 @@ sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
 		use.card = card
 		if use.to then
 			use.to:append(target)
-			--global_room:writeToConsole("使用凶算目标:"..target:objectName().." 技能:"..self.xiongsuan_skill)
+			--Global_room:writeToConsole("使用凶算目标:"..target:objectName().." 技能:"..self.xiongsuan_skill)
 		end
 	end
 end
@@ -857,7 +856,7 @@ yigui_skill.getTurnUseCard = function(self)
 		or (#yigui_kingdom[self.player:getKingdom()] >=3 and wounded_count > 1) then
 			soul_name = yigui_kingdom[self.player:getKingdom()][1]
 			class_string = "god_salvation"
-			global_room:writeToConsole("役鬼桃园")
+			Global_room:writeToConsole("役鬼桃园")
 			return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 		end
 	end
@@ -876,7 +875,7 @@ yigui_skill.getTurnUseCard = function(self)
 	local max_enemy_kingdom = "careerist"--防止空值，同时可以进攻野心家，全是暗将的情况？
 	local f_num, e_num = 0,0
 	for key, value in pairs(kingdoms) do
-		--global_room:writeToConsole("役鬼国家数:"..key.."|"..value)
+		--Global_room:writeToConsole("役鬼国家数:"..key.."|"..value)
 		if key and value > e_num then
 			max_enemy_kingdom = key
 			e_num = value
@@ -959,7 +958,7 @@ yigui_skill.getTurnUseCard = function(self)
 					class_string = "archery_attack"
 					if getYiguiAoeValue(class_string,double_kingdoms[1],double_kingdoms[2]) >0 then
 						soul_name = name
-						global_room:writeToConsole("役鬼双势力万箭")
+						Global_room:writeToConsole("役鬼双势力万箭")
 						return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 					end
 				end
@@ -967,7 +966,7 @@ yigui_skill.getTurnUseCard = function(self)
 					class_string = "savage_assault"
 					if getYiguiAoeValue(class_string,double_kingdoms[1],double_kingdoms[2]) >0 then
 						soul_name = name
-						global_room:writeToConsole("役鬼双势力南蛮")
+						Global_room:writeToConsole("役鬼双势力南蛮")
 						return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 					end
 				end
@@ -983,7 +982,7 @@ yigui_skill.getTurnUseCard = function(self)
 							self.yigui_to:append(to)
 							soul_name = name
 							class_string = "alliance_feast"
-							global_room:writeToConsole("役鬼双势力联军")
+							Global_room:writeToConsole("役鬼双势力联军")
 							return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 						end
 				end
@@ -998,7 +997,7 @@ yigui_skill.getTurnUseCard = function(self)
 			if dummyuse.card then
 				soul_name = yigui_kingdom[max_enemy_kingdom][1]
 				class_string = "burning_camps"
-				global_room:writeToConsole("役鬼火烧1")
+				Global_room:writeToConsole("役鬼火烧1")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
@@ -1007,7 +1006,7 @@ yigui_skill.getTurnUseCard = function(self)
 		class_string = "archery_attack"
 		if getYiguiAoeValue(class_string,max_enemy_kingdom) >0 then
 			soul_name = yigui_kingdom[max_enemy_kingdom][1]
-			global_room:writeToConsole("役鬼万箭")
+			Global_room:writeToConsole("役鬼万箭")
 			return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 		end
 	end
@@ -1015,7 +1014,7 @@ yigui_skill.getTurnUseCard = function(self)
 		class_string = "savage_assault"
 		if getYiguiAoeValue(class_string,max_enemy_kingdom) >0 then
 			soul_name = yigui_kingdom[max_enemy_kingdom][1]
-			global_room:writeToConsole("役鬼南蛮")
+			Global_room:writeToConsole("役鬼南蛮")
 			return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 		end
 	end
@@ -1042,7 +1041,7 @@ yigui_skill.getTurnUseCard = function(self)
 			if dummyuse.card and can_burn then
 				soul_name = yigui_kingdom[np:getKingdom()][1]
 				class_string = "burning_camps"
-				global_room:writeToConsole("役鬼火烧2")
+				Global_room:writeToConsole("役鬼火烧2")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
@@ -1056,7 +1055,7 @@ yigui_skill.getTurnUseCard = function(self)
 				soul_name = yigui_kingdom[duel_t:getKingdom()][1]
 				class_string = "duel"
 				self.yigui_to = dummyuse.to
-				global_room:writeToConsole("役鬼决斗")
+				Global_room:writeToConsole("役鬼决斗")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
@@ -1069,7 +1068,7 @@ yigui_skill.getTurnUseCard = function(self)
 				self.yigui_to:append(to)
 				soul_name = yigui_kingdom[max_friend_kingom][1]
 				class_string = "befriend_attacking"
-				global_room:writeToConsole("役鬼远交近攻1")
+				Global_room:writeToConsole("役鬼远交近攻1")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
@@ -1081,7 +1080,7 @@ yigui_skill.getTurnUseCard = function(self)
 					self.yigui_to:append(to)
 					soul_name = yigui_kingdom[key][1]
 					class_string = "befriend_attacking"
-					global_room:writeToConsole("役鬼远交近攻2")
+					Global_room:writeToConsole("役鬼远交近攻2")
 					return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 				end
 			end
@@ -1093,7 +1092,7 @@ yigui_skill.getTurnUseCard = function(self)
 				self.yigui_to:append(to)
 				soul_name = yigui_kingdom[max_enemy_kingdom][1]
 				class_string = "befriend_attacking"
-				global_room:writeToConsole("役鬼远交近攻3")
+				Global_room:writeToConsole("役鬼远交近攻3")
 				return sgs.Card_Parse(str .. class_string .. "+" .. soul_name)
 			end
 		end
@@ -1127,7 +1126,7 @@ function sgs.ai_cardsview.yigui(self, class_name, player)
 				local general = sgs.Sanguosha:getGeneral(name)
 				if not general:isDoubleKingdoms() and general:getKingdom() == dying:getKingdom() then
 					soul_name = name
-					global_room:writeToConsole("役鬼救人单势力:" .. soul_name)
+					Global_room:writeToConsole("役鬼救人单势力:" .. soul_name)
 					break
 				end
 			end
@@ -1136,7 +1135,7 @@ function sgs.ai_cardsview.yigui(self, class_name, player)
 					local general = sgs.Sanguosha:getGeneral(name)
 					if general:isDoubleKingdoms() and table.contains(general:getKingdoms(),dying:getKingdom()) then
 						soul_name = name
-						global_room:writeToConsole("役鬼救人双势力:" .. soul_name)
+						Global_room:writeToConsole("役鬼救人双势力:" .. soul_name)
 						break
 					end
 				end
@@ -1173,22 +1172,22 @@ function SmartAI:shamokeUseWeaponPriority(card)
 	local v = self:getUsePriority(card)
 	if self.player:hasSkill("jili") and not self.player:isKongcheng()
 	and card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then
-		--global_room:writeToConsole("进入shamokeUseWeapon函数")
+		--Global_room:writeToConsole("进入shamokeUseWeapon函数")
 		local hcards = self.player:getHandcards()
 		hcards = sgs.QList2Table(hcards)
 		self:sortByUsePriority(hcards)
 		local firstcard = hcards[1]
 		--assert(self.player:getMark("jili"))--沙摩柯标记
-		--global_room:writeToConsole("jilimark:")
-		--global_room:writeToConsole(self.player:getMark("jili"))
+		--Global_room:writeToConsole("jilimark:")
+		--Global_room:writeToConsole(self.player:getMark("jili"))
 		--assert(sgs.Sanguosha:correctAttackRange(self.player,true,false))--攻击距离修正技能
-		--global_room:writeToConsole(sgs.Sanguosha:correctAttackRange(self.player,true,false))
+		--Global_room:writeToConsole(sgs.Sanguosha:correctAttackRange(self.player,true,false))
 		if self.player:getMark("jili") + 2 == sgs.weapon_range[class_name] + sgs.Sanguosha:correctAttackRange(self.player,true,false)
 		and v ~= self:getUsePriority(firstcard) then--防止无限自增死循环，防止两把武器相同距离死循环
 			if not (firstcard:isKindOf("Weapon") and sgs.weapon_range[class_name] == sgs.weapon_range[firstcard:getClassName()]) then
 				v = self:getUsePriority(firstcard) + 0.1
-				--global_room:writeToConsole("装备的优先度调整:")
-				--global_room:writeToConsole(v)
+				--Global_room:writeToConsole("装备的优先度调整:")
+				--Global_room:writeToConsole(v)
 			end
 		end
 	end
@@ -1216,7 +1215,7 @@ sgs.ai_skill_invoke.zhiman = function(self, data)
 	end
 	if self:hasSkill(sgs.masochism_skill, target) and self.player:canGetCard(target, "e")
 	and self:needDamagedEffects(target, self.player) and not self:isWeak(target) then
-		global_room:writeToConsole("制蛮防止卖血")
+		Global_room:writeToConsole("制蛮防止卖血")
 		return true
 	end
 	return false
@@ -1236,12 +1235,12 @@ sgs.ai_choicemade_filter.skillInvoke.zhiman = function(self, player, promptlist)
 end
 
 sgs.ai_skill_choice.zhiman = function(self, choices)
-	global_room:writeToConsole("制蛮命令变更")
+	Global_room:writeToConsole("制蛮命令变更")
 	return "yes"
 end
 
 sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
-	global_room:writeToConsole("制蛮变更选择")
+	Global_room:writeToConsole("制蛮变更选择")
 	if sgs.ai_AOE_data then--变更只能一次，判断aoe保留变更。是否命令变更没有信息判断，只能放这在
 		local use = sgs.ai_AOE_data:toCardUse()
 		local save_transform = false
@@ -1259,7 +1258,7 @@ sgs.ai_skill_choice["transform_zhiman"] = function(self, choices)
 				end
 			end
 			if save_transform then
-				global_room:writeToConsole("制蛮保留变更")
+				Global_room:writeToConsole("制蛮保留变更")
 				return "no"
 			end
 		end
@@ -1344,7 +1343,7 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 			if self.player:isFriendWith(p) then
 				if p:getActualGeneral2Name():match("sujiang") then
 					target = p
-					global_room:writeToConsole("散谣优先变更无副将")
+					Global_room:writeToConsole("散谣优先变更无副将")
 					break
 				end
 				local skills = sgs.QList2Table(p:getDeputySkillList(true,true,false))
@@ -1355,7 +1354,7 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 					end
 				end
 				if target then
-					global_room:writeToConsole("散谣优先变更限定技")
+					Global_room:writeToConsole("散谣优先变更限定技")
 					break
 				end
 			end
@@ -1471,7 +1470,7 @@ yongjin_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.YongjinCard = function(card, use, self)
-	--global_room:writeToConsole("进入函数勇进")
+	--Global_room:writeToConsole("进入函数勇进")
 	self:updatePlayers()
 	local equip_count = 0
 	local OffensiveHorse_needcount, Armor_needcount, DefensiveHorse_needcount, Weapon_needcount, Treasure_needcount =0,0,0,0,0
@@ -1774,20 +1773,20 @@ sgs.ai_skill_invoke.diancai = function(self, data)
 end
 
 sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
-	--global_room:writeToConsole("典财变更选择")
+	--Global_room:writeToConsole("典财变更选择")
 	local importantsklii = {"xiaoji", "xuanlue", "tianxiang", "guose", "yingzi_zhouyu", "zhukou"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
 		if table.contains(importantsklii, skill:objectName()) then--重要技能
-			global_room:writeToConsole("典财重要技能")
+			Global_room:writeToConsole("典财重要技能")
 			return "no"
 		end
 		if skill:objectName() == "diancai" and not self:isWeak() then--换自己
-			global_room:writeToConsole("典财换自己")
+			Global_room:writeToConsole("典财换自己")
 			return "no"
 		end
 		if skill:getFrequency() == sgs.Skill_Limited and not (skill:getLimitMark() ~= "" and self.player:getMark(skill:getLimitMark()) == 0) then--限定技未发动
-			global_room:writeToConsole("典财限定技能")
+			Global_room:writeToConsole("典财限定技能")
 			return "no"
 		end
 	end
@@ -1803,12 +1802,11 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 			return "no"
 		end
 	end
-	local zhoutai = sgs.findPlayerByShownSkillName("buqu")
-	if zhoutai and self.player:hasSkills("keshou|hunshang") and self:isWeak() then
+	if self.player:hasSkills("keshou|hunshang") and self:isWeak() and sgs.findPlayerByShownSkillName("buqu") then
 		return "no"
 	end
-	if self.player:inDeputySkills("buqu") and self.player:getPile("scars"):length() <= 4 then
-		return "no"
+	if self.player:inDeputySkills("buqu") then
+		return self.player:getPile("scars"):length() <= 4 and "no" or "yes"
 	end
 	if self.player:hasSkill("congcha") then
 		local congcha_draw = true
@@ -1825,14 +1823,14 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 
 	local g2name = self.player:getActualGeneral2Name()
 	if g2name:match("sujiang") then
-		global_room:writeToConsole("典财无副将")
+		Global_room:writeToConsole("典财无副将")
 		return "yes"
 	end
 	if (sgs.general_value[g2name] and sgs.general_value[g2name] < 7) or self.player:inDeputySkills("yinghun_sunjian") then
-		global_room:writeToConsole("典财副将值小于7")
+		Global_room:writeToConsole("典财副将值小于7")
 		return "yes"
 	end
-	global_room:writeToConsole("典财随机选择：" .. choices)
+	Global_room:writeToConsole("典财随机选择：" .. choices)
 	choices = choices:split("+")
 	return choices[math.random(1,#choices)]
 end
@@ -1898,15 +1896,15 @@ sgs.ai_skill_use_func.FlameMapCard = function(card,use,self)
 	local full = (sunquan:getPile("flame_map"):length() >= 5)
 	sgs.ai_use_priority.FlameMapCard = 0
 	if self.player:hasSkills(sgs.lose_equip_skill) then
-		--global_room:writeToConsole("烽火弃置装备技能")
+		--Global_room:writeToConsole("烽火弃置装备技能")
 		for _, hcard in sgs.qlist(self.player:getCards("h")) do
 			if hcard:isKindOf("EquipCard") and self:getSameEquip(hcard) then
-				--global_room:writeToConsole("弃置装备技能有相同武器：" .. self:getSameEquip(hcard):getLogName())
+				--Global_room:writeToConsole("弃置装备技能有相同武器：" .. self:getSameEquip(hcard):getLogName())
 				local dummy_use = {isDummy = true}
 				self:useEquipCard(hcard, dummy_use)
 				if dummy_use.card and dummy_use.card:isKindOf("EquipCard") then
 					sgs.ai_use_priority.FlameMapCard = 20
-					--global_room:writeToConsole("弃置装备技能有相同武器2：" .. self:getSameEquip(hcard):getLogName())
+					--Global_room:writeToConsole("弃置装备技能有相同武器2：" .. self:getSameEquip(hcard):getLogName())
 					use.card = sgs.Card_Parse("@FlameMapCard=" .. self:getSameEquip(hcard):getEffectiveId() .. "&showforviewhas")
 					return
 				end
@@ -2328,7 +2326,7 @@ function sgs.readGeneralValuefromtxt()--读入ai-selector/general-value.txt
 			w = string.match(line, "^(%w+_%w+)")
 		end
 		if w and n then
-			--global_room:writeToConsole(w.."|"..n)
+			--Global_room:writeToConsole(w.."|"..n)
 			singlevalue[w] = tonumber(n)
 		end
 	end
@@ -2347,7 +2345,7 @@ function sgs.readGeneralPairValuefromtxt()--读入ai-selector/pair-value.txt
 			ww = string.match(line, "^(%w+_%w+%s+%w+_%w+)")
 		end
 		if ww and nn then
-			--global_room:writeToConsole(ww.."|"..nn)
+			--Global_room:writeToConsole(ww.."|"..nn)
 			local g1,g2 = string.match(ww, "^(%w+)"), string.match(ww, "(%w+)$")
 			local v1,v2 = string.match(nn, "^(%d+)"), string.match(nn, "(%d+)$")
 			value[g1.."+"..g2] = math.max(tonumber(v1),tonumber(v2))
@@ -2412,14 +2410,14 @@ sgs.ai_skill_invoke.transform = function(self, data)
 end
 
 sgs.ai_skill_choice.transform = function(self, generals)
-	global_room:writeToConsole("开始变更副将！！")
+	Global_room:writeToConsole("开始变更副将！！")
 --[[
 	for name, value in pairs(sgs.general_value) do
-		global_room:writeToConsole("单将表:"..sgs.Sanguosha:translate(name).."|"..value)
+		Global_room:writeToConsole("单将表:"..sgs.Sanguosha:translate(name).."|"..value)
 	end
 
 	for pairname, value in pairs(sgs.general_pair_value) do
-		global_room:writeToConsole("配对表:"..pairname .."|".. value)
+		Global_room:writeToConsole("配对表:"..pairname .."|".. value)
 	end
 ]]
 	generals = generals:split("+")
@@ -2434,7 +2432,7 @@ sgs.ai_skill_choice.transform = function(self, generals)
 	local pairvalue = 0
 	local pairchoice
 	for _, g2name in ipairs(generals) do
-		global_room:writeToConsole("当前可选武将:"..sgs.Sanguosha:translate(g2name).."|"..sgs.general_value[g2name])
+		Global_room:writeToConsole("当前可选武将:"..sgs.Sanguosha:translate(g2name).."|"..sgs.general_value[g2name])
 		for pairname, value in pairs(sgs.general_pair_value) do
 			if (g1name .. "+" .. g2name == pairname or g2name .. "+" .. g1name == pairname) then
 				if value < 10 and #generals > 0 then--去掉不合适匹配武将
@@ -2443,7 +2441,7 @@ sgs.ai_skill_choice.transform = function(self, generals)
 				or pairname == "masu+menghuo" or pairname == "masu+zhurong" then--单独去掉一些选将配对值
 					continue
 				elseif value > pairvalue  then
-					global_room:writeToConsole("与主将配对:"..pairname.."|"..value)
+					Global_room:writeToConsole("与主将配对:"..pairname.."|"..value)
 					pairvalue = value
 					pairchoice = g2name
 				end
@@ -2470,9 +2468,9 @@ sgs.ai_skill_choice.transform = function(self, generals)
 		choice = singlechoice
 	end
 	if choice then
-		global_room:writeToConsole("变更副将选择:"..sgs.Sanguosha:translate(choice))
+		Global_room:writeToConsole("变更副将选择:"..sgs.Sanguosha:translate(choice))
 		return choice
 	end
-	global_room:writeToConsole("随机变更副将！！")
+	Global_room:writeToConsole("随机变更副将！！")
 	return generals[math.random(1,#generals)]
 end

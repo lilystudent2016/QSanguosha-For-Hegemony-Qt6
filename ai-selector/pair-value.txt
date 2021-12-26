@@ -106,7 +106,7 @@ jiaxu yanliangwenchou							20 20
 jiaxu diaochan									21 21
 kongrong diaochan								22 21
 kongrong huatuo									23 23
-kongrong pengyang								22 21
+kongrong pengyang								23 22
 kongrong caiwenji								21 20
 yanliangwenchou mateng							22 22
 yanliangwenchou lijueguosi						21 21

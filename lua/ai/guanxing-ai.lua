@@ -172,7 +172,7 @@ local function GuanXing(self, cards)
 	local luoshen_flag = false
 	local next_judge = {}
 	local next_player
-	for _, p in sgs.qlist(global_room:getOtherPlayers(self.player)) do
+	for _, p in sgs.qlist(Global_room:getOtherPlayers(self.player)) do
 		if p:faceUp() then next_player = p break end
 	end
 	next_player = next_player or self.player:faceUp() and self.player or self.player:getNextAlive()
@@ -461,7 +461,7 @@ local function WuXin(self, cards)
 	local judged_list = {}
 	local has_judged = false
 	local next_player
-	for _, p in sgs.qlist(global_room:getOtherPlayers(self.player)) do
+	for _, p in sgs.qlist(Global_room:getOtherPlayers(self.player)) do
 		if p:faceUp() then next_player = p break end
 	end
 	next_player = next_player or self.player:faceUp() and self.player or self.player:getNextAlive()

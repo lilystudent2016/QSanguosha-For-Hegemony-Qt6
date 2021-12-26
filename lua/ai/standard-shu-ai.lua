@@ -154,7 +154,7 @@ end
 sgs.dynamic_value.benefit.RendeCard = true
 
 sgs.ai_skill_choice["rende_basic"] = function(self, choices)--暂时简单处理
-	global_room:writeToConsole("仁德选择:"..self.player:objectName().." :"..choices)
+	Global_room:writeToConsole("仁德选择:"..self.player:objectName().." :"..choices)
 	choices = choices:split("+")
 	if table.contains(choices, "peach") and self.player:getHp() < 3 then
 		return "peach"
@@ -217,7 +217,7 @@ end
 
 sgs.ai_skill_use["@@rende_slash"] = function(self, prompt, method)
 	local card_name = prompt:split(":")[4]
-	global_room:writeToConsole("仁德杀:"..prompt.." 杀:"..card_name)
+	Global_room:writeToConsole("仁德杀:"..prompt.." 杀:"..card_name)
 	if not card_name or not self.rende_slashtarget then return "." end
 	local card = sgs.Sanguosha:cloneCard(card_name)
 	card:setSkillName("_rende")
@@ -496,7 +496,7 @@ sgs.ai_view_as.longdan = function(card, player, card_place)
 end
 
 sgs.ai_skill_playerchosen["longdan_damage"] = function(self, targets)
-	local target =  sgs.ai_skill_playerchosen.damage(self, targets)
+	local target = sgs.ai_skill_playerchosen.damage(self, targets)
 	if self:isFriend(target) then
 		return {}
 	end
@@ -561,7 +561,7 @@ sgs.ai_skill_choice.tieqi = function(self, choices, data)
 					--[[ .. "|" .. sgs.usefull_skill]]--更新技能名单
 			for _, skill_name in ipairs(skills_name) do
 				local skill = sgs.Sanguosha:getSkill(skill_name)
-				if target:inHeadSkills(skill_name) and skill and skill:getFrequency() ~= sgs.Skill_Compulsory then
+				if target:inHeadSkills(skill_name) and target:ownSkill(skill_name) and skill and skill:getFrequency() ~= sgs.Skill_Compulsory then
 					return "head_general"
 				end
 			end
@@ -572,7 +572,7 @@ sgs.ai_skill_choice.tieqi = function(self, choices, data)
 end
 
 sgs.ai_skill_cardask["@tieji-discard"] = function(self, data, pattern, target, target2, arg, arg2)
-	--global_room:writeToConsole("铁骑判定弃牌")
+	--Global_room:writeToConsole("铁骑判定弃牌")
 	if not arg or self.player:isKongcheng() or self.player:isCardLimited(sgs.cloneCard("jink"), sgs.Card_MethodResponse) then
 		return "."
 	end
@@ -644,6 +644,7 @@ sgs.jizhi_keep_value = {
 	AwaitExhausted = 5.3,
 	BefriendAttacking = 5.8,
 	FightTogether = 5.6,
+	Drowning = 5,
 	BurningCamps = 5.6,
 	AllianceFeast = 6
 }
@@ -793,7 +794,7 @@ huoji_skill.getTurnUseCard = function(self)
 		if self.player:hasSkill("jizhi") and acard:isKindOf("TrickCard") then
 			fireValue = fireValue - 4
 		end
-		if acard:isRed() and not isCard("Peach", acard, self.player) and (self:getDynamicUsePriority(acard) < fireValue or self:getOverflow() > 0) then
+		if acard:isRed() and not isCard("Peach", acard, self.player) and (self:getUseValue(acard) < fireValue or self:getOverflow() > 0) then
 			if acard:isKindOf("Slash") and self:getCardsNum("Slash") == 1 then
 				local keep
 				local dummy_use = { isDummy = true , to = sgs.SPlayerList() }
@@ -982,6 +983,10 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 		end
 	end
 	if self.player:hasSkill("shengxi") then
+		shouldUse = shouldUse -  1
+	end
+	local liuba = sgs.findPlayerByShownSkillName("tongdu")
+	if liuba and self.player:isFriendWith(liuba) then
 		shouldUse = shouldUse -  1
 	end
 	if shouldUse >= 2 then return false end

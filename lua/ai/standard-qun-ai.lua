@@ -63,7 +63,7 @@ local chuli_skill = {}
 chuli_skill.name = "chuli"
 table.insert(sgs.ai_skills, chuli_skill)
 chuli_skill.getTurnUseCard = function(self, inclusive)
-	--global_room:writeToConsole("进入函数除疠")
+	--Global_room:writeToConsole("进入函数除疠")
 	if not self.player:canDiscard(self.player, "he") or self.player:hasUsed("ChuliCard") then return nil end
 	self.chuli_id_choice = {}
 	local cards = self.player:getCards("he")
@@ -90,11 +90,11 @@ chuli_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
-	--global_room:writeToConsole("函数使用除疠")
+	--Global_room:writeToConsole("函数使用除疠")
 	local players = self:findPlayerToDiscard("he", false, sgs.Card_MethodDiscard, nil, true)
 	local kingdoms = {}
 	local targets = {}
-	--global_room:writeToConsole("除疠预选数"..#players)
+	--Global_room:writeToConsole("除疠预选数"..#players)
 	for _, player in ipairs(players) do
 		if not self:isFriend(player) and not table.contains(kingdoms, player:getKingdom()) then
 			table.insert(targets, player)
@@ -107,7 +107,7 @@ sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
 			table.insert(kingdoms, player:getKingdom())
 		end
 	end
-	--global_room:writeToConsole("除疠目标数"..#targets)
+	--Global_room:writeToConsole("除疠目标数"..#targets)
 	if #targets == 0 then return end
 	for _, p in ipairs(targets) do
 		local id = self:askForCardChosen(p, "he", "chuli_dismantlement", sgs.Card_MethodDiscard)
@@ -117,21 +117,21 @@ sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
 			if id and chosen_card and (p:hasEquip(chosen_card) or sgs.Sanguosha:getCard(id):getSuit() == sgs.Card_Spade) then
 				if not use.card then use.card = card end
 				self.chuli_id_choice[p:objectName()] = id
-				--global_room:writeToConsole("使用除疠目标"..p:objectName()..":"..self.chuli_id_choice[p:objectName()])
+				--Global_room:writeToConsole("使用除疠目标"..p:objectName()..":"..self.chuli_id_choice[p:objectName()])
 				if use.to and use.to:length() <3 then use.to:append(p) end
 			end
 		end
 		if id then
 			if not use.card then use.card = card end
 			self.chuli_id_choice[p:objectName()] = id
-			--global_room:writeToConsole("使用除疠目标"..p:objectName()..":"..self.chuli_id_choice[p:objectName()])
+			--Global_room:writeToConsole("使用除疠目标"..p:objectName()..":"..self.chuli_id_choice[p:objectName()])
 			if use.to and use.to:length() <3 then use.to:append(p) end
 		end
 	end
 end
 
 sgs.ai_skill_cardchosen.chuli = function(self, who, flags)
-	--global_room:writeToConsole("函数选择除疠牌")
+	--Global_room:writeToConsole("函数选择除疠牌")
 	return self.chuli_id_choice[who:objectName()]
 end
 
@@ -977,7 +977,7 @@ function sgs.ai_slash_prohibit.leiji(self, from, to, card)
 		return false
 	end
 	if sgs.card_lack[to:objectName()]["Jink"] == 2 then return true end
-	if getKnownCard(to, global_room:getCurrent(), "Jink", true) >= 1 or (self:hasSuit("spade", true, to) and hcard >= 2) or hcard >= 4 then return true end
+	if getKnownCard(to, Global_room:getCurrent(), "Jink", true) >= 1 or (self:hasSuit("spade", true, to) and hcard >= 2) or hcard >= 4 then return true end
 	if self:hasEightDiagramEffect(to) then return true end
 end
 
@@ -1313,7 +1313,7 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 		use.card = card
 		if not use.isDummy and use.to then
 			self.qingcheng = "zhonghui"
-			global_room:writeToConsole("倾城钟会:"..self.qingcheng)
+			Global_room:writeToConsole("倾城钟会:"..self.qingcheng)
 			use.to:append(zhonghui)
 		end
 		return
@@ -1323,7 +1323,7 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 		use.card = card
 		if not use.isDummy and use.to then
 			self.qingcheng = "sunchen"
-			global_room:writeToConsole("倾城孙綝:"..self.qingcheng)
+			Global_room:writeToConsole("倾城孙綝:"..self.qingcheng)
 			use.to:append(sunchen)
 		end
 		return
@@ -1333,7 +1333,7 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 		use.card = card
 		if not use.isDummy and use.to then
 			self.qingcheng = "gongsunyuan"
-			global_room:writeToConsole("倾城公孙渊:"..self.qingcheng)
+			Global_room:writeToConsole("倾城公孙渊:"..self.qingcheng)
 			use.to:append(gongsunyuan)
 		end
 		return
@@ -1344,7 +1344,7 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 		use.card = card
 		if not use.isDummy and use.to then
 			self.qingcheng = "zhoutai"
-			global_room:writeToConsole("倾城周泰:"..self.qingcheng)
+			Global_room:writeToConsole("倾城周泰:"..self.qingcheng)
 			use.to:append(zhoutai)
 		end
 		return
@@ -1373,9 +1373,9 @@ sgs.ai_skill_use_func.QingchengCard = function(card, use, self)
 end
 
 sgs.ai_skill_choice.qingcheng = function(self, choices)
-	--global_room:writeToConsole("倾城选择:"..choices)
+	--Global_room:writeToConsole("倾城选择:"..choices)
 	if self.qingcheng then
-		--global_room:writeToConsole("倾城预选:"..self.qingcheng)
+		--Global_room:writeToConsole("倾城预选:"..self.qingcheng)
 		return self.qingcheng
 	end
 	local choice_table = choices:split("+")

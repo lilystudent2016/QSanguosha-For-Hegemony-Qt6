@@ -43,7 +43,7 @@ function sgs.isGoodHp(player, observer)
 	else
 		local n = 0
 		for _, friend in ipairs(sgs.recorder:getFriends(player)) do
-			if global_room:getCurrent():hasShownSkill("wansha") and player:objectName() ~= friend:objectName() then continue end
+			if Global_room:getCurrent():hasShownSkill("wansha") and player:objectName() ~= friend:objectName() then continue end
 			n = n + getCardsNum("Peach", friend, observer)
 		end
 		return n > 0
@@ -52,11 +52,11 @@ function sgs.isGoodHp(player, observer)
 end
 
 function sgs.isGoodTarget(player, targets, self, isSlash)
-	if not self then global_room:writeToConsole(debug.traceback()) end
+	if not self then Global_room:writeToConsole(debug.traceback()) end
 	-- self = self or sgs.ais[player:objectName()]
 	local arr = { "jieming", "yiji", "fangzhu" }--其他卖血技能？
 	local m_skill = false
-	local attacker = global_room:getCurrent()
+	local attacker = Global_room:getCurrent()
 
 	if targets and type(targets)=="table" then
 		if #targets == 1 then return true end
@@ -93,7 +93,7 @@ function sgs.isGoodTarget(player, targets, self, isSlash)
 end
 
 function sgs.getDefenseSlash(player, self)
-	if not player or not self then global_room:writeToConsole(debug.traceback()) return 0 end
+	if not player or not self then Global_room:writeToConsole(debug.traceback()) return 0 end
 	local attacker = self.player
 	local unknownJink = getCardsNum("Jink", player, attacker)
 	local defense = unknownJink
@@ -201,7 +201,7 @@ function sgs.getDefenseSlash(player, self)
 
 	if player:getHp() <= 2 then defense = defense - 0.4 end
 
-	local playernum = global_room:alivePlayerCount()
+	local playernum = Global_room:alivePlayerCount()
 	if (player:getSeat()-attacker:getSeat()) % playernum >= playernum-2 and playernum>3 and player:getHandcardNum()<=2 and player:getHp()<=2 then
 		defense = defense - 0.4
 	end
@@ -1425,13 +1425,17 @@ function sgs.ai_cardsview.Spear(self, class_name, player, cards)
 		if not cards then
 			cards = {}
 			for _, c in sgs.qlist(player:getHandcards()) do
-				if sgs.cardIsVisible(c, player, self.player) and c:isKindOf("Slash") then continue end
-				table.insert(cards, c)
+				if sgs.cardIsVisible(c, player, self.player) and c:isKindOf("Slash") then
+				else
+					table.insert(cards, c)
+				end
 			end
 			for _, id in sgs.qlist(player:getHandPile()) do
 				local c = sgs.Sanguosha:getCard(id)
-				if sgs.cardIsVisible(c, player, self.player) and c:isKindOf("Slash") then continue end
-				table.insert(cards, c)
+				if sgs.cardIsVisible(c, player, self.player) and c:isKindOf("Slash") then
+				else
+					table.insert(cards, c)
+				end
 			end
 		end
 		if #cards < 2 then return {} end
@@ -3002,18 +3006,19 @@ function SmartAI:useCardIndulgence(card, use)
 		if zhanghe_seat > 0 and (self:playerGetRound(zhanghe) <= self:playerGetRound(enemy) and self:enemiesContainsTrick() <= 1 or not enemy:faceUp()) then
 			return -101
 		end
-		if self:willSkipDrawPhase(enemy) and self:getOverflow() <= 0 and enemy:getHandcardNum() < (2 - enemy:getMark("@halfmaxhp"))
+		if self:willSkipDrawPhase(enemy) and self:getOverflow() <= 0 and enemy:getHandcardNum() + enemy:getMark("@halfmaxhp") < 2
 		and enemy:getMark("@firstshow") < 1 and enemy:getMark("@careerist") < 1 then
 			return -101
 		end
 
 		local value = enemy:getHandcardNum() - enemy:getHp()
 
-		if enemy:hasShownSkills("lijian|fanjian|dimeng|jijiu|jieyin|zhiheng|rende") then value = value + 10 end
-		if enemy:hasShownSkills("qixi|guose|duanliang|luoshen|jizhi|wansha") then value = value + 5 end
-		if enemy:hasShownSkills("guzheng|duoshi") then value = value + 3 end
+		if enemy:hasShownSkills(sgs.priority_skill) then value = value + 5 end
+		--if enemy:hasShownSkills("qixi|guose|duanliang|luoshen|jizhi|wansha") then value = value + 5 end
+		--if enemy:hasShownSkills("guzheng|duoshi") then value = value + 3 end
 		if self:isWeak(enemy) then value = value + 3 end
 		if self:getOverflow(enemy) > 1 then value = value + 4 end
+		if getKnownCard(enemy, self.player, "Crossbow", false) > 0 then value = value + 4 end
 		if enemy:isLord() then value = value + 3 end
 		if enemy:getRole() == "careerist" and enemy:getActualGeneral1():getKingdom() == "careerist" then
 			value = value + 3
@@ -3021,9 +3026,9 @@ function SmartAI:useCardIndulgence(card, use)
 
 		if self:objectiveLevel(enemy) < 3 then value = value - 10 end
 		if not enemy:faceUp() then value = value - 10 end
-		if enemy:hasShownSkills("keji|shensu") then value = value - enemy:getHandcardNum() end
-		if enemy:hasShownSkills("lirang|guanxing") then value = value - 5 end
-		if enemy:hasShownSkills("tuxi|tiandu|tianxiang|zhuwei") then value = value - 3 end
+		if enemy:hasShownSkills("shensu") then value = value - enemy:getHandcardNum() end
+		if enemy:hasShownSkills("keji|lirang|shengxi|xingzhao|tongdu") then value = value - 4 end
+		if enemy:hasShownSkills("guanxing|tuxi|tianxiang|"..sgs.wizard_skill) then value = value - 3 end
 		if not sgs.isGoodTarget(enemy, self.enemies, self) then value = value - 1 end
 		if getKnownCard(enemy, self.player, "Dismantlement", true) > 0 then value = value + 2 end
 		value = value + (self.room:alivePlayerCount() - self:playerGetRound(enemy)) / 2

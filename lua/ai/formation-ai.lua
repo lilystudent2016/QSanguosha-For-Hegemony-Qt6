@@ -759,7 +759,7 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 					if self.player:getPile("wooden_ox"):isEmpty() then
 						return few_hnum and 0 or 2
 					else
-						return 4
+						return 6
 					end
 				end
 				return few_hnum and 1 or 4

@@ -276,7 +276,7 @@ function SmartAI:findTuxiTarget()
 	local draw_num = 2--新突袭
 	if self.player:hasSkills("jieyue|jieyue_egf") then
 		draw_num = draw_num + math.random(0, self.player:getMark("JieyueExtraDraw")*3)
-		--global_room:writeToConsole("抽卡数:"..draw_num.."|"..self.player:getMark("JieyueExtraDraw")*3)
+		--Global_room:writeToConsole("抽卡数:"..draw_num.."|"..self.player:getMark("JieyueExtraDraw")*3)
 	end
 	if self.player:hasSkill("zisui") then
 		draw_num = draw_num + math.random(0, self.player:getPile("disloyalty"):length())
@@ -1175,7 +1175,7 @@ duanliang_skill.getTurnUseCard = function(self)
 	self:sortByUseValue(cards, true)
 
 	for _,acard in ipairs(cards)  do
-		if acard:isBlack() and (acard:isKindOf("BasicCard") or acard:isKindOf("EquipCard")) and (self:getDynamicUsePriority(acard) < sgs.ai_use_value.SupplyShortage) then
+		if acard:isBlack() and (acard:isKindOf("BasicCard") or acard:isKindOf("EquipCard")) and (self:getUseValue(acard) < sgs.ai_use_value.SupplyShortage) then
 			card = acard
 			break
 		end
@@ -1225,13 +1225,13 @@ function sgs.ai_skill_invoke.jushou(self, data)
 	end
 
 	if to_count:length() < 3 or to_count:length() > 5 then
-		--global_room:writeToConsole("据守势力小于3或大于5")
+		--Global_room:writeToConsole("据守势力小于3或大于5")
 		return true
 	end
 
 	for _, friend in ipairs(self.friends_noself) do
 		if friend:hasShownSkill("fangzhu") and to_count:length() > 3 then
-			--global_room:writeToConsole("据守有放逐队友")
+			--Global_room:writeToConsole("据守有放逐队友")
 			return true
 		end
 	end
@@ -1312,7 +1312,7 @@ qiangxi_skill.getTurnUseCard = function(self)
 	end
 end
 
-sgs.ai_skill_use_func.QiangxiCard = function(card, use, self)
+sgs.ai_skill_use_func.QiangxiCard = function(QiangxiCard, use, self)
 	local weapon = self.player:getWeapon()
 	if weapon then
 		local hand_weapon, cards
@@ -1486,7 +1486,7 @@ end
 sgs.ai_skill_invoke.xingshang = true
 
 function SmartAI:toTurnOver(player, n, reason) -- @todo: param of toTurnOver
-	if not player then global_room:writeToConsole(debug.traceback()) return end
+	if not player then Global_room:writeToConsole(debug.traceback()) return end
 	n = n or 0
 	if not player:faceUp() then return false end
 	if reason and reason == "fangzhu" and player:getHp() == 1 and sgs.ai_AOE_data then
@@ -1591,6 +1591,12 @@ sgs.ai_skill_discard["fangzhu_discard"] = function(self, discard_num, min_num, o
 	end
 	if (self.player:isRemoved() and not self.player:isNude()) or (self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty()) then
 		return self:askForDiscard("dummy_reason", 1, 1, false, true)
+	end
+	if self.player:getMark("#xiongnve_avoid") > 0 then
+		return {}
+	end
+	if self.player:hasSkill("jushou") and self.player:getPhase() <= sgs.Player_Finish then
+		return {}
 	end
 	if not self.player:faceUp() or self:isWeak() or self.player:isNude() then
 		return {}
@@ -1746,5 +1752,5 @@ end
 
 
 sgs.ai_cardneed.xiaoguo = function(to, card)
-	return getKnownCard(to, global_room:getCurrent(), "BasicCard", true) == 0 and card:getTypeId() == sgs.Card_TypeBasic
+	return getKnownCard(to, Global_room:getCurrent(), "BasicCard", true) == 0 and card:getTypeId() == sgs.Card_TypeBasic
 end

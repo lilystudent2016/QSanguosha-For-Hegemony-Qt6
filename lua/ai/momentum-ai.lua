@@ -307,7 +307,7 @@ sgs.ai_skill_use_func.DuanxieCard = function(card, use, self)
 end
 
 sgs.ai_card_intention.DuanxieCard = 60
-sgs.ai_use_priority.DuanxieCard = 0
+sgs.ai_use_priority.DuanxieCard = 0.5
 
 sgs.ai_skill_invoke.fenming = function(self, data)
 	local value, count = 0, 0
@@ -318,7 +318,7 @@ sgs.ai_skill_invoke.fenming = function(self, data)
 				if self:needToThrowArmor(player) then
 					value = value + 1
 				elseif player:getHandcardNum() == 1 and self:needKongcheng(player) then
-					value = value + 0.2
+					value = value + 1
 				elseif self.player:canDiscard(player, "he") then
 					local dec = self:isWeak(player) and 1.2 or 0.8
 					if player:objectName() == self.player:objectName() then dec = dec / 1.5 end
@@ -335,6 +335,8 @@ sgs.ai_skill_invoke.fenming = function(self, data)
 						value = value + dec
 					end
 				end
+			else
+				value = value + 0.5
 			end
 		end
 	end
@@ -599,7 +601,7 @@ end
 sgs.ai_skill_invoke.huangjinsymbol = true
 
 sgs.ai_skill_exchange["huangjinsymbol"] = function(self,pattern,max_num,min_num,expand_pile)
-	global_room:writeToConsole("君角防止体力流失")
+	Global_room:writeToConsole("君角防止体力流失")
 	local ints = sgs.QList2Table(self.player:getPile("heavenly_army"))
 	local int = getHongfaCard(ints)
 	if int then

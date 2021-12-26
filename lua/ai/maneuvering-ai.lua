@@ -290,8 +290,8 @@ function SmartAI:useCardSupplyShortage(card, use)
 
 		if self:objectiveLevel(enemy) < 3 then value = value - 10 end
 		if not enemy:faceUp() then value = value - 10 end
-		if enemy:hasShownSkills("keji|shensu") then value = value - enemy:getHandcardNum() end
-		if enemy:hasShownSkills("guanxing|tiandu|guidao|zhuwei") then value = value - 5 end
+		if enemy:hasShownSkills("shensu") then value = value - enemy:getHandcardNum() end
+		if enemy:hasShownSkills("guanxing|"..sgs.wizard_skill) then value = value - 5 end
 		if not sgs.isGoodTarget(enemy, self.enemies, self) then value = value - 1 end
 		if self:needKongcheng(enemy) then value = value - 1 end
 		return value
@@ -481,7 +481,7 @@ function SmartAI:useCardIronChain(card, use)
 		if friend:isChained() and not self:isGoodChainPartner(friend) and self:hasTrickEffective(card, friend, self.player) then
 			if friend:containsTrick("lightning") then
 				table.insert(friendtargets, friend)
-			else
+			elseif not friend:hasShownSkill("fenming") then
 				table.insert(friendtargets2, friend)
 			end
 		end
@@ -497,6 +497,7 @@ function SmartAI:useCardIronChain(card, use)
 	end
 
 	local chainSelf = self:hasTrickEffective(card, self.player, self.player) and not self.player:isChained()
+						and (not self.player:hasSkill("duanxie") or self.player:hasUsed("DuanxieCard"))
 						and (self:needToLoseHp(self.player, nil, nil, true) or self:needDamagedEffects(self.player))
 						and (self:getCardId("FireSlash") or self:getCardId("ThunderSlash")
 							or (self:getCardId("Slash") and self.player:hasWeapon("Fan"))
@@ -572,7 +573,7 @@ sgs.ai_skill_cardask["@fire-attack"] = function(self, data, pattern, target)
 						or self:isGoodChainTarget(target) or target:hasArmorEffect("Vine") then
 					needKeepPeach = false
 				end
-				if self.player:getHp() == 1 and not (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") > 1) then
+				if self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") < 2 then
 					needKeepPeach = true
 				end
 				if not needKeepPeach then

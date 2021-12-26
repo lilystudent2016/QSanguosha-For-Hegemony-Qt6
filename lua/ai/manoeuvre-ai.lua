@@ -329,10 +329,10 @@ sgs.ai_skill_invoke.yusui =  function(self, data)
   end
   self.yusui_target = data:toPlayer()
   if not self.yusui_target or not self:isEnemy(self.yusui_target)--暂不考虑自杀，参考SmartAI:SuicidebyKurou()
-  or (self.player:getHp() == 1 and self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
+  or (self.player:getHp() == 1 and self:getCardsNum({"Peach", "Analeptic"}) == 0) then
     return false
   end
-  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_targetr:getPile("heavenly_army"):isEmpty()
+  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_target:getPile("heavenly_army"):isEmpty()
   if (self.yusui_target:getHp() - math.max(self.player:getHp()-1, 1) > 1 and can_losehp)
   or (self.yusui_target:getHandcardNum() >= self.yusui_target:getMaxHp() and self.yusui_target:getHandcardNum() <= self.yusui_target:getMaxHp() + 2) then
     return true
@@ -342,7 +342,7 @@ end
 
 sgs.ai_skill_choice.yusui = function(self, choices, data)--没有来源的data，暂时用self
   choices = choices:split("+")
-  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_targetr:getPile("heavenly_army"):isEmpty()
+  local can_losehp = not self.yusui_target:hasSkill("hongfa") or self.yusui_target:getPile("heavenly_army"):isEmpty()
   if (self.yusui_target:getHp() - self.player:getHp() > 1) and can_losehp then
     self.yusui_target = nil
     return "losehp"
@@ -394,7 +394,7 @@ sgs.ai_skill_use_func.BoyanCard = function(card, use, self)
     target = self.friends_noself[1]
   end
   if target then
-    global_room:writeToConsole("驳言目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("驳言目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -434,7 +434,7 @@ sgs.ai_skill_use_func.BoyanZonghengCard = function(card, use, self)
     target = self.enemies[1]
   end
   if target then
-    global_room:writeToConsole("驳言纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("驳言纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -480,7 +480,7 @@ sgs.ai_skill_use_func.WeimengCard = function(card, use, self)
     end
   end
   if target then
-    global_room:writeToConsole("危盟目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("危盟目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -583,7 +583,7 @@ sgs.ai_skill_use_func.WeimengZonghengCard = function(card, use, self)
     end
   end
   if target then
-    global_room:writeToConsole("危盟纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("危盟纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -623,7 +623,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
         for _, c in ipairs(hcards) do
           if c:getNumber() + (self.player:hasShownSkill("yingyang") and 3 or 0) > friend_number then
             sgs.ai_use_priority.FenglveCard = 4.2
-            global_room:writeToConsole("锋略队友1:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+            Global_room:writeToConsole("锋略队友1:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
             self.fenglve_card = c:getEffectiveId()
             use.card = FLCard
             if use.to then
@@ -635,7 +635,7 @@ sgs.ai_skill_use_func.FenglveCard = function(FLCard, use, self)
       end
       if not friend_min_card and max_point > 8 then
         sgs.ai_use_priority.FenglveCard = 4.2--顺之后
-        global_room:writeToConsole("锋略队友2:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
+        Global_room:writeToConsole("锋略队友2:"..sgs.Sanguosha:translate(friend:getGeneralName()).."/"..sgs.Sanguosha:translate(friend:getGeneral2Name()))
         self.fenglve_card = max_card:getEffectiveId()
         use.card = FLCard
         if use.to then
@@ -874,9 +874,6 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
     if tp:getMark("#xiongnve_avoid") > 0 then
       n = n - 1
     end
-    if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--or from:hasSkill("xinghuo")兴火增加伤害在前
-      n = n + 1
-    end
     local gongqing_avoid = false
     if tp:hasShownSkill("gongqing") then
       if from:getAttackRange() < 3 then
@@ -891,8 +888,11 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
       n = 1
     else
       n = n * 2
+      if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--暗涌增加伤害时机在藤甲前
+        n = n + 1
+      end
     end
-    global_room:writeToConsole("暗涌预测伤害:"..sgs.Sanguosha:translate(string.format("SEAT(%s)",tp:getSeat()))..n)
+    Global_room:writeToConsole("暗涌预测伤害:"..sgs.Sanguosha:translate(string.format("SEAT(%s)",tp:getSeat()))..n)
     return n
   end
 

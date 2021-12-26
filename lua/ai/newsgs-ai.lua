@@ -66,7 +66,7 @@ sgs.ai_skill_use_func.DaoshuCard = function(card, use, self)
 				if suit == enemy:getHandcardNum() then--如果已知花色等于手牌数
 					sgs.ai_use_priority.DaoshuCard = 5.3
 					self.daoshu_suit = table.indexOf(known_suit,suit) - 1
-					--global_room:writeToConsole("已知花色:"..self.daoshu_suit)
+					--Global_room:writeToConsole("已知花色:"..self.daoshu_suit)
 					use.card = card
 					if use.to then
 						use.to:append(enemy)
@@ -91,7 +91,7 @@ sgs.ai_skill_use_func.DaoshuCard = function(card, use, self)
 			if enemy:hasSkill("hongyan") then--针对小乔
 				self.daoshu_suit = 2
 			end
-			--global_room:writeToConsole("最多的花色数量:"..max_suit)
+			--Global_room:writeToConsole("最多的花色数量:"..max_suit)
 			use.card = card
 			if use.to then
 				use.to:append(enemy)
@@ -102,19 +102,19 @@ sgs.ai_skill_use_func.DaoshuCard = function(card, use, self)
 end
 
 sgs.ai_skill_suit.daoshu= function(self)--有空可以增加配合合纵连横，估计需要改合纵连横的ai
-	--global_room:writeToConsole("选择花色:"..self.daoshu_suit)
+	--Global_room:writeToConsole("选择花色:"..self.daoshu_suit)
 	return self.daoshu_suit
 end
 
 sgs.ai_skill_cardask["@daoshu-give"] = function(self, data, pattern, target, target2)
-	--global_room:writeToConsole("盗书返还函数")
+	--Global_room:writeToConsole("盗书返还函数")
 	if not target2 or target2:isDead() then return "." end
 	local cards = {}
-	--global_room:writeToConsole("pattern参数:"..pattern)
+	--Global_room:writeToConsole("pattern参数:"..pattern)
 	local patternt = pattern:split("|")
-	--global_room:writeToConsole("pattern花色:"..patternt[2])
+	--Global_room:writeToConsole("pattern花色:"..patternt[2])
 	local suit = (patternt[2]):split(",")
-	--global_room:writeToConsole("盗书返还函数花色:"..table.concat(suit,","))
+	--Global_room:writeToConsole("盗书返还函数花色:"..table.concat(suit,","))
 	for _,c in sgs.qlist(self.player:getCards("h")) do
 		if table.contains(suit, c:getSuitString()) then
 			table.insert(cards, c)
@@ -287,7 +287,7 @@ sgs.ai_use_priority.JingheCard = 9.23--远交近攻和无中生有之后，更�
 
 sgs.ai_skill_choice.jinghe_skill = function(self, choices, data)
 	--"leiji_tianshu+yinbing+huoqi+guizhu+xianshou+lundao+guanyue+yanzheng+cancel"
-	global_room:writeToConsole("共修选择"..self.player:objectName()..":"..choices)
+	Global_room:writeToConsole("共修选择"..self.player:objectName()..":"..choices)
 	local current = self.room:getCurrent()
 	local objnames = current:getTag("JingheTargets"):toString():split("+")
 	local targets = {}
@@ -425,7 +425,7 @@ function sgs.ai_slash_prohibit.leiji_tianshu(self, from, to, card)
 		return false
 	end
 	if sgs.card_lack[to:objectName()]["Jink"] == 2 then return true end
-	if getKnownCard(to, global_room:getCurrent(), "Jink", true) >= 1 or (self:hasSuit("spade", true, to) and hcard >= 2) or hcard >= 4 then return true end
+	if getKnownCard(to, Global_room:getCurrent(), "Jink", true) >= 1 or (self:hasSuit("spade", true, to) and hcard >= 2) or hcard >= 4 then return true end
 	if self:hasEightDiagramEffect(to) then return true end
 end
 

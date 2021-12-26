@@ -71,12 +71,14 @@ sgs.ai_skill_choice.heg_nullification = function(self, choice, data)
 end
 
 sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--技能触发顺序
+	Global_room:writeToConsole("多技能触发选择:" .. choices)
+	--Global_room:writeToConsole("多技能触发data:" .. data:type())--swig没有该方法
 	local skillTrigger = false
 	local skillnames = choices:split("+")
 	table.removeOne(skillnames, "GameRule_AskForGeneralShowHead")
 	table.removeOne(skillnames, "GameRule_AskForGeneralShowDeputy")
-	--table.removeOne(skillnames, "cancel")
 	if #skillnames > 1 then
+		table.removeOne(skillnames, "cancel")
 		skillTrigger = true
 	end
 
@@ -88,11 +90,14 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		if string.find(choices, "shicai") then--卖血技能先恃才弃牌
 			local damage = data:toDamage()
 			if damage.damage > 1 then
+				if string.find(choices, "beige") then
+					return "beige"
+				end
 				if string.find(choices, "qianhuan") then
 					return "qianhuan"
 				end
-				if string.find(choices, "beige") then
-					return "beige"
+				if string.find(choices, "fudi") then
+					return "fudi"
 				end
 				return "shicai"
 			end
@@ -102,7 +107,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 				self:sort(self.enemies, "hp")
 				for _, p in ipairs(self.enemies) do
 					if self:isWeak(p) then
-						global_room:writeToConsole("望归优先")
+						Global_room:writeToConsole("望归优先")
 						return "wanggui"
 					end
 				end
@@ -139,11 +144,11 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到
 		or string.find(choices, "tieqi_xh") or string.find(choices, "liegong_xh")
 		or string.find(choices, "jianchu") or string.find(choices, "wushuang") then
-			global_room:writeToConsole("杀类技能多目标选择:" .. skillnames[1])
+			Global_room:writeToConsole("杀类技能多目标选择:" .. skillnames[1])
 			return skillnames[1]--杀类技能多目标选择
 		end
 
-
+--[[同时触发的函数不一定是askForSkillInvoke
 		local except = {}
 		for _, skillname in ipairs(skillnames) do
 			local invoke = self:askForSkillInvoke(skillname, data)--data和invoke的data不一致？？
@@ -154,12 +159,11 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			end
 		end
 		table.removeTable(skillnames, except)
-
+]]
 		if #skillnames > 0 then return skillnames[math.random(1, #skillnames)] end
 	end
 
 	skillnames = choices:split("+")
-	global_room:writeToConsole("多技能触发选择:" .. choices)
 	return skillnames[math.random(1, #skillnames)]
 end
 
@@ -551,15 +555,15 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	end
 
 	if self.player:getMark("#congcha") > 0 then--聪察队友
-		--global_room:writeToConsole("聪察:有标记")
+		--Global_room:writeToConsole("聪察:有标记")
 		local panjun = sgs.findPlayerByShownSkillName("congcha")
 		if panjun and self.player:willBeFriendWith(panjun) then--暗置只能用willBeFriendWith
-			--global_room:writeToConsole("聪察:队友明置")
+			--Global_room:writeToConsole("聪察:队友明置")
 			return "show_both_generals"
 		elseif panjun and self.player:getActualGeneral2():getKingdom() == panjun:getKingdom() and canShowDeputy then--野心家
 			return "show_deputy_general"
 		elseif self.player:getHp() == 1 and (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
-			--global_room:writeToConsole("聪察:敌方不明置")
+			--Global_room:writeToConsole("聪察:敌方不明置")
 			return "cancel"
 		end
 	end
@@ -620,14 +624,14 @@ end
 
 --变身君主
 sgs.ai_skill_choice["changetolord"] = function(self, choices, data)
-	global_room:writeToConsole(self.player:objectName().. ":变身君主选择" .. choices)
+	Global_room:writeToConsole(self.player:objectName().. ":变身君主选择" .. choices)
 	return "yes"
 end
 
 --查看下家的副将
 function sgs.viewNextPlayerDeputy()
 	if sgs.GetConfig("ViewNextPlayerDeputyGeneral", true) then
-		for _, player in sgs.qlist(global_room:getPlayers()) do
+		for _, player in sgs.qlist(Global_room:getPlayers()) do
 			local np = player:getNextAlive()
 			np:setMark(("KnownBoth_%s_%s"):format(player:objectName(), np:objectName()), 1)
 			local names = {}
@@ -647,7 +651,7 @@ function sgs.viewNextPlayerDeputy()
 			end
 			names[2] = np:getActualGeneral2Name()
 			player:setTag("KnownBoth_" .. np:objectName(), sgs.QVariant(table.concat(names, "+")))
-			global_room:writeToConsole(np:objectName().."查看下家的副将:"..table.concat(names, "+"))
+			Global_room:writeToConsole(np:objectName().."查看下家的副将:"..table.concat(names, "+"))
 		end
 	end
 end
@@ -711,7 +715,7 @@ companion_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.CompanionCard= function(card, use, self)
-	--global_room:writeToConsole("珠联璧合判断开始")
+	--Global_room:writeToConsole("珠联璧合判断开始")
 	local card_str = ("@CompanionCard=.&_companion")
 	local nofreindweak = true
 	for _, friend in ipairs(self.friends_noself) do
@@ -720,7 +724,7 @@ sgs.ai_skill_use_func.CompanionCard= function(card, use, self)
 		end
 	end
 	if self:getOverflow() > 2 and self.player:getHp() == 1 and nofreindweak then
-		--global_room:writeToConsole("桃回复")
+		--Global_room:writeToConsole("桃回复")
 		use.card = sgs.Card_Parse(card_str)
 		return
 	end
@@ -738,7 +742,7 @@ end
 function sgs.ai_cardsview.companion(self, class_name, player, cards)
 	if class_name == "Peach" then
 		if player:getMark("@companion") > 0 and not player:hasFlag("Global_PreventPeach") then
-			--global_room:writeToConsole("珠联璧合标记救人")
+			--Global_room:writeToConsole("珠联璧合标记救人")
 			return "@CompanionCard=.&_companion"
 		end
 	end
@@ -769,7 +773,7 @@ halfmaxhp_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.HalfMaxHpCard= function(card, use, self)
-	--global_room:writeToConsole("阴阳鱼摸牌判断开始")
+	--Global_room:writeToConsole("阴阳鱼摸牌判断开始")
 	if self.player:isKongcheng() and self:isWeak() and not self:needKongcheng() and self.player:getMark("@firstshow") < 1 then
 		use.card = card
 		return
@@ -790,7 +794,7 @@ end
 
 sgs.ai_skill_use_func.FirstShowCard= function(card, use, self)
 	sgs.ai_use_priority.FirstShowCard = 0.1--挟天子之前
-	--global_room:writeToConsole("先驱判断开始")
+	--Global_room:writeToConsole("先驱判断开始")
 	local target
 	local not_shown = {}
 	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
@@ -923,14 +927,14 @@ careerman_skill.name = "careerman"
 table.insert(sgs.ai_skills, careerman_skill)
 careerman_skill.getTurnUseCard = function(self, inclusive)
 	if self.player:getMark("@careerist") < 1 then return end
-	--global_room:writeToConsole("野心家标记生成")
+	--Global_room:writeToConsole("野心家标记生成")
 	return sgs.Card_Parse("@CareermanCard=.&")
 end
 
 sgs.ai_skill_use_func.CareermanCard= function(card, use, self)
 	sgs.ai_use_priority.CareermanCard = 0.1--挟天子之前
 	self.careerman_case = 2--记录选择情况
-	--global_room:writeToConsole("野心家标记判断开始")
+	--Global_room:writeToConsole("野心家标记判断开始")
 	local card_str = ("@CareermanCard=.&_careerman")
 	local nofreindweak = true
 	for _, friend in ipairs(self.friends_noself) do
@@ -939,7 +943,7 @@ sgs.ai_skill_use_func.CareermanCard= function(card, use, self)
 		end
 	end
 	if self:getOverflow() > 2 and self.player:getHp() == 1 and nofreindweak then
-		--global_room:writeToConsole("野心家标记回复")
+		--Global_room:writeToConsole("野心家标记回复")
 		self.careerman_case = 3
 		use.card = sgs.Card_Parse(card_str)
 		return
@@ -972,7 +976,7 @@ sgs.ai_skill_use_func.CareermanCard= function(card, use, self)
 				end
 			end
 			sgs.ai_use_priority.CareermanCard = 2.4--杀之后
-			--global_room:writeToConsole("野心家标记补牌")
+			--Global_room:writeToConsole("野心家标记补牌")
 			self.careerman_case = 4
 			use.card = card
 			return
@@ -1030,7 +1034,7 @@ end
 function sgs.ai_cardsview.careerman(self, class_name, player, cards)
 	if class_name == "Peach" then
 		if player:getMark("@careerist") > 0 and not player:hasFlag("Global_PreventPeach") then
-			--global_room:writeToConsole("野心家标记救人")
+			--Global_room:writeToConsole("野心家标记救人")
 			return "@CareermanCard=.&_careerman"
 		end
 	end
@@ -1077,7 +1081,7 @@ showhead_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.ShowHeadCard= function(card, use, self)
-	--global_room:writeToConsole("明置主将的武将牌")
+	--Global_room:writeToConsole("明置主将的武将牌")
 	sgs.ai_use_priority.ShowHeadCard = 2--优先度多少合适？
 	if self.player:getActualGeneral1():getKingdom() == "careerist" and self.player:hasSkill("xuanhuoattach") and not self.player:hasUsed("XuanhuoAttachCard") then
 		return
@@ -1114,7 +1118,7 @@ showdeputy_skill.getTurnUseCard = function(self, inclusive)
 end
 
 sgs.ai_skill_use_func.ShowDeputyCard= function(card, use, self)
-	--global_room:writeToConsole("明置副将的武将牌")
+	--Global_room:writeToConsole("明置副将的武将牌")
 	if (self.player:inDeputySkills("paoxiao") or self.player:inDeputySkills("baolie") or self.player:inDeputySkills("kuangcai"))
 	and self:getCardsNum("Slash") == 0 then
 		return
