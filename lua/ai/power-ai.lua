@@ -227,6 +227,9 @@ sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
       return "yes"
     end
     if index == 4 then
+      if self.player:getMark("command4_effect") > 0 then
+        return "yes"
+      end
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
         if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
@@ -305,6 +308,9 @@ sgs.ai_skill_choice["docommand_jianglve"] = function(self, choices, data)
     return "yes"
   end
   if index == 4 then
+    if self.player:getMark("command4_effect") > 0 then
+      return "yes"
+    end
     if self.player:hasSkill("xuanhuo") and not source:hasUsed("XuanhuoAttachCard") and source:getHandcardNum() > 5 then
       return "no"
     end
@@ -1169,8 +1175,13 @@ sgs.ai_skill_choice["docommand_buyi"] = function(self, choices, data)
       or self.player:isRemoved() or (self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty())) then
     return "yes"
   end
-  if index == 4 and not is_friend and count < 3 then
-    return "yes"
+  if index == 4 then
+    if self.player:getMark("command4_effect") > 0 then
+      return "yes"
+    end
+    if not is_friend and count < 3 then
+      return "yes"
+    end
   end
   if index == 5 and not self.player:faceUp() then
     return "yes"
@@ -1424,6 +1435,9 @@ sgs.ai_skill_choice["docommand_weidi"] = function(self, choices, data)
   end
   if index == 3 and not is_friend and (has_peach or self.player:isRemoved()
       or (self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty())) then
+    return "yes"
+  end
+  if index == 4 and self.player:getMark("command4_effect") > 0 then
     return "yes"
   end
   if index == 4 and not is_friend then

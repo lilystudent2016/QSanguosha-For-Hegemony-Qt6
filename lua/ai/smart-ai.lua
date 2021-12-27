@@ -71,7 +71,7 @@ sgs.ai_slash_prohibit =     {}
 sgs.ai_trick_prohibit =     {}
 sgs.ai_view_as =            {}
 sgs.ai_cardsview =          {}
-sgs.ai_cardsview_value =    {}
+sgs.ai_cardsview_priority =    {}
 sgs.dynamic_value =         {
 	damage_card =           {},
 	control_usecard =       {},
@@ -442,20 +442,6 @@ function SmartAI:objectiveLevel(player)
 			return 5
 		end
 	end
---[[
-	if self.player:getMark("GlobalBattleRoyalMode") > 0 then--增加鏖战，但是无法优先进攻血量高的角色
-		local focus_careerist = false
-		for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-			if p:getRole() == "careerist" and p:getActualGeneral1():getKingdom() == "careerist" then
-				focus_careerist = true
-			end
-		end
-		if not focus_careerist then
-			--Global_room:writeToConsole("鏖战普通势力:" .. player:objectName())
-			return  5 + player:getHp()/10
-		end
-	end
-]]
 	if sgs.isRoleExpose() then
 		if self.lua_ai:isFriend(player) then return -2
 		elseif self.lua_ai:isEnemy(player) then return 5
@@ -1330,14 +1316,15 @@ function SmartAI:assignKeep(start)
 	if start then
 		--[[
 			通常的保留顺序
-			"peach-1" = 7,
-			"peach-2" = 5.8, "jink-1" = 5.2,
-			"peach-3" = 4.5, AllianceFeast = 4.3, JadeSeal = 4.3, LuminousPearl = 4.3, "analeptic-1" = 4.1,
-			"jink-2" = 4.0, "BefriendAttacking-1" = 3.9,  "ExNihilo-1"= 3.88, "nullification-1" = 3.8, "thunderslash-1" = 3.66 "fireslash-1" = 3.63
-			"slash-1" = 3.6 indulgence-1 = 3.5 SupplyShortage-1 = 3.48 snatch-1 = 3.46 Dismantlement-1 = 3.44 Duel-1 = 3.42 Drownning -3.40
-				BurningCamps = 3.38, Collateral-1 = 3.36 ArcheryAttack-1 = 3.35 SavageAssault-1 = 3.34 KnownBoth = 3.33 IronChain = 3.32 GodSalvation-1 = 3.30,
-				Fireattack-1 = 3.28  FightTogether =3.24 LureTiger = 3.22 threaten_emperor = 3.2 "peach-4" = 3.1
-			"analeptic-2" = 2.9, "jink-3" = 2.7 ExNihilo-2 = 2.7 nullification-2 = 2.6 thunderslash-2 = 2.46 fireslash-2 = 2.43 slash-2 = 2.4
+			peach-1 = 7
+			peach-2 = 5.8 jink-1 = 5.2
+			peach-3 = 4.5 AllianceFeast = 4.4 ConsolidateCountry = 4.3 JadeSeal = 4.2 LuminousPearl = 4.2
+			analeptic-1 = 4.1 jink-2 = 4.0 BefriendAttacking-1 = 3.9 ExNihilo-1= 3.88 Conquering = 3.88
+			nullification-1 = 3.8 thunderslash-1 = 3.66 fireslash-1 = 3.63
+			slash-1 = 3.6 indulgence-1 = 3.5 RuleTheWorld = 3.5 SupplyShortage-1 = 3.48 Chaos = 3.47 snatch-1 = 3.46 Dismantlement-1 = 3.44 Duel-1 = 3.42 Drownning -3.40
+				BurningCamps = 3.38 Collateral-1 = 3.36 ArcheryAttack-1 = 3.35 SavageAssault-1 = 3.34 FightTogether = 3.33 IronChain = 3.32 GodSalvation-1 = 3.30
+				Fireattack-1 = 3.28  KnownBoth = 3.24 LureTiger = 3.22 ThreatenEmperor = 3.2 peach-4 = 3.1
+			analeptic-2 = 2.9 jink-3 = 2.7 ExNihilo-2 = 2.7 nullification-2 = 2.6 thunderslash-2 = 2.46 fireslash-2 = 2.43 slash-2 = 2.4
 			...
 			Weapon-1 = 2.08 Armor-1 = 2.06 Treasure = 2.05 DefensiveHorse-1 = 2.04 OffensiveHorse-1 = 2
 			...
@@ -1511,7 +1498,6 @@ function SmartAI:writeKeepValue(card)
 		if i > 0 then value_number = value_number / i end
 		newvalue = maxvalue + value_suit + value_number
 		if not card:isKindOf(mostvaluable_class) then   newvalue = newvalue + 0.1 end
-		if card:isKindOf("ThreatenEmperor") then maxvalue = maxvalue + (self.player:isBigKingdomPlayer() and 3 or -3) end
 		newvalue = self:adjustKeepValue(card, newvalue)
 		return newvalue
 	else
@@ -1571,8 +1557,9 @@ function SmartAI:adjustKeepValue(card, v)
 		if card:isRed() then v = v + 0.02 end
 		if card:isKindOf("NatureSlash") then v = v + 0.03 end
 		if self.player:hasSkill("jiang") and card:isRed() then v = v + 0.04 end
-	elseif card:isKindOf("HegNullification") then v = v + 0.02
 	end
+	if card:isKindOf("HegNullification") then v = v + 0.02 end
+	if card:isKindOf("ThreatenEmperor") then v = v + (self.player:isBigKingdomPlayer() and 3 or -3) end
 	if self.player:getHandPile():contains(card:getEffectiveId()) then
 		v = v - 0.1
 	end
@@ -1669,12 +1656,12 @@ function SmartAI:getUseValue(card)
 			if self.player:isWounded() then v = v + 6 end
 		end
 	elseif card:getTypeId() == sgs.Card_TypeTrick then
-		if self.player:getPhase() == sgs.Player_Play and not card:isAvailable(self.player) then v = 0 end
+		if self.player:getPhase() <= sgs.Player_Play and not card:isKindOf("Nullification") and not card:isAvailable(self.player) then v = 0 end
 		if self.player:getWeapon() and not self.player:hasSkills(sgs.lose_equip_skill) and card:isKindOf("Collateral") then v = 2 end
 		if card:getSkillName() == "shuangxiong" then v = 6 end
 		if card:isKindOf("Duel") then v = v + self:getCardsNum("Slash") * 2 end
 		if self.player:hasSkill("jizhi") then v = v + 4 end
-		if card:isKindOf("HegNullification") then v = v + 0.2 end
+		if card:isKindOf("HegNullification") then v = v + 2 end
 		if card:isKindOf("ThreatenEmperor") then v = v + (self.player:isBigKingdomPlayer() and 4 or -4) end
 	end
 
@@ -2379,7 +2366,7 @@ function SmartAI:filterEvent(event, player, data)
 				end
 			end
 		elseif data:toString() then
-			promptlist = data:toString():split(":")
+			local promptlist = data:toString():split(":")
 			local callbacktable = sgs.ai_choicemade_filter[promptlist[1]]
 			if callbacktable and type(callbacktable) == "table" then
 				local index = 2
@@ -2740,6 +2727,25 @@ function SmartAI:askForDiscard(reason, discard_num, min_num, optional, include_e
 	return to_discard
 end
 
+sgs.ai_skill_discard.gamerule = function(self, discard_num)
+	local cards = sgs.QList2Table(self.player:getHandcards())
+	if self.player:getMark("ThreatenEmperorExtraTurn") > 0 then--挟天子连续回合，失效？？
+		Global_room:writeToConsole("挟天子连续回合弃牌")
+		self:sortByUseValue(cards,true)
+	else
+		self:sortByKeepValue(cards)
+	end
+	local to_discard = {}
+	for _, card in ipairs(cards) do
+		if not self.player:isCardLimited(card, sgs.Card_MethodDiscard, true) then
+			table.insert(to_discard, card:getId())
+		end
+		if #to_discard >= discard_num or self.player:isKongcheng() then break end
+	end
+
+	return to_discard
+end
+
 function SmartAI:askForMoveCards(upcards, downcards, reason, pattern, min_num, max_num)
 	local callback = sgs.ai_skill_movecards[reason]
 	if type(callback) == "function" then
@@ -2762,25 +2768,6 @@ function SmartAI:askForMoveCards(upcards, downcards, reason, pattern, min_num, m
 		end
 	end
 	return {}, {}
-end
-
-sgs.ai_skill_discard.gamerule = function(self, discard_num)
-	local cards = sgs.QList2Table(self.player:getHandcards())
-	if self.player:getMark("ThreatenEmperorExtraTurn") > 0 then--挟天子连续回合，失效？？
-		Global_room:writeToConsole("挟天子连续回合弃牌")
-		self:sortByUseValue(cards,true)
-	else
-		self:sortByKeepValue(cards)
-	end
-	local to_discard = {}
-	for _, card in ipairs(cards) do
-		if not self.player:isCardLimited(card, sgs.Card_MethodDiscard, true) then
-			table.insert(to_discard, card:getId())
-		end
-		if #to_discard >= discard_num or self.player:isKongcheng() then break end
-	end
-
-	return to_discard
 end
 
 function SmartAI:askForNullification(trick, from, to, positive)
@@ -4379,14 +4366,14 @@ local function getPlayerSkillList(player)
 	local rule_skills = sgs.rule_skill:split("|")
 	for _, name in ipairs(rule_skills) do
 		local skill = sgs.Sanguosha:getSkill(name)
-		if skill and hasRuleSkill(name, player) then
+		if skill and HasRuleSkill(name, player) then
 			table.insert(skills, skill)
 		end
 	end
 	return skills
 end
 
-function hasRuleSkill(skill_name, player)
+function HasRuleSkill(skill_name, player)
 	local rule_skills = sgs.rule_skill:split("|")
 	if table.contains(rule_skills, skill_name) then
 		if skill_name == "aozhan" then
@@ -4410,7 +4397,7 @@ local function cardsView(self, class_name, player, cards)
 	local returnList = {}
 	for _, skill in ipairs(getPlayerSkillList(player)) do
 		local askill = skill:objectName()
-		if player:hasSkill(askill) or player:hasLordSkill(askill) or hasRuleSkill(askill, player) then
+		if player:hasSkill(askill) or player:hasLordSkill(askill) or HasRuleSkill(askill, player) then
 			local callback = sgs.ai_cardsview[askill]
 			if type(callback) == "function" then
 				local ret = callback(self, class_name, player, cards)
@@ -4427,12 +4414,12 @@ local function cardsView(self, class_name, player, cards)
 	return returnList
 end
 
-local function cardsViewValue(self, class_name, player,reason) -- 优先权最高的ViewCards。
+local function cardsViewPriority(self, class_name, player,reason) --优先度最高的视为卡，除了会优先使用外几乎与cardsView没区别。
 	local returnList = {}
 	for _, skill in ipairs(getPlayerSkillList(player)) do
 		local askill = skill:objectName()
-		if player:hasSkill(askill) or player:hasLordSkill(askill) or hasRuleSkill(askill, player) then
-			local callback = sgs.ai_cardsview_value[askill]
+		if player:hasSkill(askill) or player:hasLordSkill(askill) or HasRuleSkill(askill, player) then
+			local callback = sgs.ai_cardsview_priority[askill]
 			if type(callback) == "function" then
 				local ret = callback(self, class_name, player,reason)
 				if ret then
@@ -4451,7 +4438,7 @@ end
 local function getSkillViewCard(card, class_name, player, card_place)
 	for _, skill in ipairs(getPlayerSkillList(player)) do
 		local askill = skill:objectName()
-		if player:hasSkill(askill) or player:hasLordSkill(askill)or hasRuleSkill(askill, player) then
+		if player:hasSkill(askill) or player:hasLordSkill(askill)or HasRuleSkill(askill, player) then
 			local callback = sgs.ai_view_as[askill]
 			if type(callback) == "function" then
 				local skill_card_str = callback(card, player, card_place, class_name)
@@ -4630,7 +4617,7 @@ function SmartAI:getCardId(class_name, acard)
 		end
 	end
 
-	local cardsViewFirst = cardsViewValue(self, class_name, self.player,"getCardId")
+	local cardsViewFirst = cardsViewPriority(self, class_name, self.player,"getCardId")
 	if #cardsViewFirst > 0 then
 		table.sort(cardsViewFirst,
 		function(a,b)
@@ -4674,8 +4661,8 @@ function SmartAI:getCardId(class_name, acard)
 		cardid = #cardArr > 0 and cardArr[1]:toString()
 		if cardid or viewas then return cardid or viewas end
 	end
-	local cardsView = cardsView(self, class_name, self.player)
-	if #cardsView > 0 then return cardsView[1] end
+	local cardsview = cardsView(self, class_name, self.player)
+	if #cardsview > 0 then return cardsview[1] end
 	return
 end
 
@@ -4706,7 +4693,7 @@ function SmartAI:getCards(class_name, flag)
 	local cards, other = {}, {}
 	local card_place, card_str
 
-	local cardsViewFirst = cardsViewValue(self, class_name, self.player,"getCards")
+	local cardsViewFirst = cardsViewPriority(self, class_name, self.player,"getCards")
 	if #cardsViewFirst > 0 then
 		table.sort(cardsViewFirst,
 		function(a,b)
@@ -4866,7 +4853,7 @@ function getCardsNum(class_name, player, from)
 			clubcard = clubcard + 1
 		end
 	end
-	num = num + #cardsViewValue(sgs.ais[player:objectName()], class_name, player,"getCardsNum")
+	num = num + #cardsViewPriority(sgs.ais[player:objectName()], class_name, player,"getCardsNum")
 	num = num + #cardsView(sgs.ais[player:objectName()], class_name, player, other)
 
 	if not from or player:objectName() ~= from:objectName() then
@@ -5044,7 +5031,7 @@ function SmartAI:fillSkillCards(cards)
 		end
 	end
 	for _, skill in ipairs(sgs.ai_skills) do
-		if self:hasSkill(skill) or hasRuleSkill(skill.name, self.player) or (skill.name == "shuangxiong" and self.player:hasFlag("shuangxiong")) then
+		if self:hasSkill(skill) or HasRuleSkill(skill.name, self.player) or (skill.name == "shuangxiong" and self.player:hasFlag("shuangxiong")) then
 			local skill_card = skill.getTurnUseCard(self, #cards == 0)
 			if skill_card then table.insert(cards, skill_card) end
 		end
@@ -5060,7 +5047,7 @@ function SmartAI:useSkillCard(card, use)
 	else
 		name = card:getClassName()
 	end
-	if not use.isDummy and name ~= "TransferCard" and not hasRuleSkill(card:getSkillName(), self.player)
+	if not use.isDummy and name ~= "TransferCard" and not HasRuleSkill(card:getSkillName(), self.player)
 		and not self.player:hasSkill(card:getSkillName()) and not self.player:hasLordSkill(card:getSkillName()) then return end
 	if sgs.ai_skill_use_func[name] then
 		sgs.ai_skill_use_func[name](card, use, self)
@@ -6424,7 +6411,6 @@ function SmartAI:AssistTarget()
 	end
 	player = sgs.ai_AssistTarget
 	if player and not player:getAI() and player:isAlive() and self:isFriend(player) and player:objectName() ~= self.player:objectName() then return player end
-	return
 end
 
 function SmartAI:findFriendsByType(prompt, player)
@@ -6517,7 +6503,7 @@ function SmartAI:imitateDrawNCards(player, skills)
 end
 
 function SmartAI:willSkipPlayPhase(player, NotContains_Null)
-	local player = player or self.player
+	player = player or self.player
 
 	if player:isSkipped(sgs.Player_Play) then return true end
 	if player:hasFlag("willSkipPlayPhase") then return true end
@@ -6556,7 +6542,7 @@ function SmartAI:willSkipPlayPhase(player, NotContains_Null)
 end
 
 function SmartAI:willSkipDrawPhase(player, NotContains_Null)
-	local player = player or self.player
+	player = player or self.player
 	if player:isSkipped(sgs.Player_Draw) then return true end
 
 	local friend_null = 0

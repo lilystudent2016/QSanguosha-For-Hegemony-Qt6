@@ -616,8 +616,13 @@ sgs.ai_skill_choice["docommand_quanjin"] = function(self, choices, data)
         return "yes"
       end
     end
-    if index == 4 and draw_num > 1 and not source:canSlash(self.player, nil, true) then
-      return "yes"
+    if index == 4 then
+      if draw_num > 1 and not source:canSlash(self.player, nil, true) then
+        return "yes"
+      end
+      if self.player:getMark("command4_effect") > 0 then
+        return "yes"
+      end
     end
     if index == 6 and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 and draw_num > 1 then
       return "yes"
@@ -814,7 +819,7 @@ sgs.ai_skill_use_func.DiaoguiCard = function(card, use, self)
 ]]--主动形成队列怎么判定？
 
 	local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
-  local clone_tiger = sgs.Sanguosha:cloneCard("lure_tiger", card:getSuit(), card:getNumber())
+  local clone_tiger = sgs.cloneCard("lure_tiger", card:getSuit(), card:getNumber())
   self:useCardLureTiger(clone_tiger, dummyuse)
 	if not dummyuse.to:isEmpty() then
     use.card = card
@@ -2043,71 +2048,7 @@ sgs.ai_skill_choice.lianpian = function(self, choices, data)
 end
 
 --诸葛恪
---[[
-function sgs.ai_cardsview.aocai(self, class_name, player)
-	if player:hasFlag("Global_AocaiFailed") or player:getPhase() ~= sgs.Player_NotActive then return end
---
-  if not (pattern == "slash" or pattern == "jink" or pattern == "peach" or pattern:match("analeptic")) then
-    return
-  end
-
-  if sgs.Sanguosha:getCurrentCardUseReason() == sgs.CardUseStruct_CARD_USE_REASON_RESPONSE_USE
-  or sgs.Sanguosha:getCurrentCardUseReason() == sgs.CardUseStruct_CARD_USE_REASON_RESPONSE then
-    local pattern = sgs.Sanguosha:getCurrentCardUsePattern()
-    local card = "@AocaiCard=.&aocai:" .. pattern
-    --Global_room:writeToConsole("傲才需求响应:" .. card)
-    if class_name == "Slash" then
-      Global_room:writeToConsole("傲才需求响应:" .. card)
-      return "@AocaiCard=.&aocai:slash"
-    end
-    if class_name == "Jink" then
-      Global_room:writeToConsole("傲才需求响应:" .. card)
-      return "@AocaiCard=.&aocai:jink"
-    end
-	elseif (class_name == "Peach" and player:getMark("Global_PreventPeach") == 0) or class_name == "Analeptic" then
-		local dying = self.room:getCurrentDyingPlayer()
-		if dying and dying:objectName() == player:objectName() then
-			local user_string = "peach+analeptic"
-			if player:getMark("Global_PreventPeach") > 0 then
-        user_string = "analeptic"
-      end
-			return "@AocaiCard=.&aocai:" .. user_string
-		else
-			local user_string
-			if class_name == "Analeptic" then
-        user_string = "analeptic"
-      else
-        user_string = "peach"
-      end
-			return "@AocaiCard=.&aocai:" .. user_string
-		end
-	end
-end
-
-sgs.ai_skill_cardask["@aocai-view"] = function(self, data, pattern, target, target2)
-  Global_room:writeToConsole("进入傲才:" .. self.player:objectName())
-  if self.player:hasFlag("Global_AocaiFailed") or self.player:getPhase() ~= sgs.Player_NotActive then
-    return "."
-  end
-  local aocai_id = self.player:property("aocai"):toString():split("+")
-  if #aocai_id == 0 then
-    return "."
-  end
-  --if sgs.Sanguosha:getCurrentCardUseReason() == sgs.CardUseStruct_CARD_USE_REASON_RESPONSE_USE
-  or sgs.Sanguosha:getCurrentCardUseReason() == sgs.CardUseStruct_CARD_USE_REASON_RESPONSE then
-    for _, id in ipairs(aocai_id) do
-      if sgs.Sanguosha:getCard(id):objectName() ==  sgs.Sanguosha:getCurrentCardUsePattern()
-      or sgs.Sanguosha:getCurrentCardUsePattern():match(sgs.Sanguosha:getCard(id):objectName()) then
-        return "$" .. id
-      end
-    end
-  end
-	return "."--
-  return "$" .. aocai_id[1]
-end
-]]
-
-function sgs.ai_cardsview_value.aocai(self, class_name, player)
+function sgs.ai_cardsview_priority.aocai(self, class_name, player)
   if self.player:objectName() ~= player:objectName() or not player:hasSkill("aocai") then return end
 	if player:hasFlag("Global_AocaiFailed") or player:getPhase() ~= sgs.Player_NotActive then return end
   if sgs.Sanguosha:getCurrentCardUseReason() == sgs.CardUseStruct_CARD_USE_REASON_RESPONSE_USE
@@ -2225,6 +2166,9 @@ sgs.ai_skill_choice["docommand_duwu"] = function(self, choices, data)
     return "yes"
   end
   if index == 4 then
+    if self.player:getMark("command4_effect") > 0 then
+      return "yes"
+    end
     if not is_friend and self:slashIsAvailable(source) then
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
@@ -2723,3 +2667,5 @@ sgs.ai_skill_cardask["@chaos-select"] = function(self, data, pattern, target, ta
   end
   return "."
 end
+
+--缺无懈可击响应

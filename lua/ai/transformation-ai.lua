@@ -370,7 +370,7 @@ end
 sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local userstring = card:toString()
 	userstring = (userstring:split(":"))[3]
-	local qicecard = sgs.Sanguosha:cloneCard(userstring, card:getSuit(), card:getNumber())
+	local qicecard = sgs.cloneCard(userstring, card:getSuit(), card:getNumber())
 	self:useTrickCard(qicecard, use)--确保锦囊能使用
 	if use.card then
 		Global_room:writeToConsole("奇策卡使用")
@@ -2313,7 +2313,7 @@ LuminousPearl_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_use_priority.LuminousPearl = 5.7
-sgs.ai_keep_value.LuminousPearl = 4.3
+sgs.ai_keep_value.LuminousPearl = 4.2
 
 
 --变更武将相关

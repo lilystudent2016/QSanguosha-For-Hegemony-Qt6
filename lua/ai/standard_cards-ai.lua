@@ -483,7 +483,14 @@ end
 
 function SmartAI:useCardSlash(card, use)
 	if card:getClassName() == "AocaiCard" then
-		card = sgs.cloneCard("slash")--傲才回合外使用杀？
+		card = sgs.cloneCard("slash")
+	end
+	if card:getClassName() == "MiewuCard" then
+		local userstring = card:toString()
+		userstring = (userstring:split(":"))[3]
+		local slash = sgs.cloneCard(userstring)
+		slash:addSubcard(card:getSubcards():first())
+		card = slash
 	end
 	if not use.isDummy and not self:slashIsAvailable(self.player, card) then return end
 	if self.player:hasSkill("xiaoji") and sgs.Sanguosha:getCard(card:getEffectiveId()) and sgs.Sanguosha:getCard(card:getEffectiveId()):isKindOf("EquipCard")
@@ -1902,7 +1909,7 @@ sgs.ai_skill_cardask["archery-attack-jink"] = function(self, data, pattern, targ
 end
 
 sgs.ai_keep_value.Nullification = 3.8
-sgs.ai_use_value.Nullification = 7.8
+sgs.ai_use_value.Nullification = 5.5
 
 function SmartAI:useCardAmazingGrace(card, use)
 	local value = 1
@@ -2820,7 +2827,7 @@ function SmartAI:useCardCollateral(card, use)
 	end
 end
 
-sgs.ai_use_value.Collateral = 5.8
+sgs.ai_use_value.Collateral = 5.1
 sgs.ai_use_priority.Collateral = 2.75
 sgs.ai_keep_value.Collateral = 3.36
 
@@ -3707,8 +3714,8 @@ sgs.ai_skill_choice.known_both = function(self, choices, data)
 	return "handcards"
 end
 sgs.ai_use_priority.KnownBoth = 9.1
-sgs.ai_use_value.KnownBoth = 5.5
-sgs.ai_keep_value.KnownBoth = 3.33
+sgs.ai_use_value.KnownBoth = 5
+sgs.ai_keep_value.KnownBoth = 3.24
 sgs.ai_nullification.KnownBoth = function(self, card, from, to, positive)
 	-- todo
 	return false

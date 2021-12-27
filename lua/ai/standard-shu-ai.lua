@@ -219,7 +219,7 @@ sgs.ai_skill_use["@@rende_slash"] = function(self, prompt, method)
 	local card_name = prompt:split(":")[4]
 	Global_room:writeToConsole("仁德杀:"..prompt.." 杀:"..card_name)
 	if not card_name or not self.rende_slashtarget then return "." end
-	local card = sgs.Sanguosha:cloneCard(card_name)
+	local card = sgs.cloneCard(card_name)
 	card:setSkillName("_rende")
 	local str = card:toString()
 	str = str .. "->" .. self.rende_slashtarget:objectName()

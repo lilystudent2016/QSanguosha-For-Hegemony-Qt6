@@ -352,10 +352,9 @@ sgs.ai_nullification.Drowning = function(self, card, from, to, positive, keep)
 	else
 		if not keep and self:isFriend(from) and (self:getOverflow() > 0 or self:getCardsNum("Nullification") > 1) then return true, true end
 	end
-	return
 end
 
-sgs.ai_use_value.Drowning = 5.1
+sgs.ai_use_value.Drowning = 5.3
 sgs.ai_use_priority.Drowning = sgs.ai_use_priority.Dismantlement + 0.05
 sgs.ai_keep_value.Drowning = 3.4
 
@@ -826,7 +825,7 @@ sgs.ai_nullification.LureTiger = function(self, card, from, to, positive)
 	return false
 end
 
-sgs.ai_use_value.LureTiger = 5
+sgs.ai_use_value.LureTiger = 4.8
 sgs.ai_use_priority.LureTiger = 4.9
 sgs.ai_keep_value.LureTiger = 3.22
 
@@ -970,9 +969,9 @@ sgs.ai_nullification.FightTogether = function(self, card, from, to, positive, ke
 	return
 end
 
-sgs.ai_use_value.FightTogether = 5.2
-sgs.ai_use_priority.FightTogether = 8.9
-sgs.ai_keep_value.FightTogether = 3.24
+sgs.ai_use_value.FightTogether = 5.5
+sgs.ai_use_priority.FightTogether = 8.7
+sgs.ai_keep_value.FightTogether = 3.33
 
 --AllianceFeast
 function SmartAI:useCardAllianceFeast(card, use)--效果修改，已重写
@@ -1075,7 +1074,7 @@ end
 
 sgs.ai_use_value.AllianceFeast = 9.5
 sgs.ai_use_priority.AllianceFeast = 8.8
-sgs.ai_keep_value.AllianceFeast = 4.3
+sgs.ai_keep_value.AllianceFeast = 4.4
 
 sgs.ai_nullification.AllianceFeast = function(self, card, from, to, positive, keep)--是否需要修改？
 	if not self:isFriend(to) and not self:isEnemy(to) then return end
@@ -1328,7 +1327,7 @@ sgs.ai_skill_use["@@JadeSeal!"] = function(self, prompt, method)
 end
 
 sgs.ai_use_priority.JadeSeal = 5.6
-sgs.ai_keep_value.JadeSeal = 4.3
+sgs.ai_keep_value.JadeSeal = 4.2
 
 --Halberd
 sgs.ai_skill_use["@@Halberd"] = function(self, prompt)

@@ -466,7 +466,7 @@ luanji_skill.getTurnUseCard = function(self)
 
 		for _, c in ipairs(cards) do
 			if useAll then
-				if isCard("ArcheryAttack", c, self.player) then
+				if isCard("ArcheryAttack", c, self.player) or isCard("BefriendAttacking", c, self.player) then
 					if c:getSuit() == sgs.Card_Heart then
 						heartKeepnum = heartKeepnum +1
 					elseif c:getSuit() == sgs.Card_Diamond then
@@ -478,7 +478,9 @@ luanji_skill.getTurnUseCard = function(self)
 					end
 				end
 			else
-				if isCard("Peach", c, self.player) or isCard("ExNihilo", c, self.player) or isCard("ArcheryAttack", c, self.player) or isCard("JadeSeal", c, self.player) then
+				if isCard("Peach", c, self.player) or isCard("ExNihilo", c, self.player)
+				or isCard("BefriendAttacking", c, self.player) or isCard("AllianceFeast", c, self.player)
+				or isCard("ArcheryAttack", c, self.player) or isCard("JadeSeal", c, self.player) then
 					if c:getSuit() == sgs.Card_Heart then
 						heartKeepnum = heartKeepnum +1
 					elseif c:getSuit() == sgs.Card_Diamond then

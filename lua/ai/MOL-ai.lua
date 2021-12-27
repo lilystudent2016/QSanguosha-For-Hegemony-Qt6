@@ -31,7 +31,8 @@ miewu_skill.getTurnUseCard = function(self)
     end
     local cards = sgs.QList2Table(self.player:getCards("he"))
     self:sortByUseValue(cards, true)
-    local str = "@MiewuCard=" .. cards[1]:getEffectiveId() .. ":"
+    local subcard = cards[1]:getEffectiveId()
+    local str = "@MiewuCard=" .. subcard .. ":"
     local card_name
 
 --[[{联军盛宴,火烧连营,桃园结义,南蛮入侵,万箭齐发,
@@ -47,9 +48,12 @@ miewu_skill.getTurnUseCard = function(self)
     local basiccards = {"slash","fire_slash","thunder_slash","peach","analeptic"}--基本牌：普杀，火杀，雷杀，桃，酒
 
     local can_use = {}
+    local value = self:getUseValue(cards[1])
     for _, trick in ipairs(trickcards) do
         local clonecard = sgs.cloneCard(trick)
-        if self:getUseValue(clonecard) >= self:getUseValue(cards[1]) then
+        if self:getUseValue(clonecard) > value then
+            clonecard:addSubcard(subcard)
+            clonecard:setCanRecast(false)
             local dummyuse = { isDummy = true }
             self:useCardByClassName(clonecard, dummyuse)
             if dummyuse.card then
@@ -59,7 +63,9 @@ miewu_skill.getTurnUseCard = function(self)
     end
     for _, dtrick in ipairs(delaycards) do
         local clonecard = sgs.cloneCard(dtrick)
-        if self:getUseValue(clonecard) >= self:getUseValue(cards[1]) then
+        if self:getUseValue(clonecard) > value then
+            clonecard:addSubcard(subcard)
+            clonecard:setCanRecast(false)
             local dummyuse = { isDummy = true }
             self:useCardByClassName(clonecard, dummyuse)
             if dummyuse.card then
@@ -69,7 +75,9 @@ miewu_skill.getTurnUseCard = function(self)
     end
     for _, basic in ipairs(basiccards) do
         local clonecard = sgs.cloneCard(basic)
-        if self:getUseValue(clonecard) >= self:getUseValue(cards[1]) then
+        if self:getUseValue(clonecard) > value then
+            clonecard:addSubcard(subcard)
+            clonecard:setCanRecast(false)
             local dummyuse = { isDummy = true }
             self:useCardByClassName(clonecard, dummyuse)
             if dummyuse.card then
@@ -80,18 +88,20 @@ miewu_skill.getTurnUseCard = function(self)
 
     if #can_use > 0 then
         card_name = can_use[math.random(1, #can_use)]--随机一张牌当彩蛋
-        sgs.ai_use_priority.MiewuCard = math.max(5, self:getDynamicUsePriority(sgs.cloneCard(card_name)))--5是否合适
+        sgs.ai_use_priority.MiewuCard = math.max(4, self:getDynamicUsePriority(sgs.cloneCard(card_name)))--4是否合适
         return sgs.Card_Parse(str .. card_name)
     end
 end
 
 sgs.ai_skill_use_func.MiewuCard = function(card, use, self)
-	local userstring = card:toString()
+	local userstring = card:toString()--card:getUserString()
 	userstring = (userstring:split(":"))[3]
-	local miwucard = sgs.Sanguosha:cloneCard(userstring, card:getSuit(), card:getNumber())
+	local miwucard = sgs.cloneCard(userstring)
+    miwucard:addSubcard(card:getSubcards():first())
+    miwucard:setCanRecast(false)
 	self:useCardByClassName(miwucard, use)--确保能使用
 	if use.card then
-		Global_room:writeToConsole("灭吴卡使用")
+		Global_room:writeToConsole("灭吴卡使用:"..userstring)
 		use.card = card
 	end
 end
@@ -100,6 +110,10 @@ function sgs.ai_cardsview.miewu(self, class_name, player, cards)
 	if not player:hasShownSkill("miewu") then return end
 	if player:getMark("#wuku") == 0 or player:hasFlag("MiewuUsed") or player:isNude() then
         return
+    end
+    if sgs.Sanguosha:getCurrentCardUseReason() ~= sgs.CardUseStruct_CARD_USE_REASON_RESPONSE_USE
+    and sgs.Sanguosha:getCurrentCardUseReason() ~= sgs.CardUseStruct_CARD_USE_REASON_RESPONSE then
+        return--为简化仅考虑响应时，实际上加强了ai
     end
 	if class_name == "Peach" or class_name == "Analeptic"
     or class_name == "Slash" or class_name == "Jink" or class_name == "Nullification" then
@@ -120,31 +134,42 @@ function sgs.ai_cardsview.miewu(self, class_name, player, cards)
 			end
 		end
         if #cards < 1 then return {} end
+        --[[if player:getPhase() <= sgs.Player_Play then
+            sgs.ais[player:objectName()]:sortByUseValue(cards, true)
+        else
+
+        end]]
         sgs.ais[player:objectName()]:sortByKeepValue(cards)
 
         local className2objectName = { Peach = "peach", Analeptic = "analeptic",
-                     Slash = "slash", jink = "jink", Nullification = "heg_nullification" }--优先国无懈
+                     Slash = "slash", Jink = "jink", Nullification = "heg_nullification" }--优先国无懈
 		local object_name = className2objectName[class_name]
         if class_name == "Slash" then
             local slash = {"slash","fire_slash","thunder_slash"}--随机属性杀
             object_name = slash[math.random(1, #slash)]
         end
         local clonecard = sgs.cloneCard(object_name)
-        local value = sgs.ais[player:objectName()]:getKeepValue(clonecard)
 
         local function count_value(acard)
-            if player:getPhase() <= sgs.Player_Play then
+        --由于getUseValue会调用getCardsNum，会再次进入视为卡函数导致死循环。身份蛊惑在smart-ai里单独处理
+        --[[if player:getPhase() <= sgs.Player_Play then
                 return sgs.ais[player:objectName()]:getUseValue(acard)
             else
-                return sgs.ais[player:objectName()]:getKeepValue(acard)
-            end
+
+            end]]
+            return sgs.ais[player:objectName()]:getKeepValue(acard)
         end
 
+        local value = count_value(clonecard)
         for _, c in ipairs(cards) do--未考虑留桃留无懈等
             if count_value(c) < value then
-                Global_room:writeToConsole("灭吴卡打出")
+                Global_room:writeToConsole("灭吴卡打出:"..object_name)
                 return "@MiewuCard=" .. c:getEffectiveId() .. ":" .. object_name
             end
         end
 	end
+end
+
+function sgs.ai_cardneed.miewu(to, card, self)
+	return to:isNude() and to:getMark("#wuku") > 0
 end
