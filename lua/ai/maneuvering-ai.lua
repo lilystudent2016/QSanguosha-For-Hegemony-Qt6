@@ -539,6 +539,10 @@ function SmartAI:useCardIronChain(card, use)
 		end
 	end
 	if use.to then assert(use.to:length() < targets_num + 1) end
+	if (not use.to or use.to:isEmpty())
+	and (self.player:isCardLimited(card, sgs.Card_MethodRecast) or not card:canRecast()) then
+		use.card = nil
+	end
 end
 
 sgs.ai_card_intention.IronChain = function(self, card, from, tos)

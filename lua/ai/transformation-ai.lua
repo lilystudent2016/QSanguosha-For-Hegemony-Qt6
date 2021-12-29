@@ -1329,14 +1329,10 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 		if maxhp < p:getHp() then maxhp = p:getHp() end
 	end
     for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
-		if p:getHp() == maxhp and not p:isRemoved() then--调虎离山和伤害优先级？
+		if p:getHp() == maxhp and not p:isRemoved() then--调虎离山无法zhiman
 			targets:append(p)
 		end
 	end
-	--[[没必要选自己
-	if self:isWeak() or not not self:needToLoseHp() then
-		targets:removeOne(self.player)
-	end]]
 	local target
 	if self.player:getMark("zhimantransformUsed") == 0 then--增加优先变将
 		for _, p in sgs.qlist(targets) do
@@ -1395,10 +1391,7 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 		end
 	else
 		if not target then use.card = nil return end
-		local cards = sgs.QList2Table(self.player:getCards("e"))
-		for _, c in sgs.qlist(self.player:getHandcards()) do
-			table.insert(cards, c)
-		end
+		local cards = sgs.QList2Table(self.player:getCards("he"))
 		self:sortByUseValue(cards,true)
 
 		local card_id
@@ -1421,10 +1414,10 @@ sgs.ai_skill_use_func.SanyaoCard = function(card, use, self)
 		if not card_id then
 			for _, c in ipairs(cards) do
 				if (not isCard("Peach", c, self.player) or self:getCardsNum("Peach") > 1)
-					and (not isCard("Jink", c, self.player) or self:getCardsNum("Jink") > 1 or self:isWeak())
-					and not (self.player:getWeapon() and self.player:getWeapon():getEffectiveId() == c:getEffectiveId())
-					and not (self.player:getOffensiveHorse() and self.player:getOffensiveHorse():getEffectiveId() == c:getEffectiveId()) then
+						and (not isCard("Jink", c, self.player) or self:getCardsNum("Jink") > 1 or self:isWeak())
+					or self.player:getMark("GlobalBattleRoyalMode") > 0 then
 					card_id = c:getEffectiveId()
+					break
 				end
 			end
 		end
@@ -2353,6 +2346,11 @@ function sgs.readGeneralPairValuefromtxt()--读入ai-selector/pair-value.txt
 	end
 	return value
 end
+
+--[[lua拓展的选将值
+Config.value("LuaPackages", QString()).toString().split("+")
+QString("extensions/ai-selector/%1-general-value.txt").arg(pack)
+]]
 
 function SmartAI:getGeneralValue(player, position)
 	local general

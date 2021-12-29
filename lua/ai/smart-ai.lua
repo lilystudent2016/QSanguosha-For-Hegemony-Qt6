@@ -1831,13 +1831,25 @@ function SmartAI:getDynamicUsePriority(card)
 			end
 		end
 		value = value + dynamic_value
-	elseif (card:isKindOf("ArcheryAttack") or card:isKindOf("LureTiger")) and self.player:hasSkill("luanji") then
+	end
+	if (card:isKindOf("ArcheryAttack") or card:isKindOf("LureTiger")) and self.player:hasSkill("luanji") then
 		value = value + 5.5
-	elseif card:isKindOf("Duel") and self.player:hasSkill("shuangxiong") then
+	end
+	if card:isKindOf("Duel") and self.player:hasSkill("shuangxiong") then
 		value = value + 6.3
-	elseif card:isKindOf("WendaoCard") and self.player:hasShownSkills("wendao+hongfa") and not self.player:getPile("heavenly_army"):isEmpty()
+	end
+	if card:isKindOf("WendaoCard") and self.player:hasShownSkills("wendao+hongfa") and not self.player:getPile("heavenly_army"):isEmpty()
 		and self.player:getArmor() and self.player:getArmor():objectName() == "PeaceSpell" then
 		value = value + 8
+	end
+	if self.player:hasShownSkill("suzhi") and self.player:getPhase() == sgs.Player_Play then
+		local marks =  self.player:getMark("#suzhi")
+		if marks < 3 and card:isKindOf("Slash") then
+			value = value + math.exp(marks)
+		end
+		if card:isKindOf("Duel") and marks < 2 then
+			value = value + math.exp(marks + 1)
+		end
 	end
 
 	return value

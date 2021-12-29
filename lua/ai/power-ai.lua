@@ -1183,8 +1183,13 @@ sgs.ai_skill_choice["docommand_buyi"] = function(self, choices, data)
       return "yes"
     end
   end
-  if index == 5 and not self.player:faceUp() then
-    return "yes"
+  if index == 5 then
+    if not self.player:faceUp() then
+      return "yes"
+    end
+    if self.player:hasSkill("jushou") and self.player:getPhase() <= sgs.Player_Finish then
+      return "yes"
+    end
   end
   if index == 6 and is_enemy and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
     return "yes"

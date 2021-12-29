@@ -119,15 +119,23 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			local from = data:toDamage().from
 			if from and from:isNude() then return "wangxi" end
 		end
-		if table.contains(skillnames, "fankui") and table.contains(skillnames, "ganglie") then return "fankui" end
-		if string.find(choices, "wangxi") and table.contains(skillnames, "ganglie") then return "wangxi" end
+		if string.find(choices, "fankui") and string.find(choices, "ganglie") then return "fankui" end
+		if string.find(choices, "wangxi") and string.find(choices, "ganglie") then return "wangxi" end
 		if string.find(choices, "wangxi") and string.find(choices, "fangzhu") then return "fangzhu" end
-		if table.contains(skillnames, "yiji") then return "yiji" end
+		if string.find(choices, "yiji") then return "yiji" end
 
-		if table.contains(skillnames, "tiandu") then
+		if string.find(choices, "tiandu") then
 			local judge = data:toJudge()
 			if judge.card:isKindOf("Peach") or judge.card:isKindOf("Analeptic") then
 				return "tiandu"
+			end
+		end
+
+		if string.find(choices, "anyong") then--暗涌后翻倍
+			for _, name in ipairs(skillnames) do
+				if name ~= "anyong" then
+					return name
+				end
 			end
 		end
 
@@ -138,7 +146,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 		if string.find(choices, "elitegeneralflag") then return "elitegeneralflag" end--五子良将纛可以暗求安函放掉血
 
 		if string.find(choices, "wuxin") then return "wuxin" end--悟心
-		if table.contains(skillnames, "haoshi") then return "haoshi" end
+		if string.find(choices, "haoshi") then return "haoshi" end
 		if string.find(choices, "zisui") then return "zisui" end--公孙渊摸牌，可能就配合和张辽会触发
 
 		if string.find(choices, "tieqi") or string.find(choices, "liegong")--有_xh后缀也会find到

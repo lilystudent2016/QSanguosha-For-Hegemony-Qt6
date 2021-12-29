@@ -855,6 +855,7 @@ function SmartAI:useCardFightTogether(card, use)
 
 	if #choices > 0 then
 		local v_big, v_small = 0, 0
+		local gameProcess = sgs.gameProcess(true)
 		if table.contains(choices, "big") then
 			for _, p in ipairs(bigs) do
 				if self:isFriend(p) then
@@ -867,7 +868,6 @@ function SmartAI:useCardFightTogether(card, use)
 					if p:isChained() then
 						v_big = v_big - 1
 					else
-						local gameProcess = sgs.gameProcess()
 						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
 						or (IamSmall and string.find(gameProcess, self.player:getKingdom() .. ">>"))
 						or self.player:hasSkill("fenming") then
@@ -892,7 +892,6 @@ function SmartAI:useCardFightTogether(card, use)
 					if p:isChained() then
 						v_small = v_small - 1
 					else
-						local gameProcess = sgs.gameProcess()
 						if (p:hasShownOneGeneral() and string.find(gameProcess, p:getKingdom() .. ">>"))
 						or (IamBig and string.find(gameProcess, self.player:getKingdom() .. ">>"))
 						or self.player:hasSkill("fenming") then
@@ -920,7 +919,7 @@ function SmartAI:useCardFightTogether(card, use)
 		end
 	end
 
-	if not self.player:isCardLimited(card, sgs.Card_MethodRecast) then
+	if not self.player:isCardLimited(card, sgs.Card_MethodRecast) and card:canRecast() then
 		use.card = card
 		return
 	end

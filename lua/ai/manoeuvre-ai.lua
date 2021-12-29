@@ -866,7 +866,7 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
     return false
   end
 
-  local function damageCount(tp,num)
+  local function damageCount(tp,num,chained)
     local n = num
     if tp:hasShownSkill("mingshi") and not from:hasShownAllGenerals() then
       n = n - 1
@@ -887,7 +887,9 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
     or gongqing_avoid then
       n = 1
     else
-      n = n * 2
+      if not chained then--初次加伤，非传导伤害
+        n = n * 2
+      end
       if damageStruct.nature == sgs.DamageStruct_Fire and (tp:hasArmorEffect("Vine")) then--暗涌增加伤害时机在藤甲前
         n = n + 1
       end
@@ -916,7 +918,7 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
         end
         damageStruct.damage = tDamageNum
         if self:damageIsEffective_(damageStruct) then
-          local damage_num = damageCount(p, tDamageNum)--考虑初次传导伤害
+          local damage_num = damageCount(p, tDamageNum, true)--考虑初次传导伤害
           if self:isEnemy(p) then
             enemy_dnum = enemy_dnum + damage_num
           elseif self:isFriend(p) then

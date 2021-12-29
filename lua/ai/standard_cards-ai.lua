@@ -3700,9 +3700,9 @@ function SmartAI:useCardKnownBoth(KnownBoth, use)
 	end
 
 	if not use.card then
-		targets = sgs.PlayerList()
-		local canRecast = KnownBoth:targetsFeasible(targets, self.player)
-		if canRecast then
+		--[[targets = sgs.PlayerList()
+		local canRecast = KnownBoth:targetsFeasible(targets, self.player)]]
+		if not self.player:isCardLimited(KnownBoth, sgs.Card_MethodRecast) and KnownBoth:canRecast() then
 			use.card = KnownBoth
 			if use.to then use.to = sgs.SPlayerList() end
 		end

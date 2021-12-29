@@ -377,6 +377,9 @@ sgs.ai_skill_exchange["wenji_giveback"] = function(self,pattern,max_num,min_num,
 			break
 		end
 	end
+  --QString pattern = QString("^%1").arg(card_id);
+  local id = tonumber(string.match(pattern, "(%d+)"))
+  --Global_room:writeToConsole(pattern.."|"..id)
   if self:isFriend(to) and self:isWeak(to) then
     if self.player:getHp() > 1 and self:getCardsNum("Analeptic") > 0 then
       return self:getCard("Analeptic"):getEffectiveId()
@@ -391,20 +394,23 @@ sgs.ai_skill_exchange["wenji_giveback"] = function(self,pattern,max_num,min_num,
   local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
-	return cards[1]:getEffectiveId()
+  for _, c in ipairs(cards) do
+    if c:getEffectiveId() ~= id then
+      return c:getEffectiveId()
+    end
+  end
 end
 
 function SmartAI:hasWenjiBuff(card)
 	if self.player:hasSkill("wenji") then
-    local record_cards = self.player:property("wenji_record"):toString():split("+")
-    if table.contains(record_cards,card) then
-      return true
-    end
+    local record_ids = self.player:property("wenji_record"):toString():split("+")
     for _, id in sgs.qlist(card:getSubcards()) do
-      local subcard = sgs.Sanguosha:getCard(id)
-        if table.contains(record_cards,subcard) then
-          return true
-        end
+      if table.contains(record_ids, tostring(id)) then
+        return true
+      end
+    end
+    if table.contains(record_ids, tostring(card:getEffectiveId())) then
+      return true
     end
   end
 	return false
@@ -604,6 +610,9 @@ sgs.ai_skill_choice["docommand_quanjin"] = function(self, choices, data)
       return "yes"
     end
     if is_enemy and draw_num > 4 and math.random(1, 2) > 1 then
+      return "yes"
+    end
+    if self.player:hasSkill("jushou") and self.player:getPhase() <= sgs.Player_Finish then
       return "yes"
     end
   end
@@ -2423,7 +2432,8 @@ sgs.ai_skill_use_func.ImperialEdictAttachCard = function(card, use, self)
     return
   end
   local hcards = sgs.QList2Table(self.player:getHandcards())
-  self:sortByKeepValue(hcards)
+  self:sortByUseValue(hcards, true)
+--[[self:sortByKeepValue(hcards)
   for _, hc in ipairs(hcards) do
     local dummy_use = { isDummy = true }
     if hc:isKindOf("BasicCard") then
@@ -2436,14 +2446,14 @@ sgs.ai_skill_use_func.ImperialEdictAttachCard = function(card, use, self)
     if dummy_use.card then
       return--先用光牌
     end
-  end
+  end]]
   local limit = self:getOverflow(self.player, true)
   local peach_num = self:getCardsNum("Peach")
   local analeptic_num = self:getCardsNum("Analeptic")
   local jink_num = self:getCardsNum("Jink")
 
   local function can_attach(hcard)
-    if peach_num + analeptic_num + jink_num <= limit
+    if peach_num + analeptic_num + jink_num <= limit and limit < 3
     and (isCard("Peach", hcard, self.player) or isCard("Analeptic", hcard, self.player) or isCard("Jink", hcard, self.player)) then
       return false
     end
@@ -2452,7 +2462,11 @@ sgs.ai_skill_use_func.ImperialEdictAttachCard = function(card, use, self)
 
   for _, hc in ipairs(hcards) do
     if table.contains(suits, hc:getSuitString()) and #attach_cards < attach_num and can_attach(hc) then
-      table.insert(attach_cards, hc:getEffectiveId())
+      local dummyuse = { isDummy = true }
+      self:useCardByClassName(hc, dummyuse)
+      if not dummyuse.card then
+        table.insert(attach_cards, hc:getEffectiveId())
+      end
     end
   end
   if #attach_cards > 0 then
@@ -2508,6 +2522,7 @@ sgs.ai_use_value.RuleTheWorld = 9
 sgs.ai_card_intention.Chaos = 150
 
 sgs.ai_skill_choice["rule_the_world"] = function(self, choices, data)
+  Global_room:writeToConsole("号令天下选择:" .. choices)
   --[[缺目标信息
     choice1.startsWith("slash")
     choice2.startsWith("discard")
@@ -2567,6 +2582,7 @@ sgs.ai_skill_exchange["consolidate_country"] = function(self,pattern,max_num,min
 			end
     end
   end
+  return discards
 end
 
 sgs.ai_skill_use["@@consolidatecountrygive"] = function(self, prompt, method)
@@ -2595,7 +2611,7 @@ sgs.ai_skill_use["@@consolidatecountrygive"] = function(self, prompt, method)
     if max_num > 0 then
       for _, c in ipairs(givecards) do
         if #card_ids < max_num then
-          table.insert(givecards, c:getEffectiveId())
+          table.insert(card_ids, c:getEffectiveId())
         end
       end
       if #card_ids > 0 then
@@ -2621,6 +2637,7 @@ sgs.ai_use_value.Chaos = 9
 sgs.ai_card_intention.Chaos = 80
 
 sgs.ai_skill_choice.chaos = function(self, choices, data)
+  Global_room:writeToConsole("文和乱武选择:" .. choices)
   --[[缺目标信息
     QString choice1 = QString("letdiscard%to:%1").arg(effect.to->objectName());
     QString choice2 = QString("discard%to:%1").arg(effect.to->objectName());
