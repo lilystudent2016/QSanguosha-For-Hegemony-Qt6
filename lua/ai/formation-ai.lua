@@ -485,7 +485,7 @@ sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, ta
 		end
 	end
 	for _,card in ipairs(cards) do
-		if qianhuan_CanPut(card) and (not card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0) then
+		if qianhuan_CanPut(card) and (not self:isRecoverPeach(card)) then
 			return card:toString()
 		end
 	end
@@ -557,9 +557,9 @@ local function will_discard_zhendu(self)
 		if self.player:hasSkill("congjian") and not current:hasArmorEffect("SilverLion")  then--张绣配合，无白银狮子
 			if current:getHp() <= 2 then
 				return 1
-			elseif self.player:getMark("GlobalBattleRoyalMode") then--鏖战或出牌阶段手牌小于4
+			elseif self.player:getMark("GlobalBattleRoyalMode") > 0 then--鏖战
 				return 2.5
-			elseif current:getHandcardNum() < 4 then
+			elseif current:getHandcardNum() < 4 then--出牌阶段手牌小于4
 				return 3.5
 			else--手牌较多时
 				return 5.3

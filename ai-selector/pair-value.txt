@@ -60,6 +60,7 @@ fazheng wolong								    20 19
 fazheng ganfuren								20 20
 fazheng liuba									22 21
 dengzhi wolong									20 20
+dengzhi ganfuren								17 18
 lord_sunquan sunshangxiang						26 25
 ganning lingtong								23 22
 ganning sufei									22 21
@@ -128,7 +129,6 @@ miheng zhangxiu									21 21
 zhonghui lukang									25 24
 zhonghui dengai									25 24
 simazhao simayi									25 24
-simazhao xunchen								23 22
 gongsunyuan zhangliao							23 22
 sunchen caoren									16 15
 zhangliao zhanghe								5 5

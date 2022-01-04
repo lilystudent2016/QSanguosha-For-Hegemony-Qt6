@@ -378,7 +378,7 @@ sgs.ai_skill_exchange["wenji_giveback"] = function(self,pattern,max_num,min_num,
 		end
 	end
   --QString pattern = QString("^%1").arg(card_id);
-  local id = tonumber(string.match(pattern, "(%d+)"))
+  --local id = tonumber(string.match(pattern, "(%d+)"))
   --Global_room:writeToConsole(pattern.."|"..id)
   if self:isFriend(to) and self:isWeak(to) then
     if self.player:getHp() > 1 and self:getCardsNum("Analeptic") > 0 then
@@ -395,7 +395,7 @@ sgs.ai_skill_exchange["wenji_giveback"] = function(self,pattern,max_num,min_num,
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards,true)
   for _, c in ipairs(cards) do
-    if c:getEffectiveId() ~= id then
+    if sgs.Sanguosha:matchExpPattern(pattern,self.player,c) then--已有pattern匹配函数
       return c:getEffectiveId()
     end
   end
@@ -701,7 +701,7 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
     handcards = sgs.QList2Table(handcards)
     self:sortByUseValue(handcards, true)
     for _,c in ipairs(handcards) do
-      if not (c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0) then
+      if not (self:isRecoverPeach(c)) then
         table.insert(card_list, c:getEffectiveId())
       end
       if #card_list == need_num then
@@ -949,7 +949,7 @@ sgs.ai_skill_exchange._quanji = function(self,pattern,max_num,min_num,expand_pil
     end
   end
   if #cards > 1 and cards[1]:isKindOf("Crossbow")--别放连弩
-  and not ((cards[2]:isKindOf("Peach") or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
+  and not ((self:isRecoverPeach(cards[2]) or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
     return cards[2]:getEffectiveId()
   end
 	return cards[1]:getEffectiveId()
@@ -1311,7 +1311,7 @@ sgs.ai_skill_invoke.xiongnve = function(self, data)
     if self:isWeak() or self.player:getHp() < 2 then
       return true
     end
-    if self.player:getLostHp() > 1 or self.player:getHp() < 3 then
+    if self.player:isWounded() then
       if not self.player:faceUp() then--翻面两回合效果
         return true
       end
@@ -1351,7 +1351,10 @@ sgs.ai_skill_invoke.xiongnve = function(self, data)
           useless_num = useless_num + 1
         end
       end
-      if useless_num > 1 then
+      if useless_num > 1 and (self.player:getLostHp() > 1 or self.player:getHp() < 3) then
+        return true
+      end
+      if useless_num > 4 then
         return true
       end
     end
@@ -2181,7 +2184,7 @@ sgs.ai_skill_choice["docommand_duwu"] = function(self, choices, data)
     if not is_friend and self:slashIsAvailable(source) then
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
-        if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+        if self:isRecoverPeach(c) then--有实体卡桃可回血
           has_peach = true
         end
       end
@@ -2465,6 +2468,7 @@ sgs.ai_skill_use_func.ImperialEdictAttachCard = function(card, use, self)
       local dummyuse = { isDummy = true }
       self:useCardByClassName(hc, dummyuse)
       if not dummyuse.card then
+        table.removeOne(suits, hc:getSuitString())
         table.insert(attach_cards, hc:getEffectiveId())
       end
     end
@@ -2571,7 +2575,7 @@ sgs.ai_skill_exchange["consolidate_country"] = function(self,pattern,max_num,min
 	self:sortByUseValue(cards,true)
   local discardEquip = false
   for _, c in ipairs(cards) do
-    if #discards < min_num then--至少弃6，只考虑最小值
+    if #discards < min_num and sgs.Sanguosha:matchExpPattern(pattern,self.player,c) then--至少弃6，只考虑最小值
       if discardEquip and self.room:getCardPlace(c:getEffectiveId()) == sgs.Player_PlaceEquip then
       else
         table.insert(discards, c:getEffectiveId())
@@ -2647,7 +2651,7 @@ sgs.ai_skill_choice.chaos = function(self, choices, data)
 end
 
 sgs.ai_skill_cardask["@chaos-select"] = function(self, data, pattern, target, target2)
-  if self.player:isKongcheng()  then
+  if self.player:isKongcheng() then
     return "."
   end
   local selected_1, selected_2

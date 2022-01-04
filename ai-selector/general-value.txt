@@ -98,7 +98,7 @@ dongzhuo							6
 zhangren							5
 lijueguosi							7
 new_zuoci							10
-yuanshu								7
+yuanshu								8
 zhangxiu							8
 yanbaihu							4
 huangzu								7
@@ -127,7 +127,9 @@ zongyux								5
 miheng								8
 fengxi								7
 dengzhi								7
-xunchen								8
+xunchen								7
+beimihu								8
+caozhen								10
 duyu								9
 
 

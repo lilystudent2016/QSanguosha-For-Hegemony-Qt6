@@ -30,7 +30,7 @@ math.randomseed(os.time())
 -- SmartAI is the base class for all other specialized AI classes
 SmartAI = (require "middleclass").class("SmartAI")
 
-AIversion = "QSanguosha AI 20211212 12:12(UTC+8)"
+AIversion = "QSanguosha AI 20220101 00:00(UTC+8)"
 
 --- this function is only function that exposed to the host program
 --- and it clones an AI instance by general name
@@ -156,10 +156,10 @@ function SetInitialTables()
 	sgs.priority_skill = 	"jianan|yiji|fankui|fangzhu|tuxi|luoshen|jixi|qice|jieyue|zaoyun|" ..
 							"shouyue|paoxiao|jizhi|tieqi|kuanggu|jili|xuanhuo|tongdu|" ..
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
-							"hongfa|jijiu|luanji|lijian|wansha|jianchu|qianhuan|yigui|fudi|yongsi|"..
+							"hongfa|jijiu|luanji|wansha|jianchu|qianhuan|yigui|fudi|yongsi|"..
 							"paiyi|suzhi|shilu|huaiyi|shicai|congcha|jinfa|"..
-							"zhukou|jinghe|wanggui|boyan|kuangcai|anyong|miewu"
-	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui"
+							"zhukou|jinghe|wanggui|boyan|kuangcai|guishu|sidi|miewu"
+	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
 						"tuntian|shoucheng|yicheng|qianhuan|jizhao|hengjiang|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
 						"xibing|zhente|qiao|shejian|yusui"
@@ -1440,8 +1440,11 @@ function SmartAI:writeKeepValue(card)
 		elseif self.player:hasSkills(sgs.lose_equip_skill) then
 			if card:isKindOf("Crossbow") then
 			elseif card:isKindOf("OffensiveHorse") then return -10
-			elseif card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then return -9.9
-			elseif card:isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):isEmpty() then return -9.8
+			elseif card:isKindOf("Weapon") then return -9.9
+			elseif card:isKindOf("WoodenOx") then
+				if self.player:getPile("wooden_ox"):isEmpty() then
+					return -9.8
+				end
 			elseif card:isKindOf("DefensiveHorse") then return -9.7
 			elseif (card:isKindOf("LuminousPearl") or card:isKindOf("JadeSeal") or card:isKindOf("Crossbow")) and self:isWeak() then return -9.6
 			elseif self.player:getPhase() <= sgs.Player_Play then return -9.5--回合外别丢防具、玉玺、夜明珠
@@ -1585,8 +1588,11 @@ function SmartAI:getUseValue(card)
 			if self.player:hasSkills(sgs.lose_equip_skill) then--使用保留值是否合适？
 				if card:isKindOf("Crossbow") then
 				elseif card:isKindOf("OffensiveHorse") then return -10
-				elseif card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then return -9.9
-				elseif card:isKindOf("WoodenOx") and self.player:getPile("wooden_ox"):isEmpty() then return -9.8
+				elseif card:isKindOf("Weapon") then return -9.9
+				elseif card:isKindOf("WoodenOx") then
+					if self.player:getPile("wooden_ox"):isEmpty() then
+						return -9.8
+					end
 				elseif card:isKindOf("DefensiveHorse") then return -9.7
 				elseif (card:isKindOf("LuminousPearl") or card:isKindOf("JadeSeal")) and self:isWeak() then return -9.6
 				elseif self.player:getPhase() <= sgs.Player_Play then return -9.5--回合外别丢防具、玉玺、夜明珠
@@ -3985,6 +3991,11 @@ function SmartAI:askForPlayersChosen(targets, reason, max_num, min_num)
 	return returns
 end
 
+function SmartAI:isRecoverPeach(card, player)
+	player = player or self.player
+	return card:isKindOf("Peach") and player:getMark("GlobalBattleRoyalMode") == 0
+end
+
 function SmartAI:ableToSave(saver, dying)
 	local current = self.room:getCurrent()
 	if current and current:getPhase() ~= sgs.Player_NotActive and current:hasShownSkill("wansha")
@@ -4186,7 +4197,7 @@ function SmartAI:needRetrial(judge)
 		end
 	elseif reason == "luoshen" then
 		if self:isFriend(who) then
-			if who:getHandcardNum() > 10 and who ~= self.player then return false end
+			if who:getHandcardNum() > 10 and who:objectName() ~= self.player:objectName() then return false end
 			if self:willSkipPlayPhase(who) then return false end
 			if self:hasCrossbowEffect(who) or getKnownCard(who, self.player, "Crossbow", false) > 0 then return not judge:isGood() end
 			if getKnownCard(who, self.player, "ThreatenEmperor", false) > 0 and who:isBigKingdomPlayer() then return false end
@@ -4966,9 +4977,15 @@ function SmartAI:getSuitNum(suit_strings, include_equip, player)
 	local allcards
 	if player:objectName() == self.player:objectName() then
 		allcards = sgs.QList2Table(player:getCards(flag))
+		for _, id in sgs.qlist(player:getHandPile()) do
+			table.insert(allcards, sgs.Sanguosha:getCard(id))
+		end
 	else
 		allcards = include_equip and sgs.QList2Table(player:getEquips()) or {}
 		local handcards = sgs.QList2Table(player:getHandcards())
+		for _, id in sgs.qlist(player:getHandPile()) do
+			table.insert(handcards, sgs.Sanguosha:getCard(id))
+		end
 		for i = 1, #handcards, 1 do
 			if sgs.cardIsVisible(handcards[i], player, self.player) then
 				table.insert(allcards, handcards[i])

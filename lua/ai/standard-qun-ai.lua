@@ -452,7 +452,7 @@ luanji_skill.getTurnUseCard = function(self)
 			cards:prepend(sgs.Sanguosha:getCard(id))
 		end
 		cards = sgs.QList2Table(cards)
-		self:sortByKeepValue(cards)
+		self:sortByUseValue(cards, true)
 		local useAll = false
 		local hasSamesuit = false
 		local heartKeepnum, diamondKeepnum, spadeKeepnum, clubKeepnum = 0,0,0,0
@@ -502,8 +502,12 @@ luanji_skill.getTurnUseCard = function(self)
 	   end
 
 		for _, fcard in ipairs(cards) do
-			local fvalueCard = (isCard("Peach", fcard, self.player) or isCard("ExNihilo", fcard, self.player) or isCard("ArcheryAttack", fcard, self.player) or isCard("JadeSeal", fcard, self.player))
-			if useAll then fvalueCard = isCard("ArcheryAttack", fcard, self.player) end
+			local fvalueCard = (isCard("Peach", fcard, self.player) or isCard("ExNihilo", fcard, self.player)
+								or isCard("BefriendAttacking", fcard, self.player) or isCard("AllianceFeast", fcard, self.player)
+								or isCard("ArcheryAttack", fcard, self.player) or isCard("JadeSeal", fcard, self.player))
+			if useAll then
+				fvalueCard = isCard("ArcheryAttack", fcard, self.player) or isCard("BefriendAttacking", fcard, self.player)
+			end
 			if not fvalueCard and not table.contains(usedsuits, sgs.Sanguosha:getCard(fcard:getId()):getSuitString()) then
 				first_card = fcard
 				first_found = true

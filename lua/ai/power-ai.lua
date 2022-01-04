@@ -163,7 +163,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
 	self:sortByUseValue(handcards,true)
 	local card = handcards[1]
   local visibleflag--记录给出的手牌，盗书等技能需要
-  if card:isKindOf("Peach") and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+  if self:isWeak() and self:isRecoverPeach(card) then
     return "."
   end
   local targets = {}
@@ -183,7 +183,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
         return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. p:objectName()
     end
   end
-  if card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+  if self:isRecoverPeach(card) then
     return "."
   end
 	self:sort(targets, "defense", true)
@@ -232,7 +232,7 @@ sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
       end
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
-        if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+        if self:isRecoverPeach(c) then--有实体卡桃可回血
           has_peach = true
         end
       end
@@ -1140,7 +1140,7 @@ sgs.ai_skill_choice["docommand_buyi"] = function(self, choices, data)
   local has_peach = false
   local count = 0
   for _, c in sgs.qlist(self.player:getHandcards()) do
-    if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+    if self:isRecoverPeach(c) then--有实体卡桃可回血
       has_peach = true
     end
     if c:isAvailable(self.player) then
@@ -1228,8 +1228,7 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
   end
 
   local function canKeshouDiscard(card)
-    if (card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0)
-    or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
+    if self:isRecoverPeach(card) or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
       return false
     end
     return true
@@ -1416,7 +1415,7 @@ sgs.ai_skill_choice["docommand_weidi"] = function(self, choices, data)
   local has_peach = false
   local valuable_count = 0
   for _, c in sgs.qlist(self.player:getHandcards()) do
-    if c:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+    if self:isRecoverPeach(c) then--有实体卡桃可回血
       has_peach = true
     end
     if self:getUseValue(c) >= sgs.ai_use_value.Peach then
@@ -1672,7 +1671,7 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
       end
     end
   end
-  if self.player:hasSkill("jieyue") then--和五子良将纛同一时机触发的技能
+  if self.player:hasSkill("jieyue") then--和五子良将纛同一时机触发的技能，设置优先发动jieyue
     table.insert(jianan_skills ,"jieyue")
   end
   if #jianan_skills == 0 and not self.player:getMark("JieyueExtraDraw") > 0 then--没有技能可选，参考眩惑预选
@@ -1685,13 +1684,12 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   self:sortByUseValue(allcards, true)
   local discard = allcards[1]
   if self.player:getMark("JieyueExtraDraw") > 0 then
-    if self.player:getCardCount(true) == 1 and allcards[1]:isKindOf("Peach")
-    and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+    if self.player:getCardCount(true) == 1 and self:isRecoverPeach(allcards[1]) and self:isWeak() then
       return "."
     end
     if #jianan_skills == 0 then
       if self.player:getCardCount(true) < 2
-      or (allcards[2]:isKindOf("Peach") and self:isWeak() and self.player:getMark("GlobalBattleRoyalMode") == 0) then
+      or (self:isRecoverPeach(allcards[2]) and self:isWeak()) then
         return "."
       end
     end
@@ -1700,13 +1698,16 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   if (self.player:hasSkill(choice) and choice ~= "jieyue") or choice == "xiaoguo" then--骁果
     return "."
   end
+  if self.player:isLord() and self.player:inHeadSkills("sidi") and not self.player:getPile("drive"):isEmpty() then
+    return "."
+  end
   if choice == "qiaobian" then
     return discard:toString()
   end
-  if self.player:hasSkill("qiaobian") and choice == "tuxi" then
+  if self.player:hasSkills("qiaobian|qiaobian_egf") and choice == "tuxi" then
     return "."
   end
-  if not discard:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then
+  if not self:isRecoverPeach(discard) then
     local g1name = self.player:getActualGeneral1Name()
     local g2name = self.player:getActualGeneral2Name()
     if shouldUseJiananByValue(self, g1name) or shouldUseJiananByValue(self, g2name)
@@ -1752,6 +1753,13 @@ sgs.ai_skill_choice.jianan_hide = function(self, choices)
       v2 = v2 + self.player:getPile("field"):length() * 0.5
     end
 	end
+  if self.player:hasSkill("sidi") then
+    if self.player:inHeadSkills("sidi") then
+      v1 = v1 + self.player:getPile("drive"):length()
+    else
+      v2 = v2 + self.player:getPile("drive"):length()
+    end
+  end
 	return v1 > v2 and "deputy" or "head"
 end
 

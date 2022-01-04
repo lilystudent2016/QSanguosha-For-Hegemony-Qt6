@@ -1086,7 +1086,7 @@ duoshi_skill.getTurnUseCard = function(self, inclusive)
 		cards:prepend(sgs.Sanguosha:getCard(id))
 	end
 	cards = sgs.QList2Table(cards)
-	self:sortByUseValue(cards)
+	self:sortByUseValue(cards, true)
 	for _, card in ipairs(cards) do
 		if self:getUseValue(card) >= 4.5 and card:isAvailable(self.player) then
 			local dummy_use = {isDummy = true}

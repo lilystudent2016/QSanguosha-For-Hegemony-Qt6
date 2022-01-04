@@ -541,12 +541,29 @@ sgs.ai_use_priority.WendaoCard = sgs.ai_use_priority.ZhihengCard
 
 sgs.ai_skill_invoke.hongfa = true
 
-local getHongfaCard = function(pile)
-	for _, c in ipairs(pile) do
-		if sgs.Sanguosha:getCard(c):objectName() == "PeaceSpell" then return c end
-	end
-	for _, c in ipairs(pile) do
-		if sgs.Sanguosha:getCard(c):objectName() ~= "DragonPhoenix" then return c end
+local getHongfaCard = function(self,pile)
+	for _, id in ipairs(pile) do
+		local card = sgs.Sanguosha:getCard(id)
+		if card:isKindOf("PeaceSpell") then
+			return id
+		elseif card:isKindOf("DragonPhoenix") then
+			local lord = self.room:getLord("shu")
+			if not lord or self:isFriend(lord) then
+				return id
+			end
+		elseif card:isKindOf("LuminousPearl") then
+			local lord = self.room:getLord("wu")
+			if not lord or self:isFriend(lord) then
+				return id
+			end
+		elseif card:isKindOf("SixDragons") then
+			local lord = self.room:getLord("wei")
+			if not lord or self:isFriend(lord) then
+				return id
+			end
+		else
+			return id
+		end
 	end
 	if #pile > 0 then return pile[1] end
 	return nil
@@ -560,7 +577,7 @@ huangjinsymbol_skill.getTurnUseCard = function(self, inclusive)
 	if not zj or zj:getPile("heavenly_army"):isEmpty() or not self.player:willBeFriendWith(zj) then return end
 	local ints = sgs.QList2Table(zj:getPile("heavenly_army"))
 
-	local int = getHongfaCard(ints)
+	local int = getHongfaCard(self,ints)
 	if int then
 		local card = sgs.Sanguosha:getCard(int)
 		local suit = card:getSuitString()
@@ -603,7 +620,7 @@ sgs.ai_skill_invoke.huangjinsymbol = true
 sgs.ai_skill_exchange["huangjinsymbol"] = function(self,pattern,max_num,min_num,expand_pile)
 	Global_room:writeToConsole("君角防止体力流失")
 	local ints = sgs.QList2Table(self.player:getPile("heavenly_army"))
-	local int = getHongfaCard(ints)
+	local int = getHongfaCard(self,ints)
 	if int then
 		return {int}
 	end
@@ -635,8 +652,8 @@ end
 --太平要术
 sgs.ai_slash_prohibit.PeaceSpell = function(self, from, enemy, card)
 	if from:hasShownSkill("zhiman") then return false end
-	if enemy:hasArmorEffect("PeaceSpell") and card:isKindOf("NatureSlash") and not IgnoreArmor(from, enemy) and not from:hasWeapon("IceSword") then return true end
-	return
+	if enemy:hasArmorEffect("PeaceSpell") and card:isKindOf("NatureSlash")
+	and not IgnoreArmor(from, enemy) and not from:hasWeapon("IceSword") then return true end
 end
 
 function sgs.ai_armor_value.PeaceSpell(player, self)

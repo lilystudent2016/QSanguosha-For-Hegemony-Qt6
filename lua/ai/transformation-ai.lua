@@ -117,7 +117,7 @@ qice_skill.getTurnUseCard = function(self)
 	cards = sgs.QList2Table(cards)
 	for _,card in ipairs(cards) do
 		if card:canRecast() then return end
-		if card:isKindOf("Peach") and self.player:getMark("GlobalBattleRoyalMode") == 0 then--有实体卡桃可回血
+		if self:isRecoverPeach(card) then--有实体卡桃可回血
 			has_peach = true
 		end
 		if card:isKindOf("ThreatenEmperor") and self.player:isBigKingdomPlayer() then--手牌多可以aoe的时候？
@@ -295,33 +295,27 @@ qice_skill.getTurnUseCard = function(self)
 	end
 
 	if not has_peach and table.contains(available_tricks,"duel") then
-		local can_duel = false
-		for _, p in ipairs(self.enemies) do
-			if p:getHp() == 1 and p:getHandcardNum() < 2 and getCardsNum("Slash", p, self.player) < 1 then
-				can_duel = true
-			end
-		end
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useCardDuel(sgs.cloneCard("duel"), dummyuse)
-		if not dummyuse.to:isEmpty() and can_duel then
-			Global_room:writeToConsole("奇策决斗")
-			return sgs.Card_Parse(str .. "duel")
+		if not dummyuse.to:isEmpty() then
+			local enemy = dummyuse.to:first()
+			if enemy:getHp() == 1 and enemy:getHandcardNum() < 2 and getCardsNum("Slash", enemy, self.player) < 1 then
+				Global_room:writeToConsole("奇策决斗")
+				return sgs.Card_Parse(str .. "duel")
+			end
 		end
 	end
 
 	if not has_peach and table.contains(available_tricks,"drowning") and self.player:getHp() > 1 then
-		local can_drowning = false
-		for _, p in ipairs(self.enemies) do
-			if (self:isWeak(p) or (p:getHp() == 1 and not p:hasArmorEffect("Breastplate")))
-			and p:getEquips():length() > 3 and not p:hasArmorEffect("PeaceSpell") then
-				can_drowning = true
-			end
-		end
 		local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
 		self:useCardDrowning(sgs.cloneCard("drowning"), dummyuse)
-		if not dummyuse.to:isEmpty() and can_drowning then
-			Global_room:writeToConsole("奇策水淹七军")
-			return sgs.Card_Parse(str .. "drowning")
+		if not dummyuse.to:isEmpty() then
+			local enemy = dummyuse.to:first()
+			if (self:isWeak(enemy) or (enemy:getHp() == 1 and not enemy:hasArmorEffect("Breastplate")))
+			and enemy:getEquips():length() > 3 and not enemy:hasArmorEffect("PeaceSpell") then
+				Global_room:writeToConsole("奇策水淹七军")
+				return sgs.Card_Parse(str .. "drowning")
+			end
 		end
 	end
 
@@ -371,7 +365,7 @@ sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local userstring = card:toString()
 	userstring = (userstring:split(":"))[3]
 	local qicecard = sgs.cloneCard(userstring, card:getSuit(), card:getNumber())
-	self:useTrickCard(qicecard, use)--确保锦囊能使用
+	self:useCardByClassName(qicecard, use)--确保锦囊能使用
 	if use.card then
 		Global_room:writeToConsole("奇策卡使用")
 		use.card = card
@@ -862,6 +856,7 @@ yigui_skill.getTurnUseCard = function(self)
 	end
 
 	local kingdoms = {wei = 0, shu = 0, wu = 0, qun = 0, careerist = 0}--计算势力的人数，正是敌人，负是队友
+	local kingdom_players = {wei = {}, shu = {}, wu = {}, qun = {}, careerist = {}}--各国家成员
 	for _, p in sgs.qlist(self.room:getAlivePlayers()) do
 		if not p:isRemoved() and p:hasShownOneGeneral() then--非暗将和掉虎
 			local p_kingdom = p:getKingdom()
@@ -869,6 +864,7 @@ yigui_skill.getTurnUseCard = function(self)
 				p_kingdom = "careerist"
 			end
 			kingdoms[p_kingdom] = kingdoms[p_kingdom] + (self:isFriend(p) and -1 or 1)
+			table.insert(kingdom_players[p_kingdom], p)
 		end
 	end
 	local max_friend_kingom
@@ -889,15 +885,9 @@ yigui_skill.getTurnUseCard = function(self)
 	local function getYiguiTargetByKingdom(kingdom, key, inverse)
 		kingdom = kingdom or "careerist"
 		key = key or "hp"
-		local targets = {}
-		for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-			if not p:isRemoved() and p:hasShownOneGeneral() and p:getKingdom() == kingdom then--非暗将和掉虎
-				table.insert(targets, p)
-			end
-		end
-		if #targets > 0 then
-			self:sort(targets, key, inverse)
-			return targets[1]
+		if #kingdom_players[kingdom] > 0 then
+			self:sort(kingdom_players[kingdom], key, inverse)
+			return kingdom_players[kingdom][1]
 		end
 		return nil
 	end
@@ -978,7 +968,7 @@ yigui_skill.getTurnUseCard = function(self)
 					or (kingdoms[double_kingdoms[1]] < 0 and self.player:isWounded())) then
 						local to = getYiguiTargetByKingdom(double_kingdoms[1], "handcard")
 						if to then
-							self.yigui_to = sgs.PlayerList()
+							self.yigui_to = sgs.SPlayerList()
 							self.yigui_to:append(to)
 							soul_name = name
 							class_string = "alliance_feast"
@@ -1064,7 +1054,7 @@ yigui_skill.getTurnUseCard = function(self)
 		if max_friend_kingom and #yigui_kingdom[max_friend_kingom] > 0 and (self.player:getHandcardNum() < 3 or #yigui_kingdom[max_friend_kingom] > 1) then
 			local to = getYiguiTargetByKingdom(max_friend_kingom, "handcard")
 			if to then
-				self.yigui_to = sgs.PlayerList()
+				self.yigui_to = sgs.SPlayerList()
 				self.yigui_to:append(to)
 				soul_name = yigui_kingdom[max_friend_kingom][1]
 				class_string = "befriend_attacking"
@@ -1076,7 +1066,7 @@ yigui_skill.getTurnUseCard = function(self)
 			if #yigui_kingdom[key] > 1 and value > 0 and key ~= max_enemy_kingdom then
 				local to = getYiguiTargetByKingdom(key, "handcard")
 				if to then
-					self.yigui_to = sgs.PlayerList()
+					self.yigui_to = sgs.SPlayerList()
 					self.yigui_to:append(to)
 					soul_name = yigui_kingdom[key][1]
 					class_string = "befriend_attacking"
@@ -1088,7 +1078,7 @@ yigui_skill.getTurnUseCard = function(self)
 		if #yigui_kingdom[max_enemy_kingdom] > kingdoms[max_enemy_kingdom] and #yigui_kingdom[max_enemy_kingdom] > 0 then
 			local to = getYiguiTargetByKingdom(max_enemy_kingdom, "handcard")
 			if to then
-				self.yigui_to = sgs.PlayerList()
+				self.yigui_to = sgs.SPlayerList()
 				self.yigui_to:append(to)
 				soul_name = yigui_kingdom[max_enemy_kingdom][1]
 				class_string = "befriend_attacking"
@@ -1106,7 +1096,7 @@ end
 sgs.ai_skill_use_func.YiguiCard = function(card, use, self)
 	use.card = card
 	if use.to and self.yigui_to then--部分锦囊需要手选目标，决斗、远交近攻等
-		use.to = sgs.PlayerList2SPlayerList(self.yigui_to)--P和SP的区别，需要targetFilter只能用sgs.PlayerList()
+		use.to = self.yigui_to--Plist和SPlist的区别，需要targetFilter只能用sgs.PlayerList()
 		self.yigui_to = nil
 	end
 end
@@ -1712,7 +1702,7 @@ end
 
 sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method)
 	self.diaodu_id = nil
-	if who == self.player then--severplayer类型可以判定等于吗，指针是可以的
+	if who:objectName() == self.player:objectName() then--指针是可以判定等于的，severplayer类型，但是who是否会是player类型？
 		for _, hcard in sgs.qlist(self.player:getCards("h")) do
 			if hcard:isKindOf("EquipCard") and self:getSameEquip(hcard) then
 				self.diaodu_id = self:getSameEquip(hcard):getEffectiveId()
@@ -2084,21 +2074,22 @@ sgs.ai_skill_askforag.flamemap = function(self, card_ids)
 			return id
 		elseif card:isKindOf("DragonPhoenix") then
 			local lord = self.room:getLord("shu")
-			if lord and self:isEnemy(lord) then
-				continue--不知为何lua无该关键字，但是可以正常使用continue。不行就移除再加在表末尾
+			if not lord or self:isFriend(lord) then
+				return id
 			end
 		elseif card:isKindOf("PeaceSpell") then
 			local lord = self.room:getLord("qun")
-			if lord and self:isEnemy(lord) then
-				continue
+			if not lord or self:isFriend(lord) then
+				return id
 			end
 		elseif card:isKindOf("SixDragons") then
 			local lord = self.room:getLord("wei")
-			if lord and self:isEnemy(lord) then
-				continue
+			if not lord or self:isFriend(lord) then
+				return id
 			end
+		else
+			return id
 		end
-		return id
 	end
 	return card_ids[1]
 end
@@ -2211,8 +2202,11 @@ duoshi_flamemap_skill.getTurnUseCard = function(self, inclusive)
 
 	if sgs.turncount <= 1 and #self.friends_noself == 0 and not self:isWeak() and self:getOverflow() <= 0 then return end
 	local cards = self.player:getCards("h")
+	for _, id in sgs.qlist(self.player:getHandPile()) do
+		cards:prepend(sgs.Sanguosha:getCard(id))
+	end
 	cards = sgs.QList2Table(cards)
-	self:sortByUseValue(cards)
+	self:sortByUseValue(cards, true)
 	for _, card in ipairs(cards) do
 		if self:getUseValue(card) >= 4.5 and card:isAvailable(self.player) then
 			local dummy_use = {isDummy = true}

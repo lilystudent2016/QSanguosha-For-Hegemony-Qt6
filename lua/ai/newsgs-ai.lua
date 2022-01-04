@@ -116,7 +116,7 @@ sgs.ai_skill_cardask["@daoshu-give"] = function(self, data, pattern, target, tar
 	local suit = (patternt[2]):split(",")
 	--Global_room:writeToConsole("盗书返还函数花色:"..table.concat(suit,","))
 	for _,c in sgs.qlist(self.player:getCards("h")) do
-		if table.contains(suit, c:getSuitString()) then
+		if table.contains(suit, c:getSuitString()) then--sgs.Sanguosha:matchExpPattern(pattern,self.player,c)
 			table.insert(cards, c)
 		end
 	end
@@ -156,8 +156,18 @@ end
 sgs.ai_skill_playerchosen.lianyou = function(self, targets)
 	local targetlist = sgs.QList2Table(targets)
 	self:sort(targetlist, "hp", true)
+	for _, target in ipairs(targetlist) do--考虑方便火烧
+		if self:isFriendWith(target) and target:getHp() > 1 and self:isEnemy(target:getNextAlive()) then
+			return target
+		end
+	end
 	for _, target in ipairs(targetlist) do
 		if self:isFriendWith(target) then return target end
+	end
+	for _, target in ipairs(targetlist) do
+		if self:isFriend(target) and target:getHp() > 1 and self:isEnemy(target:getNextAlive()) then
+			return target
+		end
 	end
 	for _, target in ipairs(targetlist) do
 		if self:isFriend(target) then return target end
@@ -442,7 +452,7 @@ huoqi_skill.name = "huoqi"
 table.insert(sgs.ai_skills, huoqi_skill)
 huoqi_skill.getTurnUseCard = function(self)
 	if self.player:isKongcheng() or self.player:hasUsed("HuoqiCard") then return end
-	local cards = self.player:getHandcards()
+	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards, true)
 	local card_str = ("@HuoqiCard=%d&huoqi"):format(cards[1]:getId())
@@ -585,7 +595,7 @@ sgs.ai_skill_exchange.yanzheng = function(self,pattern,max_num,min_num,expand_pi
 		end
 	end
 	if can_yanzheng then
-		return {cards[1]:getEffectiveId()}--保留值最大的一张
+		return {cards[1]:getEffectiveId()}--使用值最大的一张，table形式方便调用
 	end
 	return {}
 end

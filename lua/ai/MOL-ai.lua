@@ -96,10 +96,10 @@ end
 sgs.ai_skill_use_func.MiewuCard = function(card, use, self)
 	local userstring = card:toString()--card:getUserString()
 	userstring = (userstring:split(":"))[3]
-	local miwucard = sgs.cloneCard(userstring)
-    miwucard:addSubcard(card:getSubcards():first())
-    miwucard:setCanRecast(false)
-	self:useCardByClassName(miwucard, use)--确保能使用
+	local miewucard = sgs.cloneCard(userstring)
+    miewucard:addSubcard(card:getSubcards():first())
+    miewucard:setCanRecast(false)
+	self:useCardByClassName(miewucard, use)--确保能使用
 	if use.card then
 		Global_room:writeToConsole("灭吴卡使用:"..userstring)
 		use.card = card

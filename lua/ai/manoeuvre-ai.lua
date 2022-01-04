@@ -42,7 +42,7 @@ sgs.ai_need_damaged.wanggui = function(self, attacker, player)
 end
 
 sgs.ai_skill_invoke.xibing =  function(self, data)
-  self.xibing_targetSkill = nil
+  self.xibing_skill = nil
   if not self:willShowForDefence() then
     return false
   end
@@ -60,19 +60,19 @@ sgs.ai_skill_invoke.xibing =  function(self, data)
               "jixi|qice|zaoyun|jinfa|"..
 							"jizhi|tieqi|kuanggu|jili|tongdu|"..
 							"xiaoji|guose|xuanlue|"..
-							"lijian|wansha|jianchu|qianhuan|"..
-							"zhukou|boyan|anyong|miewu"
+							"wansha|jianchu|qianhuan|"..
+							"zhukou|boyan|guishu|miewu"
   if self:isEnemy(target) and eachother_shown then
     local skills = (xibing_firstskills):split("|")
     for _, skill in ipairs(skills) do
       if target:hasSkill(skill) then
-        self.xibing_targetSkill = skill
+        self.xibing_skill = skill
         return true
       end
     end
   end
   if target:hasShownSkill("buqu") and target:getPile("scars"):length() > 4 and self:isFriend(target) and eachother_shown then
-    self.xibing_targetSkill = "buqu"
+    self.xibing_skill = "buqu"
     return true
   end
   local not_firstskill = true
@@ -84,12 +84,12 @@ sgs.ai_skill_invoke.xibing =  function(self, data)
   if not_firstskill then
     local xibing_secondskills = "|duanliang|qiangxi|juejue|daoshu|wusheng|shengxi|sanyao|"..
               "zhiheng|qixi|kurou|fanjian|keji|duoshi|tianyi|dimeng|ganlu|"..
-              "shuangxiong|lirang|chuanxin|xiongsuan|weidi|midao|baolie"
+              "shuangxiong|lijian|lirang|chuanxin|xiongsuan|weidi|midao|baolie"
     if self:isEnemy(target) and eachother_shown then
       local skills = (xibing_secondskills):split("|")
       for _, skill in ipairs(skills) do
         if target:hasSkill(skill) then
-          self.xibing_targetSkill = skill
+          self.xibing_skill = skill
           return true
         end
       end
@@ -107,25 +107,26 @@ end
 
 sgs.ai_skill_choice.xibing = function(self, choices, data)
   choices = choices:split("+")
-  if not self.xibing_targetSkill and table.contains(choices,"cancel") then
+  if not self.xibing_skill and table.contains(choices,"cancel") then
     return "cancel"
   end
-  self.room:writeToConsole("息兵暗置技能:"..sgs.Sanguosha:translate(self.xibing_targetSkill))
+  self.room:writeToConsole("息兵暗置技能:"..sgs.Sanguosha:translate(self.xibing_skill))
   local current = self.room:getCurrent()
   if table.contains(choices,"cancel") then
     if #choices == 1 then
       return "cancel"
     end
     if self.player:hasSkill("tuntian") and not self.player:getPile("field"):isEmpty() then
-      if current:inDeputySkills("tuntian") then
+      if self.player:inDeputySkills("tuntian") then
         return "head"
+      else
+        return "deputy"
       end
-      return "deputy"
     end
     if self.player:hasSkill("paiyi") and not self.player:getPile("power_pile"):isEmpty() then
       return "deputy"
     end
-    if self.player:hasSkill("xiongnve") and not self.player:getMark("#massacre") > 0 then
+    if self.player:hasSkill("xiongnve") and self.player:getMark("#massacre") > 0 then
       return "deputy"
     end
     if self.player:hasSkill("zisui") and not self.player:getPile("disloyalty"):isEmpty() then
@@ -133,6 +134,13 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
         return "head"
       end
       return "deputy"
+    end
+    if self.player:hasSkill("sidi") and not self.player:getPile("drive"):isEmpty() then
+      if self.player:inDeputySkills("sidi") then
+        return "head"
+      else
+        return "deputy"
+      end
     end
 
     local xibing_defenseskills = {"yiji","fankui","ganglie","fangzhu","shicai","qingguo"}
@@ -154,7 +162,7 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
     end
   else
     if table.contains(choices,"head") then
-      if current:inHeadSkills(self.xibing_targetSkill) then
+      if current:inHeadSkills(self.xibing_skill) then
         return "head"
       end
       return "deputy"
