@@ -151,7 +151,6 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			use.card = sgs.Card_Parse(card_str)
 			if use.to then use.to:append(target) end
 			--Global_room:writeToConsole("合纵连横含重要卡牌:" .. card_str)
-			--self.player:speak("发动合纵连横")
 			return
 		end
 	end
@@ -177,7 +176,6 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 				if use.to then use.to:append(p) end
 				--Global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
 				--Global_room:writeToConsole("合纵连横卡牌:" .. card_str)
-				--self.player:speak("发动合纵连横")
 				return
 			end
 		end
@@ -191,14 +189,13 @@ sgs.ai_skill_use_func.TransferCard = function(transferCard, use, self)
 			if use.to then use.to:append(p) end
 			--Global_room:writeToConsole("合纵连横卡牌对象:" .. p:objectName())
 			--Global_room:writeToConsole("合纵连横卡牌:" .. card_str)
-			--self.player:speak("发动合纵连横")
 			return
 		end
 	end
 end
 
 sgs.ai_use_priority.TransferCard = 3--合纵连横效果修改
-sgs.ai_card_intention.TransferCard = -10
+sgs.ai_card_intention.TransferCard = -40
 
 --Drowning
 function SmartAI:useCardDrowning(card, use)
@@ -408,7 +405,6 @@ function SmartAI:useCardBurningCamps(card, use)
 			if player:isChained() and self:isGoodChainTarget_(damage) then
 				shouldUse = true
 			elseif self:objectiveLevel(player) > 3.5 then
-				--self.player:speak("objectivelevel大于3.5")
 				shouldUse = true
 			else
 				return
@@ -728,11 +724,13 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 		end
 		if to then
 			if can_slash and self:hasCrossbowEffect() and self:getCardsNum("Slash") > 2 then
+				local slash_num = self:getCardsNum("Slash")
 				for _, enemy in ipairs(enemys_copy) do
-					if  (enemy:getHp() == 1 and enemy:getHandcardNum() < 3)
+					if  (sgs.getDefenseSlash(enemy, self) <= 2 or (enemy:getHandcardNum() < 3 and enemy:getHp() <= slash_num))
 						and self.player:canSlash(enemy, slash, true) and not self:slashProhibit(slash, enemy)
 						and self:slashIsEffective(slash, enemy) and sgs.isGoodTarget(enemy, enemys_copy, self)
 						and not (self.player:hasFlag("slashTargetFix") and not enemy:hasFlag("SlashAssignee")) then
+							slash_num = slash_num - enemy:getHp()
 							table.removeOne(enemys_copy, enemy)
 					end
 				end
@@ -1144,6 +1142,9 @@ end
 --ThreatenEmperor
 function SmartAI:useCardThreatenEmperor(card, use)
 	if not card:isAvailable(self.player) then return end
+	if self.player:getMark("ThreatenEmperorExtraTurn") > 0 then--配合当先
+		return
+	end
 	local cardPlace = self.room:getCardPlace(card:getEffectiveId())--修改后无法使用装备，考虑手牌区
 	if self.player:getCardCount(false) < 1 + (cardPlace == sgs.Player_PlaceHand and 1 or 0) then return end
 	if not self:hasTrickEffective(card, self.player, self.player) then return end
@@ -1272,10 +1273,10 @@ sgs.ai_skill_choice.imperial_order = function(self, choices, data)
 		return "show_head"
 	end
 
-	if self.player:getPhase() ~= sgs.Player_NotActive then return "show_head" end
+	if self.player:getPhase() ~= sgs.Player_NotActive then return math.random(2) > 1 and "show_head" or "show_deputy" end
 	if self:needToLoseHp() then return "losehp" end
 	if not self.player:isWounded() and self.player:getCardCount(true) > 6 then return "losehp" end
-	return "show_head"
+	return math.random(2) > 1 and "show_head" or "show_deputy"
 end
 
 

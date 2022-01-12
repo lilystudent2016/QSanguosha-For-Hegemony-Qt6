@@ -372,6 +372,7 @@ sgs.ai_skill_use["@@mouduan_move"] = function(self, prompt, method)
 		end
 
 		if self.player:hasEquip() and self.player:hasShownSkills(sgs.lose_equip_skill) and self:getMoveCardorTarget(self.player, ".") then
+			self.mouduancard = self:getMoveCardorTarget(self.player, "card","e")
 			return MDCard .. self.player:objectName() .. "+" .. self:getMoveCardorTarget(self.player, "target" ,"e"):objectName()
 		end
 

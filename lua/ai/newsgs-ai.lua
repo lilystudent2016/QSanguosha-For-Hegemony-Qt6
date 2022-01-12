@@ -421,7 +421,7 @@ end
 
 function sgs.ai_slash_prohibit.leiji_tianshu(self, from, to, card)
 	if self:isFriend(to, from) then return false end
-	if not to:hasSkills(sgs.wizard_harm_skill) then return false end
+	if not to:hasShownSkills(sgs.wizard_skill) then return false end
 	if from:hasShownSkills("tieqi|tieqi_xh") then return false end
 	if from:hasShownSkill("jianchu") and (to:hasEquip() or to:getCardCount(true) == 1) then
 		return false

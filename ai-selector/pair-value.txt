@@ -24,6 +24,7 @@ jianggan dongzhao								21 22
 jianggan yujin									21 22
 jianggan cuiyanmaojie							15 15
 huaxin xuyou									24 24
+caozhen dengai									24 23
 lord_liubei fazheng								26 25
 huangyueying zhangfei							23 22
 huangyueying wolong								22 21
@@ -61,6 +62,9 @@ fazheng ganfuren								20 20
 fazheng liuba									22 21
 dengzhi wolong									20 20
 dengzhi ganfuren								17 18
+liaohua liushan									22 22
+liaohua	pengyang								22 21
+liaohua dengzhi									20 20
 lord_sunquan sunshangxiang						26 25
 ganning lingtong								23 22
 ganning sufei									22 21
@@ -96,6 +100,7 @@ zhouyi daqiao									21 21
 zhouyi ganning									21 21
 luyusheng erzhang								20 20
 fengxi sunjian									22 21
+zhugejin lukang									22 21
 lord_zhangjiao new_zuoci						26 25
 yuanshao tianfeng								23 22
 yuanshao mateng									24 23
@@ -113,6 +118,7 @@ yanliangwenchou mateng							22 22
 yanliangwenchou lijueguosi						21 21
 lijueguosi xuyou								23 22
 lijueguosi mateng								23 23
+lijueguosi beimihu								23 22
 tianfeng hetaihou								18 17
 huatuo zhanglu									19 18
 yuji xuyou										23 22

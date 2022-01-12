@@ -87,6 +87,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			return "keshou"
 		end
 
+		if string.find(choices, "sidi") then return "sidi" end--司敌放置牌
 		if string.find(choices, "shicai") then--卖血技能先恃才弃牌
 			local damage = data:toDamage()
 			if damage.damage > 1 then
@@ -391,7 +392,7 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	local canShowHead = string.find(choices, "show_head_general")
 	local canShowDeputy = string.find(choices, "show_deputy_general")
 
-	local firstShow = ("luanji|niepan|bazhen|qianhuan|jianglve|jinghe"):split("|")
+	local firstShow = ("luanji|niepan|bazhen|qianhuan|jianglve|jinghe|dangxian"):split("|")
 	local bothShow = ("luanji+shuangxiong|luanji+huoshui|guanxing+yizhi"):split("|")
 	local followShow = ("qianhuan|duoshi|rende|cunsi|jieyin|xiongyi"):split("|")
 

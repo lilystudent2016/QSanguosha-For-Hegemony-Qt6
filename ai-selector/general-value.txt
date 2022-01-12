@@ -130,6 +130,8 @@ dengzhi								7
 xunchen								7
 beimihu								8
 caozhen								10
+liaohua								7
+zhugejin							7
 duyu								9
 
 

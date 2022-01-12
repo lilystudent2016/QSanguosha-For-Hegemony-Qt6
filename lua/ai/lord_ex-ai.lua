@@ -764,12 +764,11 @@ sgs.ai_skill_invoke.jiancai = function(self, data)
     --Global_room:writeToConsole("荐才:变更时的备选武将数+2")
     return true
   end
-  if prompt[1] == "damage" then--无法知道伤害大小信息，判断多点减伤和桃数量
-    local target = prompt[2]
-    for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if p:objectName() == target and self.player:isFriendWith(p) and p:getHp() == 1 then--处理野心家？
-        return true
-      end
+  if prompt[1] == "damage" then
+    local target = self.room:findPlayerbyobjectName(prompt[2])
+    local damageStruct = self.player:getTag("JiancaiDamagedata"):toDamage()
+    if self:getAllPeachNum() + damageStruct.to:getHp() >= damageStruct.damage - 1  then
+      return true
     end
   end
 	return false
@@ -2527,11 +2526,19 @@ sgs.ai_card_intention.Chaos = 150
 
 sgs.ai_skill_choice["rule_the_world"] = function(self, choices, data)
   Global_room:writeToConsole("号令天下选择:" .. choices)
-  --[[缺目标信息
+  choices = choices:split("+")
+--[[
     choice1.startsWith("slash")
     choice2.startsWith("discard")
   ]]
-	choices = choices:split("+")
+  local target = data:toPlayer()
+  if self:isFriend(target) then
+    return "cancel"
+  elseif self:slashIsEffective(sgs.cloneCard("slash"), target, self.player) then
+    return choices[1]
+  else
+    return choices[2]
+  end
 	return choices[math.random(1, #choices)]
 end
 
@@ -2642,11 +2649,15 @@ sgs.ai_card_intention.Chaos = 80
 
 sgs.ai_skill_choice.chaos = function(self, choices, data)
   Global_room:writeToConsole("文和乱武选择:" .. choices)
-  --[[缺目标信息
+  choices = choices:split("+")
+--[[判断我选择弃和让对方弃更优？
     QString choice1 = QString("letdiscard%to:%1").arg(effect.to->objectName());
     QString choice2 = QString("discard%to:%1").arg(effect.to->objectName());
   ]]
-	choices = choices:split("+")
+  local target = data:toPlayer()
+  if self:isFriend(target) then
+    return choices[2]
+  end
 	return choices[math.random(1, #choices)]
 end
 

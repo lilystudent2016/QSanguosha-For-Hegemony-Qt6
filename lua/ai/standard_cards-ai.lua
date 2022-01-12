@@ -140,7 +140,7 @@ function sgs.getDefenseSlash(player, self)
 		end
 	end
 
-	if player:getMark("#boyan") > 0 then
+	if player:getMark("#boyan") > 0 or player:getMark("command4_effect") > 0 then
 		defense = 0
 	end
 

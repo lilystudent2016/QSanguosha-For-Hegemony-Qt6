@@ -420,7 +420,7 @@ end
 
 sgs.ai_skill_choice["transform_qice"] = function(self, choices)
 	Global_room:writeToConsole("奇策变更选择")
-	local importantsklii = {"yiji", "guicai", "fangzhu", "luoshen", "jieming", "jieyue", "shicai", "wanggui"}--还有哪些？
+	local importantsklii = {"yiji", "guicai", "fangzhu", "luoshen", "jieming", "jieyue", "shicai", "wanggui", "sidi"}--还有哪些？
 	local skills = sgs.QList2Table(self.player:getDeputySkillList(true,true,false))
 	for _, skill in ipairs(skills) do
 		if table.contains(importantsklii, skill:objectName()) then--重要技能
@@ -632,6 +632,9 @@ sgs.ai_skill_use_func.XiongsuanCard = function(card, use, self)
 		end
 		if self.player:hasSkill("congjian") then
 			can_xiongsuan = false
+		end
+		if self.player:hasSkill("yuanyu") then
+			can_xiongsuan = true
 		end
 		if can_xiongsuan then
 			self.xiongsuan_skill = "xiongsuan"

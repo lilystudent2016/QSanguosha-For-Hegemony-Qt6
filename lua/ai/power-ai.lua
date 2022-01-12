@@ -600,12 +600,12 @@ end
 sgs.ai_skill_choice.xuanhuo = function(self, choices)
   choices = choices:split("+")
   local xuanhuoskill = {"wusheng", "paoxiao", "longdan", "tieqi", "liegong", "kuanggu"}
-  local has_wusheng = self.player:hasSkill("wusheng")
-  local has_paoxiao = self.player:hasSkill("paoxiao")
-  local has_longdan = self.player:hasSkill("longdan")
-  local has_tieqi = self.player:hasSkill("tieqi")
-  local has_liegong = self.player:hasSkill("liegong")
-  local has_kuanggu = self.player:hasSkill("kuanggu")
+  local has_wusheng = self.player:hasSkills("wusheng|wusheng_xh")
+  local has_paoxiao = self.player:hasSkills("paoxiao|paoxiao_xh")
+  local has_longdan = self.player:hasSkills("longdan|longdan_xh")
+  local has_tieqi = self.player:hasSkills("tieqi|tieqi_xh")
+  local has_liegong = self.player:hasSkills("liegong|liegong_xh")
+  local has_kuanggu = self.player:hasSkills("kuanggu|kuanggu_xh")
   local has_qianxi = self.player:hasSkill("qianxi")
   local has_Crossbow = self:getCardsNum("Crossbow") > 0
   local has_baolie = self.player:hasSkill("baolie") and self.player:getHp() < 3--夏侯霸新技能豹烈
@@ -1951,6 +1951,14 @@ sgs.ai_skill_choice.startcommand_to = function(self, choices, data)--含目标�
       end
     end
   end
+  if table.contains(choices, "command4") and target:getMark("command4_effect") > 0 then
+    Global_room:writeToConsole("军令四的特殊情况")
+    for _, command in ipairs(choices) do
+      if command ~= "command4" then
+        return command
+      end
+    end
+  end
   if table.contains(choices, "command3") and (target:isRemoved() or (target:hasSkill("hongfa") and not target:getPile("heavenly_army"):isEmpty())) then
     Global_room:writeToConsole("军令三的特殊情况")
     for _, command in ipairs(choices) do
@@ -1980,7 +1988,56 @@ sgs.ai_skill_choice.docommand_from = function(self, choices, data)
   return "no"
 end
 
---askForExchange(this, "command", 2, 2, "@command-give:"+source->objectName())缺来源信息
+sgs.ai_skill_exchange.command = function(self,pattern,max_num,min_num,expand_pile)
+  local card_give = {}
+  local to
+	for _, p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+		if p:hasFlag("CommandSource") then
+			to = p
+			break
+		end
+	end
+  local visibleflag = string.format("%s_%s_%s", "visible", self.player:objectName(), to:objectName())
+
+  local function card_insert(card)--判断并防止重复
+    local c_id = card:getEffectiveId()
+    if #card_give < max_num and not table.contains(card_give, c_id) then
+      if not card:hasFlag("visible") then card:setFlags(visibleflag) end--记录已知牌
+      table.insert(card_give, c_id)
+    end
+  end
+
+  local cards = self.player:getCards("he")
+	cards = sgs.QList2Table(cards)
+  if self.player:getPhase() <= sgs.Player_Play then
+		self:sortByUseValue(cards, true)
+	else
+		self:sortByKeepValue(cards)
+	end
+  if self:isFriend(to) then
+    if self.player:getHp() > 1 and self:isWeak(to) and self:getCardsNum("Analeptic") > 0 then
+      card_insert(self:getCard("Analeptic"))
+    end
+    if not self:isWeak() and self:isWeak(to) and self:getCardsNum("Peach") > 0 then
+      card_insert(self:getCard("Peach"))
+    end
+    local c, friend = self:getCardNeedPlayer(cards, {to})
+    if friend and friend:objectName() == to:objectName() then
+      card_insert(c)
+    end
+    if self:getCardsNum("Jink") > 1 then
+      card_insert(self:getCard("Jink"))
+    end
+    if self:getCardsNum("Slash") > 1 and not self:hasCrossbowEffect() then
+      card_insert(self:getCard("Slash"))
+    end
+  end
+
+  for _, c in ipairs(cards) do
+    card_insert(c)
+  end
+	return card_give
+end
 
 sgs.ai_skill_cardask["@command-select"] = function(self, data, pattern, target, target2)
   local selected_h, selected_e

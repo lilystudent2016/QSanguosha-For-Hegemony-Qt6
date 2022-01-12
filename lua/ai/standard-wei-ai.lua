@@ -146,14 +146,14 @@ end
 
 
 sgs.ai_skill_cardask["@guicai-card"] = function(self, data)
-	if not (self:willShowForAttack() or self:willShowForDefence() ) then return "." end
+	if not (self:willShowForAttack() or self:willShowForDefence()) then return "." end
 	local judge = data:toJudge()
 	local cards = sgs.QList2Table(self.player:getCards("he"))
 	for _, id in sgs.qlist(self.player:getHandPile()) do
 		table.insert(cards, 1, sgs.Sanguosha:getCard(id))
 	end
-	if self.player:hasSkill("luoshen") and self.player:hasTreasure("JadeSeal") then--去掉玉玺洛神，考虑判断reason？
-		table.removeOne(cards,sgs.Sanguosha:getCard(self:getCardId("JadeSeal")))
+	if self.player:hasSkill("luoshen") and self.player:hasTreasure("JadeSeal") and judge.reason ~= "lightning" then
+		table.removeOne(cards,self.player:getTreasure())--洛神去掉玉玺
 	end
 
 	if self:needRetrial(judge) then

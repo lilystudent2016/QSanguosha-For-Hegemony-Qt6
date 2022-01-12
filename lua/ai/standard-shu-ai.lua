@@ -50,31 +50,21 @@ function SmartAI:shouldUseRende()
 		end
 	end
 
-	local keepNum = 2
-	if self.player:getMark("rende") == 0 then
-		if self.player:getHandcardNum() == 2 then
-			keepNum = 0
-		end
-		if self.player:getHandcardNum() > 3 then
-			keepNum = self.player:getHandcardNum() - 2
-		end
-	end
-	if self.player:hasSkill("kongcheng") then
-		keepNum = 0
+	local giveNum = self.player:getMark("rende")
+	local keepNum = self.player:getHandcardNum() - 2 + giveNum
+	if self.player:hasSkill("kongcheng") and keepNum <= 2 then--有空城时手牌少时
+		return true
+	elseif keepNum < 0 and not self:isWeak() then--没有空城手牌少时，考虑先驱、阴阳鱼等?
+		return false
 	end
 
-	if self:getOverflow() > 0  then
+	if self:getOverflow() > 0 then
 		return true
 	end
 	if self.player:getHandcardNum() > keepNum  then
 		return true
 	end
-	if self.player:getMark("rende") ~= 0 and self.player:getMark("rende") < 2
-		and (2 - self.player:getMark("rende")) >=  (self.player:getHandcardNum() - keepNum) then
-		return true
-	end
-
-	if self.player:hasSkill("kongcheng") then
+	if giveNum > 0 and giveNum < 2 and (2 - giveNum) >=  (self.player:getHandcardNum() - keepNum) then
 		return true
 	end
 
@@ -932,6 +922,9 @@ function sgs.ai_slash_prohibit.xiangle(self, from, to, card)
 end
 
 sgs.ai_skill_invoke.fangquan = function(self, data)
+	if self.player:hasFlag("fangquanInvoked") then--已经发动过放权，配合当先
+		return false
+	end
 	self.fangquan_card_str = nil
 	self.fangquan_target = nil
 	if #self.friends == 1 then
@@ -987,6 +980,9 @@ sgs.ai_skill_invoke.fangquan = function(self, data)
 	end
 	local liuba = sgs.findPlayerByShownSkillName("tongdu")
 	if liuba and self.player:isFriendWith(liuba) then
+		shouldUse = shouldUse -  1
+	end
+	if self.player:hasSkill("dangxian") then--当先
 		shouldUse = shouldUse -  1
 	end
 	if shouldUse >= 2 then return false end

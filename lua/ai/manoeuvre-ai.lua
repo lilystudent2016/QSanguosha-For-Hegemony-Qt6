@@ -479,7 +479,7 @@ sgs.ai_skill_use_func.WeimengCard = function(card, use, self)
     end
   end
   if not target then
-    self:sort(self.enemies, "handcard", true)--破坏敌人防御？
+    self:sort(self.enemies, "handcard", true)--优先破坏敌人防御？
     for _, p in ipairs(self.enemies) do
       if not p:isKongcheng() then
         target = p

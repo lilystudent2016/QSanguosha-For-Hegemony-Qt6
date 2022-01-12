@@ -162,7 +162,7 @@ function SetInitialTables()
 	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
 						"tuntian|shoucheng|yicheng|qianhuan|jizhao|hengjiang|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
-						"xibing|zhente|qiao|shejian|yusui"
+						"xibing|zhente|qiao|shejian|yusui|yuanyu|mingzhe"
 	sgs.usefull_skill = "tiandu|qiaobian|xingshang|xiaoguo|wusheng|guanxing|qicai|jizhi|kuanggu|lianhuan|huoshou|juxiang|shushen|zhiheng|keji|" ..
 						"duoshi|xiaoji|hongyan|haoshi|guzheng|zhijian|shuangxiong|guidao|guicai|xiongyi|mashu|lirang|yizhi|shengxi|" ..
 						"xunxun|wangxi|yingyang|hunshang|biyue"
@@ -170,7 +170,7 @@ function SetInitialTables()
 						"lijian|luanji|mengjin|kuangfu|huoshui|qingcheng|tiaoxin|shangyi|jiang|chuanxin"
 	sgs.drawcard_skill = "yingzi_sunce|yingzi_zhouyu|haoshi|yingzi_flamemap|haoshi_flamemap|shelie|jieyue|congcha|zisui"
 	sgs.force_slash_skill = "tieqi|tieqi_xh|liegong|liegong_xh|wushuang|jianchu|qianxi"
-	sgs.wizard_skill = 		"guicai|guidao|tiandu|zhuwei"
+	sgs.wizard_skill = 		"guicai|guidao|tiandu|zhuwei|huanshi"
 	sgs.wizard_harm_skill = "guicai|guidao"
 	sgs.lose_equip_skill = 	"xiaoji|xuanlue"
 	sgs.need_kongcheng = 	"kongcheng"
@@ -2979,8 +2979,7 @@ function SmartAI:askForNullification(trick, from, to, positive)
 			end
 		elseif trick:isKindOf("Indulgence") then
 			if self:isFriend(to) and not to:isSkipped(sgs.Player_Play) then
-				if (to:hasShownSkill("guanxing") or to:hasShownSkill("yizhi") and to:inDeputySkills("yizhi"))
-					and (Global_room:alivePlayerCount() > 4 or to:hasShownSkill("yizhi")) then return end
+				if to:hasShownSkills("guanxing|yizhi") and (Global_room:alivePlayerCount() > 4 or to:hasShownSkills("guanxing+yizhi")) then return nil end
 				if to:getHp() - to:getHandcardNum() >= 2 then return nil end
 				if to:hasShownSkill("tuxi") and to:getHp() > 2 then return nil end
 				if to:hasShownSkill("qiaobian") and not to:isKongcheng() then return nil end
@@ -2989,9 +2988,8 @@ function SmartAI:askForNullification(trick, from, to, positive)
 			end
 		elseif trick:isKindOf("SupplyShortage") then
 			if self:isFriend(to) and not to:isSkipped(sgs.Player_Draw) then
-				if (to:hasShownSkill("guanxing") or to:hasShownSkill("yizhi") and to:inDeputySkills("yizhi"))
-					and (Global_room:alivePlayerCount() > 4 or to:hasShownSkill("yizhi")) then return end
-				if to:hasShownSkills("guidao|tiandu") then return nil end
+				if to:hasShownSkills("guanxing|yizhi") and (Global_room:alivePlayerCount() > 4 or to:hasShownSkills("guanxing+yizhi")) then return nil end
+				if to:hasShownSkills("guidao|tiandu|zhuwei") then return nil end
 				if to:hasShownSkill("qiaobian") and not to:isKongcheng() then return nil end
 				if (to:containsTrick("indulgence") or self:willSkipPlayPhase(to)) and null_num <= 1 and self:getOverflow(to) > 1 then return nil end
 				return null_card
@@ -3684,7 +3682,7 @@ function SmartAI:getCardNeedPlayer(cards, friends_table, skillname)
 		end
 	end
 
-	if (skillname == "rende" and self.player:hasSkill("rende") and self.player:isWounded() and self.player:getMark("rende") < 3) and not self.player:hasSkill("kongcheng") then
+	if (skillname == "rende" and self.player:hasSkill("rende") and self.player:isWounded() and self.player:getMark("rende") < 2) and not self.player:hasSkill("kongcheng") then
 		if (self.player:getHandcardNum() < 3 and self.player:getMark("rende") == 0 and self:getOverflow() <= 0) then return end
 	end
 
@@ -4119,7 +4117,9 @@ function SmartAI:canRetrial(player, to_retrial, reason)
 		end
 		if blackequipnum + player:getHandcardNum() > 0 then return true end
 	end
-	if player:hasShownSkill("guicai") and player:getHandcardNum() > 0 then return true end
+	if player:hasShownSkill("guicai") and not player:isNude() then return true end
+	if player:hasShownSkill("huanshi") and player:isFriendWith(to_retrial) and not player:isNude() then return true end
+	return false
 end
 
 function SmartAI:getFinalRetrial(player, reason)
@@ -4130,7 +4130,7 @@ function SmartAI:getFinalRetrial(player, reason)
 	local wizardf, wizarde
 	player = player or self.room:getCurrent()
 	for _, aplayer in ipairs(self.friends) do
-		if aplayer:hasShownSkills(sgs.wizard_harm_skill) and self:canRetrial(aplayer, player, reason) then
+		if aplayer:hasShownSkills(sgs.wizard_harm_skill.."|huanshi") and self:canRetrial(aplayer, player, reason) then
 			tmpfriend = (aplayer:getSeat() - player:getSeat()) % (Global_room:alivePlayerCount())
 			if tmpfriend > maxfriendseat then
 				maxfriendseat = tmpfriend
@@ -4139,7 +4139,7 @@ function SmartAI:getFinalRetrial(player, reason)
 		end
 	end
 	for _, aplayer in ipairs(self.enemies) do
-		if aplayer:hasShownSkills(sgs.wizard_harm_skill) and self:canRetrial(aplayer, player, reason) then
+		if aplayer:hasShownSkills(sgs.wizard_harm_skill.."|huanshi") and self:canRetrial(aplayer, player, reason) then
 			tmpenemy = (aplayer:getSeat() - player:getSeat()) % (Global_room:alivePlayerCount())
 			if tmpenemy > maxenemyseat then
 				maxenemyseat = tmpenemy
@@ -4172,13 +4172,15 @@ function SmartAI:needRetrial(judge)
 		end
 	elseif reason == "indulgence" then
 		if who:isSkipped(sgs.Player_Draw) and who:isKongcheng() then
-			if who:hasShownSkill("kurou") and who:getHp() >= 3 then
+			if (who:hasShownSkill("kurou") and who:getHp() >= 3 and not who:isNude())
+			or (who:getMark("@firstshow") + who:getMark("@careerist") > 0) then
 				if self:isFriend(who) then
 					return not judge:isGood()
 				else
 					return judge:isGood()
 				end
 			end
+			return false
 		end
 		if self:isFriend(who) then
 			local drawcardnum = self:imitateDrawNCards(who, who:getVisibleSkillList(true))
@@ -5745,6 +5747,10 @@ function SmartAI:useEquipCard(card, use)
 			return
 		end
 	end
+	if card:isKindOf("ImperialEdict") then--宝物诏书
+		use.card = card
+		return
+	end
 	local same = self:getSameEquip(card)
 	local zzzh, isfriend_zzzh, isenemy_zzzh = sgs.findPlayerByShownSkillName("guzheng")
 	if zzzh then
@@ -5896,7 +5902,8 @@ function SmartAI:useEquipCard(card, use)
 end
 
 function SmartAI:needRende()
-	return self.player:getLostHp() > 1 and self:findFriendsByType(sgs.Friend_Draw) and (self.player:hasSkill("rende") and self.player:getMark("rende") < 3)
+	return (self.player:hasSkill("rende") and self.player:getMark("rende") < 2)
+			and self.player:getLostHp() > 1 and self:findFriendsByType(sgs.Friend_Draw)
 end
 
 function SmartAI:needToLoseHp(to, from, isSlash, passive, recover)
