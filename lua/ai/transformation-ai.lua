@@ -117,7 +117,7 @@ qice_skill.getTurnUseCard = function(self)
 	cards = sgs.QList2Table(cards)
 	for _,card in ipairs(cards) do
 		if card:canRecast() then return end
-		if self:isRecoverPeach(card) then--有实体卡桃可回血
+		if isCard("Peach", card, self.player) then--有实体卡桃可回血
 			has_peach = true
 		end
 		if card:isKindOf("ThreatenEmperor") and self.player:isBigKingdomPlayer() then--手牌多可以aoe的时候？
@@ -242,7 +242,7 @@ qice_skill.getTurnUseCard = function(self)
 			zhurongSA = true
 		end
 		if caocaoAOE or mengdaAOE then
-			if self:hasTrickEffective(use_card,caocao)) and self:getAoeValue(use_card) > -5 then--负5来自身份，是否合适？
+			if self:trickIsEffective(use_card,caocao)) and self:getAoeValue(use_card) > -5 then--负5来自身份，是否合适？
 
 			end
 		end]]
@@ -272,11 +272,11 @@ qice_skill.getTurnUseCard = function(self)
 		local burn_weak = 0
 		local players = self.player:getNextAlive():getFormation()
 		for _, p in sgs.qlist(players) do
-			if p:getHp() == 1 and self:hasTrickEffective(sgs.cloneCard("burning_camps"), p, self.player) then
+			if p:getHp() == 1 and self:trickIsEffective(sgs.cloneCard("burning_camps"), p, self.player) then
 				can_burn = true
 				break
 			end
-			if self:isWeak(p) and self:hasTrickEffective(sgs.cloneCard("burning_camps"), p, self.player) then
+			if self:isWeak(p) and self:trickIsEffective(sgs.cloneCard("burning_camps"), p, self.player) then
 				burn_weak = burn_weak + 1
 			end
 		end
@@ -365,6 +365,9 @@ sgs.ai_skill_use_func.QiceCard = function(card, use, self)
 	local userstring = card:toString()
 	userstring = (userstring:split(":"))[3]
 	local qicecard = sgs.cloneCard(userstring, card:getSuit(), card:getNumber())
+	if self.player:isCardLimited(qicecard, sgs.Card_MethodUse) then
+        return
+    end
 	self:useCardByClassName(qicecard, use)--确保锦囊能使用
 	if use.card then
 		Global_room:writeToConsole("奇策卡使用")
@@ -407,11 +410,11 @@ end
 	if cardsavailable(sgs.Card_Parse("ex_nihilo:qice[to_be_decided:0]=" .. id .."&qice")) then
 		table.insert(parsed_card, sgs.Card_Parse("ex_nihilo:qice[to_be_decided:0]=" .. id .."&qice"))			--无中生有
 	end
-	if not preventdamage or not self:hasTrickEffective(sgs.Card_Parse("archery_attack:qice[to_be_decided:0]=" .. id .."&qice"), caocao)
+	if not preventdamage or not self:trickIsEffective(sgs.Card_Parse("archery_attack:qice[to_be_decided:0]=" .. id .."&qice"), caocao)
 		and cardsavailable(sgs.Card_Parse("archery_attack:qice[to_be_decided:0]=" .. id .."&qice")) then
 		table.insert(parsed_card, sgs.Card_Parse("archery_attack:qice[to_be_decided:0]=" .. id .."&qice"))	--万箭齐发
 	end
-	if not preventdamage or not self:hasTrickEffective(sgs.Card_Parse("savage_assault:qice[to_be_decided:0]=" .. id .."&qice"), caocao) and
+	if not preventdamage or not self:trickIsEffective(sgs.Card_Parse("savage_assault:qice[to_be_decided:0]=" .. id .."&qice"), caocao) and
 		cardsavailable(sgs.Card_Parse("savage_assault:qice[to_be_decided:0]=" .. id .."&qice")) then
 		table.insert(parsed_card, sgs.Card_Parse("savage_assault:qice[to_be_decided:0]=" .. id .."&qice"))	--南蛮
 	end
@@ -1018,11 +1021,11 @@ yigui_skill.getTurnUseCard = function(self)
 			local burn_weak = 0
 			local players = np:getFormation()
 			for _, p in sgs.qlist(players) do
-				if p:getHp() == 1 and self:hasTrickEffective(sgs.cloneCard("burning_camps"), p, self.player) then
+				if p:getHp() == 1 and self:trickIsEffective(sgs.cloneCard("burning_camps"), p, self.player) then
 					can_burn = true
 					break
 				end
-				if self:isWeak(p) and self:hasTrickEffective(sgs.cloneCard("burning_camps"), p, self.player) then
+				if self:isWeak(p) and self:trickIsEffective(sgs.cloneCard("burning_camps"), p, self.player) then
 					burn_weak = burn_weak + 1
 				end
 			end
@@ -1097,6 +1100,13 @@ yigui_skill.getTurnUseCard = function(self)
 end
 
 sgs.ai_skill_use_func.YiguiCard = function(card, use, self)
+	local userstring = card:toString()
+	userstring = (userstring:split(":"))[3]
+	userstring = (userstring:split("+"))[1]
+	Global_room:writeToConsole("役鬼卡使用:"..userstring)
+	if self.player:isCardLimited(sgs.cloneCard(userstring), sgs.Card_MethodUse) then
+        return
+    end
 	use.card = card
 	if use.to and self.yigui_to then--部分锦囊需要手选目标，决斗、远交近攻等
 		use.to = self.yigui_to--Plist和SPlist的区别，需要targetFilter只能用sgs.PlayerList()
@@ -1703,7 +1713,7 @@ sgs.ai_skill_playerchosen.diaodu = function(self, targets)--还可以细化条�
 	return self.player
 end
 
-sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method)
+sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method, disable_list)
 	self.diaodu_id = nil
 	if who:objectName() == self.player:objectName() then--指针是可以判定等于的，severplayer类型，但是who是否会是player类型？
 		for _, hcard in sgs.qlist(self.player:getCards("h")) do
@@ -1713,7 +1723,7 @@ sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method)
 			end
 		end
 	end
-	self.diaodu_id = self:askForCardChosen(who, flags, "diaodu_snatch", method)
+	self.diaodu_id = self:askForCardChosen(who, flags, "diaodu_snatch", method, disable_list)
 	return self.diaodu_id
 end
 
@@ -1746,7 +1756,7 @@ sgs.ai_skill_playerchosen["diaodu_give"] = function(self, targets)
 		return friend
 		end]]
 	end
-	return nil
+	return {}
 end
 
 sgs.ai_skill_choice["diaodu"] = function(self, choices, data)
@@ -1844,21 +1854,19 @@ sgs.ai_skill_use_func.LianziCard = function(card, use, self)
 	use.card = card
 end
 
-sgs.ai_skill_invoke.jubao = function(self, data)
-	return true
-end
+sgs.ai_skill_invoke.jubao = true
 
-sgs.ai_skill_cardchosen.jubao = function(self, who, flags, method)
+sgs.ai_skill_cardchosen.jubao = function(self, who, flags, method, disable_list)
 	if who:hasSkills(sgs.lose_equip_skill) and self:isFriend(who) then
-		return self:askForCardChosen(who, "e", "jubao_snatch", method)
+		return self:askForCardChosen(who, "e", "jubao_snatch", method, disable_list)
 	end
 	if not self:isFriend(who) then
-		if self:isWeak(who) and who:getHandcardNum() <=2 then
-			return self:askForCardChosen(who, "h", "jubao_snatch", method)
+		if self:isWeak(who) and who:getHandcardNum() <= 2 then
+			return self:askForCardChosen(who, "h", "jubao_snatch", method, disable_list)
 		end
 		return who:getTreasure():getId()
 	end
-	return self:askForCardChosen(who, flags, "jubao_snatch", method)
+	return self:askForCardChosen(who, flags, "jubao_snatch", method, disable_list)
 end
 
 --缘江烽火图【缘江】

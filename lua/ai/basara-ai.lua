@@ -566,14 +566,16 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	if self.player:getMark("#congcha") > 0 then--聪察队友
 		--Global_room:writeToConsole("聪察:有标记")
 		local panjun = sgs.findPlayerByShownSkillName("congcha")
-		if panjun and self.player:willBeFriendWith(panjun) then--暗置只能用willBeFriendWith
-			--Global_room:writeToConsole("聪察:队友明置")
-			return "show_both_generals"
-		elseif panjun and self.player:getActualGeneral2():getKingdom() == panjun:getKingdom() and canShowDeputy then--野心家
-			return "show_deputy_general"
-		elseif self.player:getHp() == 1 and (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
-			--Global_room:writeToConsole("聪察:敌方不明置")
-			return "cancel"
+		if panjun then
+			if self.player:willBeFriendWith(panjun) then--暗置只能用willBeFriendWith
+				--Global_room:writeToConsole("聪察:队友明置")
+				return "show_both_generals"
+			elseif self.player:getActualGeneral2():getKingdom() == panjun:getKingdom() and canShowDeputy then--野心家
+				return "show_deputy_general"
+			elseif self.player:getHp() == 1 and (self:getCardsNum("Peach") + self:getCardsNum("Analeptic") == 0) then
+				--Global_room:writeToConsole("聪察:敌方不明置")
+				return "cancel"
+			end
 		end
 	end
 

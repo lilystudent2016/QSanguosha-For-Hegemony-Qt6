@@ -63,27 +63,26 @@ local chuli_skill = {}
 chuli_skill.name = "chuli"
 table.insert(sgs.ai_skills, chuli_skill)
 chuli_skill.getTurnUseCard = function(self, inclusive)
-	--Global_room:writeToConsole("进入函数除疠")
 	if not self.player:canDiscard(self.player, "he") or self.player:hasUsed("ChuliCard") then return nil end
-	self.chuli_id_choice = {}
+	self.chuli_id = nil
 	local cards = self.player:getCards("he")
 	cards = sgs.QList2Table(cards)
 	self:sortByUseValue(cards, true)
 	if self:needToThrowArmor() then
-		self.chuli_id_choice[self.player:objectName()] = self.player:getArmor():getEffectiveId()
+		self.chuli_id = self.player:getArmor():getEffectiveId()
 		return sgs.Card_Parse("@ChuliCard=.&chuli")
 	end
 	for _, card in ipairs(cards) do
 		if not self:isValuableCard(card) then
 			if card:getSuit() == sgs.Card_Spade then
-				self.chuli_id_choice[self.player:objectName()] = card:getEffectiveId()
+				self.chuli_id = card:getEffectiveId()
 				return sgs.Card_Parse("@ChuliCard=.&chuli")
 			end
 		end
 	end
 	for _, card in ipairs(cards) do
 		if not self:isValuableCard(card) and not (card:isRed() and self:getOverflow() < 2) then
-			self.chuli_id_choice[self.player:objectName()] = card:getEffectiveId()
+			self.chuli_id = card:getEffectiveId()
 			return sgs.Card_Parse("@ChuliCard=.&chuli")
 		end
 	end
@@ -92,23 +91,28 @@ end
 sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
 	--Global_room:writeToConsole("函数使用除疠")
 	local players = self:findPlayerToDiscard("he", false, sgs.Card_MethodDiscard, nil, true)
-	local kingdoms = {}
-	local targets = {}
-	--Global_room:writeToConsole("除疠预选数"..#players)
+	local targets = sgs.PlayerList()
+
 	for _, player in ipairs(players) do
-		if not self:isFriend(player) and not table.contains(kingdoms, player:getKingdom()) then
-			table.insert(targets, player)
-			table.insert(kingdoms, player:getKingdom())
+		if self:isEnemy(player) and card:targetFilter(targets, player, self.player) then
+			targets:append(player)
 		end
 	end
 	for _, player in ipairs(players) do
-		if not table.contains(targets, player) and not table.contains(kingdoms, player:getKingdom()) then
-			table.insert(targets, player)
-			table.insert(kingdoms, player:getKingdom())
+		if not self:isFriend(player) and card:targetFilter(targets, player, self.player) then
+			targets:append(player)
 		end
 	end
-	--Global_room:writeToConsole("除疠目标数"..#targets)
-	if #targets == 0 then return end
+	for _, player in ipairs(players) do
+		if self:isFriend(player) and card:targetFilter(targets, player, self.player) then
+			targets:append(player)
+		end
+	end
+	if targets:length() > 0 then
+		use.card = card
+		if use.to then use.to = sgs.PlayerList2SPlayerList(targets) end
+	end
+--[[旧写法，无法考虑拆队友黑桃
 	for _, p in ipairs(targets) do
 		local id = self:askForCardChosen(p, "he", "chuli_dismantlement", sgs.Card_MethodDiscard)
 		if self:isFriend(p) then
@@ -128,11 +132,15 @@ sgs.ai_skill_use_func.ChuliCard = function(card, use, self)
 			if use.to and use.to:length() <3 then use.to:append(p) end
 		end
 	end
+]]
 end
 
-sgs.ai_skill_cardchosen.chuli = function(self, who, flags)
-	--Global_room:writeToConsole("函数选择除疠牌")
-	return self.chuli_id_choice[who:objectName()]
+sgs.ai_skill_cardchosen.chuli = function(self, who, flags, method, disable_list)
+	if who:objectName() == self.player:objectName() and self.chuli_id then
+		Global_room:writeToConsole("选择自己除疠牌")
+		return self.chuli_id
+	end
+	return self:askForCardChosen(who, flags, "chuli_dismantlement", method, disable_list)
 end
 
 sgs.ai_use_value.ChuliCard = 5
@@ -281,7 +289,7 @@ function SmartAI:findLijianTarget(card_name, use)
 		local maxSlash = 0
 		local friend_maxSlash
 		for _, friend in ipairs(self.friends_noself) do
-			if friend:isMale() and self:hasTrickEffective(duel, first, friend) then
+			if friend:isMale() and self:trickIsEffective(duel, first, friend) then
 				if (getCardsNum("Slash", friend, self.player) > maxSlash) then
 					maxSlash = getCardsNum("Slash", friend, self.player)
 					friend_maxSlash = friend
@@ -312,10 +320,10 @@ function SmartAI:findLijianTarget(card_name, use)
 				else
 					for _, anotherenemy in ipairs(self.enemies) do
 						if anotherenemy:isMale() and anotherenemy:objectName() ~= enemy:objectName() then
-							if #males == 0 and self:hasTrickEffective(duel, enemy, anotherenemy) then
+							if #males == 0 and self:trickIsEffective(duel, enemy, anotherenemy) then
 								table.insert(males, enemy)
 							end
-							if #males == 1 and self:hasTrickEffective(duel, males[1], anotherenemy) then
+							if #males == 1 and self:trickIsEffective(duel, males[1], anotherenemy) then
 								if not anotherenemy:hasShownSkills("jizhi|jiang") then
 									table.insert(males, anotherenemy)
 								else
@@ -370,7 +378,7 @@ function SmartAI:findLijianTarget(card_name, use)
 		if #males == 1 and #self.friends_noself > 0 then
 			self:log("Only 1")
 			first = males[1]
-			if zhugeliang_kongcheng and self:hasTrickEffective(duel, first, zhugeliang_kongcheng) then
+			if zhugeliang_kongcheng and self:trickIsEffective(duel, first, zhugeliang_kongcheng) then
 				table.insert(males, zhugeliang_kongcheng)
 			else
 				local friend_maxSlash = findFriend_maxSlash(self, first)
@@ -790,14 +798,16 @@ sgs.ai_skill_invoke.jianchu = function(self,data)
 	return not self:isFriend(target) and not self:doNotDiscard(target, "he")
 end
 
-sgs.ai_skill_cardchosen.jianchu = function(self, who, flags, method)
-	if not who:isNude() then
-		if who:hasEquip() then
-			return self:askForCardChosen(who, "e", "jianchu_dismantlement", method)
-		else
-			return self:askForCardChosen(who, flags, "jianchu_dismantlement", method)
+sgs.ai_skill_cardchosen.jianchu = function(self, who, flags, method, disable_list)
+	if flags:match("e") then
+		local id = self:askForCardChosen(who, "e", "jianchu_dismantlement", method, disable_list)
+		if id then
+			return id
 		end
+	else
+		return self:askForCardChosen(who, flags, "jianchu_dismantlement", method, disable_list)
 	end
+
 end
 
 function sgs.ai_cardneed.jianchu(to, card, self)
@@ -1201,7 +1211,7 @@ sgs.ai_skill_invoke.kuangfu = function(self, data)
 	return not benefit
 end
 
-sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
+sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags, method, disable_list)
 	if self:isFriend(who) then
 		if who:getArmor() and self:needToThrowArmor(who) then return who:getArmor():getEffectiveId() end
 		if who:getArmor() and self:evaluateArmor(who:getArmor(), who) < -5 then return who:getArmor():getEffectiveId() end
@@ -1211,33 +1221,22 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 		end
 	else
 		if self.player:hasSkills("kuangfu+xishe") and who:hasEquip() then--配合不臣黄祖
-			local card_id
 			if not self.player:getWeapon() and who:getWeapon() then
-			  card_id =  who:getWeapon():getId()
+				return who:getWeapon():getId()
 			elseif not self.player:getOffensiveHorse() and who:getOffensiveHorse() then
-			  card_id =  who:getOffensiveHorse():getId()
-			elseif not self.player:getArmor() and who:getArmor() then
-			  card_id =  who:getArmor():getId()
+				return who:getOffensiveHorse():getId()
 			elseif not self.player:getDefensiveHorse() and who:getDefensiveHorse() then
-			  card_id =  who:getDefensiveHorse():getId()
+				return who:getDefensiveHorse():getId()
+			elseif not self.player:getArmor() and who:getArmor() then
+				return who:getArmor():getId()
 			elseif self.player:getTreasure() and who:getTreasure() then
-				card_id =  who:getTreasure():getEffectiveId()
+				return who:getTreasure():getEffectiveId()
 			end
-			if card_id then return card_id end
 		end
 		local dangerous = self:getDangerousCard(who)
 		if dangerous then return dangerous end
-		--[[
-			local card = sgs.Sanguosha:getCard(dangerous)
-			if card:isKindOf("Weapon") and who:getWeapon() then return who:getWeapon():getEffectiveId()
-			elseif card:isKindOf("Armor") and who:getArmor() then return who:getArmor():getEffectiveId()
-			elseif card:isKindOf("DefensiveHorse") and who:getDefensiveHorse() then return who:getDefensiveHorse():getEffectiveId()
-			elseif card:isKindOf("OffensiveHorse") and who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId()
-			elseif card:isKindOf("Treasure") and who:getTreasure() then return who:getTreasure():getEffectiveId()
-			end
-		]]
 		if who:getArmor() and who:getArmor():isKindOf("EightDiagram") and not self:needToThrowArmor(who) then return who:getArmor():getEffectiveId() end
-		if who:hasShownSkills("jijiu|beige|weimu|qingcheng") and not self:doNotDiscard(who, "e", false, 1, reason) then
+		if who:hasShownSkills("jijiu|beige|weimu|qingcheng") and not self:doNotDiscard(who, "e", false, 1) then
 			if who:getPile("wooden_ox"):length() > 1 or who:hasTreasure("JadeSeal") then return who:getTreasure():getEffectiveId() end
 			if who:getDefensiveHorse() then return who:getDefensiveHorse():getEffectiveId() end
 			if who:getArmor() and who:getArmor() and not self:needToThrowArmor(who) then return who:getArmor():getEffectiveId() end
@@ -1246,15 +1245,6 @@ sgs.ai_skill_cardchosen.kuangfu = function(self, who, flags)
 		end
 		local valuable = self:getValuableCard(who)
 		if valuable then return valuable end
-		--[[
-			local card = sgs.Sanguosha:getCard(valuable)
-			if card:isKindOf("Weapon") and who:getWeapon() then return who:getWeapon():getEffectiveId()
-			elseif card:isKindOf("Armor") and who:getArmor() then return who:getArmor():getEffectiveId()
-			elseif card:isKindOf("DefensiveHorse") and who:getDefensiveHorse() then return who:getDefensiveHorse():getEffectiveId()
-			elseif card:isKindOf("OffensiveHorse") and who:getOffensiveHorse() then return who:getOffensiveHorse():getEffectiveId()
-			elseif card:isKindOf("Treasure") and who:getTreasure() then return who:getTreasure():getEffectiveId()
-			end
-		]]
 		if not self:doNotDiscard(who, "e") then
 			if who:getArmor() and self:isWeak() then return who:getArmor():getEffectiveId() end
 			if who:getTreasure() then return who:getTreasure():getEffectiveId() end

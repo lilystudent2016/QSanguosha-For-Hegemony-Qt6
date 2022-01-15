@@ -54,7 +54,7 @@ function SmartAI:shouldUseRende()
 	local keepNum = self.player:getHandcardNum() - 2 + giveNum
 	if self.player:hasSkill("kongcheng") and keepNum <= 2 then--有空城时手牌少时
 		return true
-	elseif keepNum < 0 and not self:isWeak() then--没有空城手牌少时，考虑先驱、阴阳鱼等?
+	elseif keepNum < 0 and self.player:getMark("@firstshow") + self.player:getMark("@careerist") == 0 then--没有空城手牌少时
 		return false
 	end
 

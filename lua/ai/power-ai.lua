@@ -163,7 +163,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
 	self:sortByUseValue(handcards,true)
 	local card = handcards[1]
   local visibleflag--记录给出的手牌，盗书等技能需要
-  if self:isWeak() and self:isRecoverPeach(card) then
+  if self:isWeak() and isCard("Peach", card, self.player) then
     return "."
   end
   local targets = {}
@@ -183,7 +183,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
         return "@JieyueCard=" .. card:getEffectiveId() .. "->" .. p:objectName()
     end
   end
-  if self:isRecoverPeach(card) then
+  if isCard("Peach", card, self.player) then
     return "."
   end
 	self:sort(targets, "defense", true)
@@ -232,7 +232,7 @@ sgs.ai_skill_choice["docommand_jieyue"] = function(self, choices, data)
       end
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
-        if self:isRecoverPeach(c) then--有实体卡桃可回血
+        if isCard("Peach", c, self.player) then--有实体卡桃可回血
           has_peach = true
         end
       end
@@ -368,11 +368,15 @@ sgs.ai_skill_choice["jianglve"] = function(self, choices, data)--ai势力召唤
   if table.contains(choices,"show_head_general") then
     return "show_head_general"
   end
-  return choices[1]--不亮将的可以加上敌友标记？王平回合开始明置？
+  return choices[1]
 end
 
 --法正
 sgs.ai_skill_invoke.enyuan = function(self, data)
+  local target = data:toPlayer()
+  if target:objectName() == self.player:objectName() then--只考虑不恩怨自己掉血，其他正负面无法分辨
+    return false
+  end
   return true
 end
 
@@ -1140,7 +1144,7 @@ sgs.ai_skill_choice["docommand_buyi"] = function(self, choices, data)
   local has_peach = false
   local count = 0
   for _, c in sgs.qlist(self.player:getHandcards()) do
-    if self:isRecoverPeach(c) then--有实体卡桃可回血
+    if isCard("Peach", c, self.player) then--有实体卡桃可回血
       has_peach = true
     end
     if c:isAvailable(self.player) then
@@ -1228,7 +1232,7 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
   end
 
   local function canKeshouDiscard(card)
-    if self:isRecoverPeach(card) or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
+    if isCard("Peach", card, self.player) or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
       return false
     end
     return true
@@ -1338,7 +1342,7 @@ function sgs.ai_slash_prohibit.fudi(self, from, to)--杀禁止
 	if to:isKongcheng() then return false end
   if to:getPhase() ~= sgs.Player_NotActive then return false end
   if from:getHp() >= 3 or (to:getHp() - from:getHp() > 1) then return false end
-  if from:hasSkills("tieqi|tieqi_xh") then return false end
+  if from:hasSkills("tieqi|tieqi_xh|yinbing") then return false end
   self:sort(self.friends_noself,"hp", true)
   for _, friend in ipairs(self.friends_noself) do
     if friend:getHp() > from:getHp() and from:isFriendWith(friend) and friend:isAlive() then
@@ -1415,7 +1419,7 @@ sgs.ai_skill_choice["docommand_weidi"] = function(self, choices, data)
   local has_peach = false
   local valuable_count = 0
   for _, c in sgs.qlist(self.player:getHandcards()) do
-    if self:isRecoverPeach(c) then--有实体卡桃可回血
+    if isCard("Peach", c, self.player) then--有实体卡桃可回血
       has_peach = true
     end
     if self:getUseValue(c) >= sgs.ai_use_value.Peach then
@@ -1684,12 +1688,12 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   self:sortByUseValue(allcards, true)
   local discard = allcards[1]
   if self.player:getMark("JieyueExtraDraw") > 0 then
-    if self.player:getCardCount(true) == 1 and self:isRecoverPeach(allcards[1]) and self:isWeak() then
+    if self.player:getCardCount(true) == 1 and isCard("Peach", allcards[1], self.player) and self:isWeak() then
       return "."
     end
     if #jianan_skills == 0 then
       if self.player:getCardCount(true) < 2
-      or (self:isRecoverPeach(allcards[2]) and self:isWeak()) then
+      or (isCard("Peach", allcards[2], self.player) and self:isWeak()) then
         return "."
       end
     end
@@ -1707,7 +1711,7 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   if self.player:hasSkills("qiaobian|qiaobian_egf") and choice == "tuxi" then
     return "."
   end
-  if not self:isRecoverPeach(discard) then
+  if not isCard("Peach", discard, self.player) then
     local g1name = self.player:getActualGeneral1Name()
     local g2name = self.player:getActualGeneral2Name()
     if shouldUseJiananByValue(self, g1name) or shouldUseJiananByValue(self, g2name)

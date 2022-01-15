@@ -70,7 +70,7 @@ sgs.ai_choicemade_filter.cardChosen.fankui = function(self, player, promptlist)
 	end
 end
 
-sgs.ai_skill_cardchosen.fankui = function(self, who, flags)
+sgs.ai_skill_cardchosen.fankui = function(self, who, flags, method, disable_list)
 	local suit = sgs.ai_need_damaged.fankui(self, who, self.player)
 	if not suit then return nil end
 
@@ -247,7 +247,7 @@ end
 
 function sgs.ai_slash_prohibit.ganglie(self, from, to)
 	if self:isFriend(from, to) then return false end
-	if from:hasShownSkills("tieqi|tieqi_xh") then return false end
+	if from:hasShownSkills("tieqi|tieqi_xh|yinbing") then return false end
 	return from:getHandcardNum() + from:getHp() < 4
 end
 
@@ -265,26 +265,21 @@ sgs.ai_choicemade_filter.skillInvoke.ganglie = function(self, player, promptlist
 end
 
 --张辽
-function SmartAI:findTuxiTarget()
-
-	self:sort(self.enemies, "handcard_defense")
+function SmartAI:findTuxiTarget(max_num)
 	local targets = {}
-
-	local zhugeliang = sgs.findPlayerByShownSkillName("kongcheng")
-	local dengai = sgs.findPlayerByShownSkillName("tuntian")
-
-	local draw_num = 2--新突袭
+	max_num = max_num or 2--新突袭
+--[[
 	if self.player:hasSkills("jieyue|jieyue_egf") then
-		draw_num = draw_num + math.random(0, self.player:getMark("JieyueExtraDraw")*3)
-		--Global_room:writeToConsole("抽卡数:"..draw_num.."|"..self.player:getMark("JieyueExtraDraw")*3)
+		max_num = max_num + math.random(0, self.player:getMark("JieyueExtraDraw")*3)
+		--Global_room:writeToConsole("抽卡数:"..max_num.."|"..self.player:getMark("JieyueExtraDraw")*3)
 	end
 	if self.player:hasSkill("zisui") then
-		draw_num = draw_num + math.random(0, self.player:getPile("disloyalty"):length())
+		max_num = max_num + math.random(0, self.player:getPile("disloyalty"):length())
 	end
-
+]]
 	local add_player = function (player, isfriend)
 		if player:getHandcardNum() == 0 or player:objectName() == self.player:objectName() then return #targets end
-		if #targets < draw_num then
+		if #targets < max_num then
 			if not table.contains(targets, player:objectName()) then
 				table.insert(targets, player:objectName())
 			end
@@ -295,38 +290,40 @@ function SmartAI:findTuxiTarget()
 		return #targets
 	end
 
+	local zhugeliang = sgs.findPlayerByShownSkillName("kongcheng")
 	if zhugeliang and self:isFriend(zhugeliang) and sgs.ai_explicit[zhugeliang:objectName()] ~= "unknown" and zhugeliang:getHandcardNum() == 1
 		and self:getEnemyNumBySeat(self.player,zhugeliang) > 0 then
 		if zhugeliang:getHp() <= 2 then
-			if add_player(zhugeliang, 1) == draw_num then return targets end
+			if add_player(zhugeliang, 1) == max_num then return targets end
 		else
 			local cards = sgs.QList2Table(zhugeliang:getHandcards())
 			if #cards == 1 and sgs.cardIsVisible(cards[1], zhugeliang, self.player) then
 				if cards[1]:isKindOf("TrickCard") or cards[1]:isKindOf("Slash") or cards[1]:isKindOf("EquipCard") then
-					if add_player(zhugeliang, 1) == draw_num then return targets end
+					if add_player(zhugeliang, 1) == max_num then return targets end
 				end
 			end
 		end
 	end
 
+	self:sort(self.enemies, "handcard_defense")
 	for _, enemy in ipairs(self.enemies) do
 		local cards = sgs.QList2Table(enemy:getHandcards())
 		for _, card in ipairs(cards) do
 			if sgs.cardIsVisible(card, enemy, self.player) and (card:isKindOf("Peach") or card:isKindOf("Nullification") or card:isKindOf("Analeptic") ) then
-				if add_player(enemy) == draw_num  then return targets end
+				if add_player(enemy) == max_num  then return targets end
 			end
 		end
 	end
 
 	for _, enemy in ipairs(self.enemies) do
 		if enemy:hasShownSkills(sgs.notActive_cardneed_skill) then
-			if add_player(enemy) == draw_num then return targets end
+			if add_player(enemy) == max_num then return targets end
 		end
 	end
 
 	for _, enemy in ipairs(self.enemies) do
 		if enemy:hasShownSkills(sgs.Active_cardneed_skill) then
-			if add_player(enemy) == draw_num then return targets end
+			if add_player(enemy) == max_num then return targets end
 		end
 	end
 
@@ -335,23 +332,17 @@ function SmartAI:findTuxiTarget()
 		local good_target = true
 		if x == 1 and self:needKongcheng(enemy) then good_target = false end
 		if x >= 2 and enemy:hasShownSkill("tuntian") then good_target = false end
-		if good_target and add_player(enemy) == draw_num then return targets end
+		if good_target and add_player(enemy) == max_num then return targets end
 	end
 
 	local others = self.room:getOtherPlayers(self.player)
 	for _, other in sgs.qlist(others) do
-		if self:objectiveLevel(other) >= 0 and not other:hasShownSkill("tuntian") and add_player(other) == draw_num then
+		if self:objectiveLevel(other) >= 0 and not other:hasShownSkill("tuntian") and add_player(other) == max_num then
 			return targets
 		end
 	end
---[[
-	for _, other in sgs.qlist(others) do
-		if self:objectiveLevel(other) >= 0 and not other:hasShownSkill("tuntian") and add_player(other) == 1 and math.random(0, 5) <= 1 and not self.player:hasSkill("qiaobian") then
-			return targets
-		end
-	end
-]]
-	if #targets >=1 then--新突袭，配合于禁、公孙渊
+
+	if #targets > 0 then--新突袭，配合于禁、公孙渊
 		return targets
 	end
 end
@@ -370,11 +361,11 @@ sgs.ai_skill_use["@@tuxi"] = function(self, prompt)
 end
 ]]
 
-sgs.ai_skill_playerchosen.tuxi = function(self)
-	local targets = self:findTuxiTarget()
-	if type(targets) == "table" and #targets > 0 then
+sgs.ai_skill_playerchosen.tuxi = function(self, targets, max_num, min_num)
+	local tos = self:findTuxiTarget(max_num)
+	if type(tos) == "table" and #tos > 0 then
 		local result = {}
-		for _,name in pairs(targets)do
+		for _,name in pairs(tos)do
 			table.insert(result,self.room:findPlayerbyobjectName(name))
 		end
 		return result
@@ -865,14 +856,14 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 				for _, judge in sgs.qlist(judges) do
 					card = sgs.Sanguosha:getCard(judge:getEffectiveId())
 					for _, enemy in ipairs(self.enemies) do
-						if not enemy:containsTrick(judge:objectName()) and self:hasTrickEffective(judge, enemy, self.player) then
+						if not enemy:containsTrick(judge:objectName()) and self:trickIsEffective(judge, enemy, self.player) then
 							target = enemy
 							break
 						end
 					end
 					if not target then
 						for _, enemy in sgs.qlist(self.room:getAlivePlayers()) do
-							if not self:isFriend(enemy) and not enemy:containsTrick(judge:objectName()) and self:hasTrickEffective(judge, enemy, self.player) then
+							if not self:isFriend(enemy) and not enemy:containsTrick(judge:objectName()) and self:trickIsEffective(judge, enemy, self.player) then
 								target = enemy
 								break
 							end
@@ -880,7 +871,7 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 					end
 					if not target then
 						for _, enemy in sgs.qlist(self.room:getAlivePlayers()) do
-							if not self.player:isFriendWith(enemy) and not enemy:containsTrick(judge:objectName()) and self:hasTrickEffective(judge, enemy, self.player) then
+							if not self.player:isFriendWith(enemy) and not enemy:containsTrick(judge:objectName()) and self:trickIsEffective(judge, enemy, self.player) then
 								target = enemy
 								break
 							end
@@ -934,7 +925,7 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 		if flag:match("e") then
 			if card == nil or target == nil then
 				if not who:hasEquip() or who:hasShownSkills(sgs.lose_equip_skill) then return nil end
-				local card_id = self:askForCardChosen(who, "e", "snatch")
+				local card_id = self:askForCardChosen(who, "e", "move")
 				if card_id >= 0 and who:hasEquip(sgs.Sanguosha:getCard(card_id)) then card = sgs.Sanguosha:getCard(card_id) end
 				if card then
 					if card:isKindOf("Armor") or card:isKindOf("DefensiveHorse") then
@@ -971,7 +962,7 @@ function SmartAI:getMoveCardorTarget(who, return_prompt, flag)--原巧变修改�
 	end
 end
 
-sgs.ai_skill_cardchosen.qiaobian = function(self, who, flags)
+sgs.ai_skill_cardchosen.qiaobian = function(self, who, flags, method, disable_list)
 	if flags == "ej" then
 		return self:getMoveCardorTarget(who, "card")
 	end

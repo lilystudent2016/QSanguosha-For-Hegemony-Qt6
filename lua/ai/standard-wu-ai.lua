@@ -290,6 +290,10 @@ qixi_skill.getTurnUseCard = function(self, inclusive)
 				shouldUse = false
 			end
 
+			if self.player:hasSkill("duannian") and self.player:isLastHandCard(card) and sgs.ai_skill_invoke.duannian(self) then
+				shouldUse = false--配合周夷
+			end
+
 			if shouldUse then
 				black_card = card
 				break
@@ -817,6 +821,10 @@ guose_skill.getTurnUseCard = function(self, inclusive)
 				shouldUse = false
 			end
 
+			if self.player:hasSkill("duannian") and self.player:isLastHandCard(acard) and sgs.ai_skill_invoke.duannian(self) then
+				shouldUse = false--配合周夷
+			end
+
 			if shouldUse then
 				card = acard
 				break
@@ -1279,7 +1287,7 @@ sgs.ai_cardneed.xiaoji = sgs.ai_cardneed.equip
 
 --孙坚
 sgs.ai_skill_playerchosen.yinghun_sunjian = function(self, targets)
-	Global_room:writeToConsole("进入英魂")
+	--Global_room:writeToConsole("进入英魂")
 	local x = self.player:getLostHp()
 	local n = x - 1
 	self:updatePlayers()
@@ -1627,7 +1635,7 @@ end
 
 function sgs.ai_slash_prohibit.tianxiang(self, from, to)
 	if self:isFriend(to, from) then return false end
-	if from:hasShownSkills("tieqi|tieqi_xh") then return false end
+	if from:hasShownSkills("tieqi|tieqi_xh|yinbing") then return false end
 	return self:cantbeHurt(to, from)
 end
 

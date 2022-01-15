@@ -379,7 +379,7 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 	end
 
 	if not self:damageIsEffective_(damageStruct) then return end
-	if card and card:isKindOf("TrickCard") and not self:hasTrickEffective(card, to, self.player) then return end
+	if card and card:isKindOf("TrickCard") and not self:trickIsEffective(card, to, self.player) then return end
 
 	local jiaren_zidan = sgs.findPlayerByShownSkillName("jgchiying")
 	if jiaren_zidan and jiaren_zidan:isFriendWith(to) then
@@ -441,7 +441,7 @@ function SmartAI:isGoodChainTarget_(damageStruct)
 		newDamageStruct.to = player
 		if nature == sgs.DamageStruct_Fire and player:hasArmorEffect("Vine") then newDamageStruct.damage = newDamageStruct.damage + 1 end
 		if player:objectName() ~= to:objectName() and player:isChained() and self:damageIsEffective_(newDamageStruct)
-			and not (card and card:isKindOf("FireAttack") and not self:hasTrickEffective(card, to, self.player)) then
+			and not (card and card:isKindOf("FireAttack") and not self:trickIsEffective(card, to, self.player)) then
 			local getvalue = getChainedPlayerValue(player, 0)
 			if kills == #self.enemies and sgs.getDefenseSlash(player, self) < 2 then
 				if card and from:objectName() == self.room:getCurrent():objectName() and from:getPhase() == sgs.Player_Play then
@@ -478,7 +478,7 @@ function SmartAI:useCardIronChain(card, use)
 	local enemytargets = {}
 	self:sort(self.friends, "defense")
 	for _, friend in ipairs(self.friends) do
-		if friend:isChained() and not self:isGoodChainPartner(friend) and self:hasTrickEffective(card, friend, self.player) then
+		if friend:isChained() and not self:isGoodChainPartner(friend) and self:trickIsEffective(card, friend, self.player) then
 			if friend:containsTrick("lightning") then
 				table.insert(friendtargets, friend)
 			elseif not friend:hasShownSkill("fenming") then
@@ -490,13 +490,13 @@ function SmartAI:useCardIronChain(card, use)
 	self:sort(self.enemies, "defense")
 	for _, enemy in ipairs(self.enemies) do
 		if not enemy:isChained()
-			and self:hasTrickEffective(card, enemy, self.player) and self:objectiveLevel(enemy) > 3
+			and self:trickIsEffective(card, enemy, self.player) and self:objectiveLevel(enemy) > 3
 			and not self:needDamagedEffects(enemy) and not self:needToLoseHp(enemy) and sgs.isGoodTarget(enemy, self.enemies, self) then
 			table.insert(enemytargets, enemy)
 		end
 	end
 
-	local chainSelf = self:hasTrickEffective(card, self.player, self.player) and not self.player:isChained()
+	local chainSelf = self:trickIsEffective(card, self.player, self.player) and not self.player:isChained()
 						and (not self.player:hasSkill("duanxie") or self.player:hasUsed("DuanxieCard"))
 						and (self:needToLoseHp(self.player, nil, nil, true) or self:needDamagedEffects(self.player))
 						and (self:getCardId("FireSlash") or self:getCardId("ThunderSlash")
@@ -637,7 +637,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 		end]]
 		return self:objectiveLevel(enemy) > 3 and not enemy:isKongcheng()--and damage > 0
 				and self:damageIsEffective(enemy, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(enemy, self.player)--, damage
-				and self:hasTrickEffective(fire_attack, enemy)
+				and self:trickIsEffective(fire_attack, enemy)
 				and sgs.isGoodTarget(enemy, self.enemies, self)
 				and (not (enemy:hasShownSkill("jianxiong") and not self:isWeak(enemy)) and not self:needDamagedEffects(enemy, self.player)
 						and not (enemy:isChained() and not self:isGoodChainTarget(enemy, nil, nil, nil, fire_attack)))
@@ -661,7 +661,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 	if can_FireAttack_self and self.player:isChained() and self:isGoodChainTarget(self.player, nil, nil, nil, fire_attack)
 		and self.player:getHandcardNum() > 1
 		and self:damageIsEffective(self.player, sgs.DamageStruct_Fire, self.player) and not self:cantbeHurt(self.player)
-		and self:hasTrickEffective(fire_attack, self.player) then
+		and self:trickIsEffective(fire_attack, self.player) then
 
 		if HasNiepanEffect(self.player) then
 			table.insert(targets, self.player)
@@ -715,7 +715,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)--对明牌没花色的打�
 		if godsalvation and godsalvation:getId() ~= fire_attack:getId() and self:willUseGodSalvation(godsalvation) then
 			local use_gs = true
 			for _, p in ipairs(targets) do
-				if not p:isWounded() or not self:hasTrickEffective(godsalvation, p, self.player) then break end
+				if not p:isWounded() or not self:trickIsEffective(godsalvation, p, self.player) then break end
 				use_gs = false
 			end
 			if use_gs then

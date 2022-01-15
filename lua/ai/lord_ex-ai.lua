@@ -51,11 +51,6 @@ sgs.ai_skill_choice.liangfan = function(self, choices, data)
 	return "yes"
 end
 
---[[
-  用默认的
-  askForCardChosen(player, target, "he", "liangfan", false, Card::MethodGet);
-]]
-
 --唐咨
 sgs.ai_skill_invoke.xingzhao = function(self, data)
 	if not self:willShowForAttack() then
@@ -265,11 +260,11 @@ sgs.ai_skill_choice.fengshix = function(self, choices, data)
 	return "no"
 end
 
-sgs.ai_skill_cardchosen.fengshix = function(self, who, flags, method)
-  if self.fengshix_discard then--自己被水淹七军缺信息
+sgs.ai_skill_cardchosen.fengshix = function(self, who, flags, method, disable_list)
+  if who:objectName() == self.player:objectName() and self.fengshix_discard then--自己被水淹七军缺信息
     return self.fengshix_discard
   end
-  return self:askForCardChosen(who, flags, "fengshix_dismantlement", method)
+  return self:askForCardChosen(who, flags, "fengshix_dismantlement", method, disable_list)
 end
 
 sgs.ai_cardneed.fengshix = function(to, card, self)
@@ -701,7 +696,7 @@ sgs.ai_skill_use_func.ZaoyunCard= function(card, use, self)
     handcards = sgs.QList2Table(handcards)
     self:sortByUseValue(handcards, true)
     for _,c in ipairs(handcards) do
-      if not (self:isRecoverPeach(c)) then
+      if not (isCard("Peach", c, self.player)) then
         table.insert(card_list, c:getEffectiveId())
       end
       if #card_list == need_num then
@@ -828,6 +823,9 @@ sgs.ai_skill_use_func.DiaoguiCard = function(card, use, self)
 
 	local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
   local clone_tiger = sgs.cloneCard("lure_tiger", card:getSuit(), card:getNumber())
+  if self.player:isCardLimited(clone_tiger, sgs.Card_MethodUse) then
+    return
+  end
   self:useCardLureTiger(clone_tiger, dummyuse)
 	if not dummyuse.to:isEmpty() then
     use.card = card
@@ -948,7 +946,7 @@ sgs.ai_skill_exchange._quanji = function(self,pattern,max_num,min_num,expand_pil
     end
   end
   if #cards > 1 and cards[1]:isKindOf("Crossbow")--别放连弩
-  and not ((self:isRecoverPeach(cards[2]) or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
+  and not ((isCard("Peach", cards[2], self.player) or cards[2]:isKindOf("Analeptic")) and self.player:getHp() == 1) then
     return cards[2]:getEffectiveId()
   end
 	return cards[1]:getEffectiveId()
@@ -1702,7 +1700,7 @@ sgs.ai_skill_playerchosen["huaiyi_snatch"] = function(self, targets, max_num, mi
   return result
 end
 
-sgs.ai_skill_cardchosen.huaiyi = function(self, who, flags)
+sgs.ai_skill_cardchosen.huaiyi = function(self, who, flags, method, disable_list)
   local flag_str
   if self.player:getPile("disloyalty"):length() + 1 == self.player:getMaxHp() then
     flag_str = "h"
@@ -1738,7 +1736,7 @@ sgs.ai_skill_cardchosen.huaiyi = function(self, who, flags)
       end
     end
   end
-	return self:askForCardChosen(who, flag_str, "huaiyi_snatch", sgs.Card_MethodGet)
+	return self:askForCardChosen(who, flag_str, "huaiyi_snatch", method, disable_list)
 end
 
 sgs.ai_skill_invoke.zisui = true
@@ -2183,7 +2181,7 @@ sgs.ai_skill_choice["docommand_duwu"] = function(self, choices, data)
     if not is_friend and self:slashIsAvailable(source) then
       local has_peach = false
       for _, c in sgs.qlist(self.player:getHandcards()) do
-        if self:isRecoverPeach(c) then--有实体卡桃可回血
+        if isCard("Peach", c, self.player) then--有实体卡桃可回血
           has_peach = true
         end
       end
@@ -2482,7 +2480,7 @@ end
 
 sgs.ai_skill_choice["trick_show"] = function(self, choices)
 	choices = choices:split("+")
-	return choices[math.random(1, #choices)]
+	return choices[math.random(1, #choices-1)]--不取消
 end
 
 --号令天下
@@ -2496,7 +2494,7 @@ function SmartAI:useCardRuleTheWorld(card, use)
   end
   self:sort(self.enemies, "hp")
   for _, enemy in ipairs(self.enemies) do
-    if enemy:getHp() > min_hp and self:hasTrickEffective(card, enemy) and enemy:hasShownSkills(sgs.priority_skill)
+    if enemy:getHp() > min_hp and self:trickIsEffective(card, enemy) and enemy:hasShownSkills(sgs.priority_skill)
     and self:slashIsEffective(sgs.cloneCard("slash"), enemy) then
       use.card = card
       if use.to then use.to:append(enemy) end
@@ -2504,14 +2502,14 @@ function SmartAI:useCardRuleTheWorld(card, use)
     end
   end
   for _, enemy in ipairs(self.enemies) do
-    if enemy:getHp() > min_hp and self:hasTrickEffective(card, enemy) and self:slashIsEffective(sgs.cloneCard("slash"), enemy) then
+    if enemy:getHp() > min_hp and self:trickIsEffective(card, enemy) and self:slashIsEffective(sgs.cloneCard("slash"), enemy) then
       use.card = card
       if use.to then use.to:append(enemy) end
       return
     end
   end
   for _, enemy in ipairs(self.enemies) do
-    if enemy:getHp() > min_hp and self:hasTrickEffective(card, enemy) then--考虑敌友方人数和杀禁止、买血？
+    if enemy:getHp() > min_hp and self:trickIsEffective(card, enemy) then--考虑敌友方人数和杀禁止、买血？
       use.card = card
       if use.to then use.to:append(enemy) end
       return
@@ -2535,11 +2533,31 @@ sgs.ai_skill_choice["rule_the_world"] = function(self, choices, data)
   if self:isFriend(target) then
     return "cancel"
   elseif self:slashIsEffective(sgs.cloneCard("slash"), target, self.player) then
-    return choices[1]
+    for _, choice in ipairs(choices) do
+      if choice:startsWith("slash") then
+        return choice
+      end
+    end
   else
-    return choices[2]
+    for _, choice in ipairs(choices) do
+      if choice:startsWith("discard") then
+        return choice
+      end
+    end
   end
 	return choices[math.random(1, #choices)]
+end
+
+sgs.ai_nullification.RuleTheWorld = function(self, card, from, to, positive, keep)
+  if #(self:getEnemies(to)) > (to:getHp() > 2 and 2 or 1) then
+    keep = false
+  end
+  if keep then return false end
+	if positive then
+		if self:isFriend(to) then return true, true end
+	else
+		if self:isEnemy(to) then return true, true end
+	end
 end
 
 --克复中原
@@ -2563,6 +2581,52 @@ sgs.ai_skill_playerchosen["conquering_slash"] = function(self, targets)
 		return {}
 	end
   return target
+end
+
+sgs.ai_nullification.Conquering = function(self, card, from, to, positive, keep)
+  local targets = sgs.SPlayerList()
+	local players = self.room:getTag("targets" .. card:toString()):toList()
+	for _, q in sgs.qlist(players) do
+		targets:append(q:toPlayer())
+	end
+  if card:hasFlag("CompleteEffect") then
+    local num = 0
+    for _, p in sgs.qlist(targets) do
+      if p:getSeemingKingdom() == "shu" then
+        num = num + 1
+      end
+    end
+    if num > 1 then
+      keep = false
+    end
+  end
+  if keep then return false end
+	if positive then
+		if self:isEnemy(to) and self:getCard("HegNullification") then
+      local num = 0
+      for _, p in sgs.qlist(targets) do
+        if p:isFriendWith(to) then
+          num = num + 1
+        end
+      end
+      if num > 1 then
+        return true, false
+      end
+    end
+	else
+		if self:isFriendWith(to)
+    and self.room:getTag("NullifyingTimes"):toInt() > 0 and self.room:getTag("NullificatonType"):toBool() then
+      local num = 0
+      for _, p in sgs.qlist(targets) do
+        if p:isFriendWith(to) then
+          num = num + 1
+        end
+      end
+      if num > 1 then
+        return true, true
+      end
+    end
+	end
 end
 
 --固国安邦
@@ -2633,6 +2697,25 @@ sgs.ai_skill_use["@@consolidatecountrygive"] = function(self, prompt, method)
   return "."
 end
 
+sgs.ai_nullification.ConsolidateCountry = function(self, card, from, to, positive, keep)
+  if card:hasFlag("CompleteEffect") then
+    for _, p in ipairs(self:getFriends(from)) do
+      if from:isFriendWith(p) then
+        keep = false
+        break
+      end
+    end
+  end
+	if keep then return false end
+	if positive then
+		if self:isEnemy(from) and (self:isWeak(from) or from:hasShownSkills(sgs.cardneed_skill)) then
+			return true, true
+		end
+	else
+		if self:isFriend(from) then return true, true end
+	end
+end
+
 --文和乱武
 function SmartAI:useCardChaos(card, use)
   for _, p in ipairs(self.enemies) do
@@ -2650,14 +2733,22 @@ sgs.ai_card_intention.Chaos = 80
 sgs.ai_skill_choice.chaos = function(self, choices, data)
   Global_room:writeToConsole("文和乱武选择:" .. choices)
   choices = choices:split("+")
---[[判断我选择弃和让对方弃更优？
+--[[
     QString choice1 = QString("letdiscard%to:%1").arg(effect.to->objectName());
     QString choice2 = QString("discard%to:%1").arg(effect.to->objectName());
   ]]
   local target = data:toPlayer()
   if self:isFriend(target) then
-    return choices[2]
+    for _, choice in ipairs(choices) do
+      if choice:startsWith("discard") then
+        return choice
+      end
+    end
   end
+--[[判断我选择弃和让对方弃更优？按类型划分牌比较最有价值的牌和两类最小值之和大小；群势力加成
+
+
+    ]]
 	return choices[math.random(1, #choices)]
 end
 
@@ -2700,4 +2791,46 @@ sgs.ai_skill_cardask["@chaos-select"] = function(self, data, pattern, target, ta
   return "."
 end
 
---缺无懈可击响应
+sgs.ai_nullification.Chaos = function(self, card, from, to, positive, keep)
+  local targets = sgs.SPlayerList()
+	local players = self.room:getTag("targets" .. card:toString()):toList()
+	for _, q in sgs.qlist(players) do
+		targets:append(q:toPlayer())
+	end
+  local null_card = self:getCard("Nullification")
+  if null_card and not self.player:isKongcheng() then
+    local hcards = sgs.QList2Table(self.player:getHandcards())
+    self:sortByKeepValue(hcards, true)
+    --[[未完成，无懈可能被弃时选择
+
+
+    ]]
+  end
+  if keep then return false end
+	if positive then
+		if self:isFriendWith(to) and self:getCard("HegNullification") then
+      local num = 0
+      for _, p in sgs.qlist(targets) do
+        if p:isFriendWith(to) then
+          num = num + 1
+        end
+      end
+      if num > 1 then
+        return true, false
+      end
+    end
+	else
+		if self:isEnemy(to)
+    and self.room:getTag("NullifyingTimes"):toInt() > 0 and self.room:getTag("NullificatonType"):toBool() then
+      local num = 0
+      for _, p in sgs.qlist(targets) do
+        if p:isFriendWith(to) then
+          num = num + 1
+        end
+      end
+      if num > 1 then
+        return true, true
+      end
+    end
+	end
+end

@@ -53,6 +53,9 @@ sgs.ai_skill_use_func.GuishuCard = function(card, use, self)
 	userstring = (userstring:split(":"))[3]
     local guishucard = sgs.cloneCard(userstring, card:getSuit(), card:getNumber())
     guishucard:setCanRecast(false)
+    if self.player:isCardLimited(guishucard, sgs.Card_MethodUse) then
+        return
+    end
     self:useCardByClassName(guishucard, use)--确保能使用
     if use.card then--and use.to and not use.to:isEmpty() 如果有use.to会使用虚拟牌，为何？
 		Global_room:writeToConsole("鬼术卡使用:"..userstring)
@@ -81,7 +84,7 @@ sgs.ai_skill_invoke.sidi = function(self, data)
     local num = 0
     for _, card in sgs.qlist(target:getHandcards()) do
 		if not sgs.cardIsVisible(card, target, self.player)
-        or not (self:isRecoverPeach(card) or (card:isKindOf("Analeptic") and target:getHp() == 1)) then
+        or not (isCard("Peach", card, self.player) or (card:isKindOf("Analeptic") and target:getHp() == 1)) then
 			num = num + 1
 		end
 	end
@@ -111,28 +114,26 @@ sgs.ai_skill_exchange.sidi = function(self,pattern,max_num,min_num,expand_pile)
             end
         end
     end
-    if self:isEnemy(current) then
+    if self:isEnemy(current) and (not self:willSkipPlayPhase(current) or self.player:getPile("drive"):length() > 2) then
 --禁卡
-        if not self:willSkipPlayPhase(current) then
-            if getCardsNum("TrickCard", current, self.player) > (current:hasShownSkill("jizhi") and 1 or 2)
-            or (current:hasShownSkills("guose|luanji|guishu") and current:getHandcardNum() > 1)
-            or (current:hasShownSkill("jixi") and current:getPile("field"):length() > 1)
-            or (current:hasShownSkills("qice|yigui")) then
-                self.sidi_cardtype = "TrickCard"
-            end
-            if current:hasShownSkills("diaodu+xiaoji|diaodu+xuanlue") then
-                self.sidi_cardtype = "EquipCard"
-            end
-            if (current:getHp() == 1 and self:isWeak(current) and current:getMark("GlobalBattleRoyalMode") == 0)
-            or ((self:hasCrossbowEffect(current) or current:hasShownSkills(sgs.force_slash_skill))
-                    and getCardsNum("Slash", current, self.player) >= 1) then
+        if getCardsNum("TrickCard", current, self.player) > (current:hasShownSkill("jizhi") and 1 or 2)
+        or (current:hasShownSkills("guose|luanji|guishu") and current:getHandcardNum() > 1)
+        or (current:hasShownSkill("jixi") and current:getPile("field"):length() > 1)
+        or (current:hasShownSkills("qice|yigui")) then
+            self.sidi_cardtype = "TrickCard"
+        end
+        if current:hasShownSkills("diaodu+xiaoji|diaodu+xuanlue") then
+            self.sidi_cardtype = "EquipCard"
+        end
+        if (current:getHp() == 1 and self:isWeak(current) and current:getMark("GlobalBattleRoyalMode") == 0)
+        or ((self:hasCrossbowEffect(current) or current:hasShownSkills(sgs.force_slash_skill))
+                and getCardsNum("Slash", current, self.player) >= 1) then
+            self.sidi_cardtype = "BasicCard"
+        end
+        for _, friend in ipairs(self.friends) do
+            if current:canSlash(friend, nil, true) and sgs.getDefenseSlash(friend, self) <= 2 then
                 self.sidi_cardtype = "BasicCard"
-            end
-            for _, friend in ipairs(self.friends) do
-                if current:canSlash(friend, nil, true) and sgs.getDefenseSlash(friend, self) <= 2 then
-                    self.sidi_cardtype = "BasicCard"
-                    break
-                end
+                break
             end
         end
 --技能
@@ -210,7 +211,7 @@ sgs.ai_skill_exchange.sidi_put = function(self,pattern,max_num,min_num,expand_pi
 	else
 		self:sortByKeepValue(cards)
 	end
-    if self:isRecoverPeach(cards[1]) or (cards[1]:isKindOf("Analeptic") and self.player:getHp() == 1) then
+    if isCard("Peach", cards[1], self.player) or (cards[1]:isKindOf("Analeptic") and self.player:getHp() == 1) then
         return {}
     end
     return cards[1]:getEffectiveId()
@@ -218,7 +219,7 @@ end
 
 sgs.ai_skill_choice["sidi_choice"] = function(self, choices, data)
     --"cardlimit" << "skilllimit" << "recover"
-    --Global_room:writeToConsole("司敌选择:" .. choices)
+    Global_room:writeToConsole("司敌选择:" .. choices)
     choices = choices:split("+")
     if self.sidi_cardtype and table.contains(choices, "cardlimit") then
         return "cardlimit"
@@ -326,6 +327,24 @@ table.insert(sgs.ai_skills, hongyuan_skill)
 hongyuan_skill.getTurnUseCard = function(self)
 	if self.player:isKongcheng() or self.player:hasUsed("HongyuanCard") then return end
 	return sgs.Card_Parse("@HongyuanCard=.&hongyuan")
+--[[使用ViewAsSkill的写法
+    local Skill = sgs.Sanguosha:getViewAsSkill("hongyuan")
+    if Skill:isEnabledAtPlay(self.player) then
+        local hcards = sgs.QList2Table(self.player:getHandcards())
+        self:sortByUseValue(hcards, true)
+        local cards = sgs.CardList()
+        for _, c in ipairs(hcards) do
+            if Skill:viewFilter(cards, c) then
+                cards:append(c)
+            end
+        end
+        if cards:length() > 0 then
+            local hycard = Skill:viewAs(cards)
+            Global_room:writeToConsole("弘援合纵:"..hycard:toString())
+            return hycard
+        end
+    end
+]]
 end
 
 sgs.ai_skill_use_func.HongyuanCard = function(hycard, use, self)

@@ -55,6 +55,12 @@ sgs.ai_skill_invoke.xibing =  function(self, data)
     return true
   end
 	local eachother_shown = target:hasShownAllGenerals() and self.player:hasShownAllGenerals()
+  if target:hasShownAllGenerals() then--发动技能后双亮
+    if (self.player:hasShownGeneral1() and self.player:inDeputySkills("xibing") and self.player:canShowGeneral("d"))
+    or (self.player:hasShownGeneral2() and self.player:inHeadSkills("xibing") and self.player:canShowGeneral("h")) then
+      eachother_shown = true
+    end
+  end
   local xibing_firstskills = --注意有优先顺序
               "paiyi|suzhi|shilu|huaiyi|luanji|yigui|paoxiao|kuangcai|diaodu|xuanhuo|"..
               "jixi|qice|zaoyun|jinfa|"..
@@ -143,22 +149,21 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
       end
     end
 
-    local xibing_defenseskills = {"yiji","fankui","ganglie","fangzhu","shicai","qingguo"}
+    local xibing_defenseskills = "yiji|fankui|ganglie|fangzhu|qingguo|shicai|zhaoxin"
     if self.player:hasSkill("jieming") and self:getJiemingDrawNum(self.player) >= 2 then
-      table.insert(xibing_defenseskills,"jieming")
+      xibing_defenseskills = "jieming|" .. xibing_defenseskills
     end
-    if current:canSlash(self.player, nil, true) and self.player:hasSkills(table.concat(xibing_defenseskills, "|")) and table.contains(choices,"head") then
-      for _, skill in ipairs(xibing_defenseskills) do
-        if self.player:inHeadSkills(skill) then
-          return "deputy"
-        end
+    if current:canSlash(self.player, nil, true) and not self.player:hasSkills(xibing_defenseskills) then
+      if self.player:inDeputySkills("xibing") and table.contains(choices,"head") then--暗无防御将
+        return "head"
+      else
+        return "deputy"
       end
-      return "head"
     end
-    if self.player:inDeputySkills("xibing") and table.contains(choices,"head") then
-      return "head"
-    else
+    if self.player:inDeputySkills("xibing") and table.contains(choices,"deputy") then--暗着可以发动息兵
       return "deputy"
+    else
+      return "head"
     end
   else
     if table.contains(choices,"head") then
@@ -319,7 +324,7 @@ sgs.ai_skill_invoke.shejian =  function(self, data)
   if card:isKindOf("Slash") and self:hasHeavySlashDamage(use.from, card, self.player) and self:getCardsNum("Jink","h") > 0 then
     return false
   end
-  if (self.player:getHandcardNum() < (self:needKongcheng() and 4 or 3) and self:getCardsNum("Peach","h") == 0)
+  if (self.player:getHandcardNum() < ((self:needKongcheng() or self.player:hasSkill("lirang")) and 4 or 3) and self:getCardsNum("Peach","h") == 0)
   and target:getHp() <= (self.player:hasSkill("congjian") and 2 or 1) and self:isWeak(target) then
     return true
   end
@@ -364,6 +369,10 @@ sgs.ai_skill_choice.yusui = function(self, choices, data)--没有来源的data�
     return "losehp"
   end
   return choices[math.random(1,#choices)]
+end
+
+sgs.ai_trick_prohibit.yusui = function(self, card, to, from)
+  
 end
 
 local boyan_skill = {}

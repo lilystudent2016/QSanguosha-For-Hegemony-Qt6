@@ -570,10 +570,10 @@ function SmartAI:getValuableCardForGuanxing(cards, up_cards)
 	for _, target in sgs.qlist(self.room:getAlivePlayers()) do
 		if self:willSkipPlayPhase(target) or self:willSkipDrawPhase(target) then
 			if nullification then return nullification
-			elseif self:isFriend(target) and snatch and self:hasTrickEffective(snatch, target, self.player) and
+			elseif self:isFriend(target) and snatch and self:trickIsEffective(snatch, target, self.player) and
 				not self:willSkipPlayPhase() and self.player:distanceTo(target) == 1 then
 				return snatch
-			elseif self:isFriend(target) and dismantlement and self:hasTrickEffective(dismantlement, target, self.player) and
+			elseif self:isFriend(target) and dismantlement and self:trickIsEffective(dismantlement, target, self.player) and
 				not self:willSkipPlayPhase() and self.player:objectName() ~= target:objectName() then
 				return dismantlement
 			end

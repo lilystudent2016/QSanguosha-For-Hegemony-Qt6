@@ -99,6 +99,9 @@ sgs.ai_skill_use_func.MiewuCard = function(card, use, self)
 	local miewucard = sgs.cloneCard(userstring)
     miewucard:addSubcard(card:getSubcards():first())
     miewucard:setCanRecast(false)
+    if self.player:isCardLimited(miewucard, sgs.Card_MethodUse) then
+        return
+    end
 	self:useCardByClassName(miewucard, use)--确保能使用
 	if use.card then
 		Global_room:writeToConsole("灭吴卡使用:"..userstring)

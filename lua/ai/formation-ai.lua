@@ -47,7 +47,7 @@ jixi_skill.getTurnUseCard = function(self)
 
 		for _, player in sgs.qlist(self.room:getOtherPlayers(self.player)) do
 			if (self.player:distanceTo(player, 1) <= 1 + sgs.Sanguosha:correctCardTarget(sgs.TargetModSkill_DistanceLimit, self.player, jixisnatch))
-				and self:hasTrickEffective(jixisnatch, player) then
+				and self:trickIsEffective(jixisnatch, player) then
 
 				local suit = snatch:getSuitString()
 				local number = snatch:getNumberString()
@@ -485,7 +485,7 @@ sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, ta
 		end
 	end
 	for _,card in ipairs(cards) do
-		if qianhuan_CanPut(card) and (not self:isRecoverPeach(card)) then
+		if qianhuan_CanPut(card) and (not isCard("Peach", card, self.player)) then
 			return card:toString()
 		end
 	end
@@ -499,7 +499,7 @@ local invoke_qianhuan = function(self, use)
 	if use.card:isKindOf("Lightning") then return end
 	local to = use.to:first()
 	if use.card:isKindOf("Slash") and not self:slashIsEffective(use.card, to, use.from) then return end
-	if use.card:isKindOf("TrickCard") and not self:hasTrickEffective(use.card, to, use.from) then return end
+	if use.card:isKindOf("TrickCard") and not self:trickIsEffective(use.card, to, use.from) then return end
 	if self.player:getPile("sorcery"):length() == 1 then
 		if use.card:isKindOf("Slash") or use.card:isKindOf("Duel")  or use.card:isKindOf("BurningCamps")
 			or use.card:isKindOf("ArcheryAttack")  or use.card:isKindOf("SavageAssault")
@@ -609,7 +609,7 @@ function sgs.ai_weapon_value.DragonPhoenix(self, enemy, player)
 		--(sgs.card_lack[enemy:objectName()]["Jink"] == 1 or getCardsNum("Jink", enemy, self.player) == 0)
 		return 4.5
 	end
-	if player:hasShownSkills("paoxiao|paoxiao_xh|xiongnve|kuangcai") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
+	if player:hasShownSkills("paoxiao|paoxiao_xh|suzhi|xiongnve|kuangcai") or (player:hasShownSkill("baolie") and player:getHp() < 3) then
 		return 3.5
 	end
 	return 2.5
@@ -793,10 +793,12 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 	end
 end
 
-sgs.ai_skill_cardchosen.DragonPhoenix = function(self, who, flags)
+--[[默认的就好
+sgs.ai_skill_cardchosen.DragonPhoenix = function(self, who, flags, method, disable_list)
 	local cards = who:getCards(flags)
 	local length = cards:length()
 	local index = math.random(0, length)
 	local card = cards:at(index)
 	return card:getId()
 end
+]]
