@@ -156,8 +156,8 @@ end
 sgs.ai_skill_playerchosen.lianyou = function(self, targets)
 	local targetlist = sgs.QList2Table(targets)
 	self:sort(targetlist, "hp", true)
-	for _, target in ipairs(targetlist) do--考虑方便火烧
-		if self:isFriendWith(target) and target:getHp() > 1 and self:isEnemy(target:getNextAlive()) then
+	for _, target in ipairs(targetlist) do--考虑方便火烧，考虑下家队列长度？
+		if self:isFriendWith(target) and target:getHp() > 1 and (self:isEnemy(target:getNextAlive()) or target:hasSkill("huoji")) then
 			return target
 		end
 	end
@@ -165,7 +165,7 @@ sgs.ai_skill_playerchosen.lianyou = function(self, targets)
 		if self:isFriendWith(target) then return target end
 	end
 	for _, target in ipairs(targetlist) do
-		if self:isFriend(target) and target:getHp() > 1 and self:isEnemy(target:getNextAlive()) then
+		if self:isFriend(target) and target:getHp() > 1 and (self:isEnemy(target:getNextAlive()) or target:hasSkill("huoji")) then
 			return target
 		end
 	end
@@ -173,6 +173,18 @@ sgs.ai_skill_playerchosen.lianyou = function(self, targets)
 		if self:isFriend(target) then return target end
 	end
 	return {}
+end
+
+sgs.ai_skill_invoke.xinghuo =  function(self, data)
+	local damage = data:toDamage()
+	if self:isFriend(damage.to) then
+		return false
+	end
+	return true
+end
+
+function sgs.ai_cardneed.xinghuo(to, card, self)
+	return card:isKindOf("BurningCamps") or isCard("FireAttack", card, to) or isCard("FireSlash", card, to)
 end
 
 --南华老仙
@@ -367,7 +379,7 @@ sgs.ai_skill_choice.jinghe_skill = function(self, choices, data)
 				min_hp = p:getHp()
 			end
 		end
-		if self.player:getHp() == min_hp and self.player:isWounded() then
+		if self.player:getHp() == min_hp and self.player:isWounded() then--帮队友回复优化/
 			return "huoqi"
 		end
 	end
@@ -508,12 +520,14 @@ sgs.ai_skill_use_func.XianshouCard = function(card, use, self)
 	for _, p in ipairs(self.friends) do
 		if self.player:isFriendWith(p) and not p:isWounded() then
 			target = p
+			break
 		end
 	end
 	if not target then
 		for _, p in ipairs(self.friends) do
 			if self:isFriend(p) and not p:isWounded() then
 				target = p
+				break
 			end
 		end
 	end
