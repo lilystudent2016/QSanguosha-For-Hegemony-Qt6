@@ -158,7 +158,7 @@ function SetInitialTables()
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
 							"hongfa|jijiu|luanji|wansha|jianchu|qianhuan|yigui|fudi|yongsi|"..
 							"paiyi|suzhi|shilu|huaiyi|shicai|congcha|jinfa|"..
-							"zhukou|jinghe|wanggui|boyan|kuangcai|guishu|sidi|miewu"
+							"zhukou|jinghe|guowu|shenwei|wanggui|boyan|kuangcai|guishu|sidi|miewu"
 	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
 						"tuntian|shoucheng|yicheng|qianhuan|jizhao|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
@@ -169,7 +169,7 @@ function SetInitialTables()
 	sgs.attack_skill = "paoxiao|duanliang|quhu|rende|tieqi|liegong|huoji|lieren|qixi|kurou|fanjian|guose|tianyi|dimeng|duanbing|fenxun|qingnang|wushuang|" ..
 						"lijian|luanji|mengjin|kuangfu|huoshui|qingcheng|tiaoxin|shangyi|jiang|chuanxin"
 	sgs.drawcard_skill = "yingzi_sunce|yingzi_zhouyu|haoshi|yingzi_flamemap|haoshi_flamemap|shelie|jieyue|congcha|zisui"
-	sgs.force_slash_skill = "tieqi|tieqi_xh|liegong|liegong_xh|wushuang|jianchu|qianxi"
+	sgs.force_slash_skill = "tieqi|tieqi_xh|liegong|liegong_xh|wushuang|jianchu|qianxi|wushuang_lvlingqi"
 	sgs.wizard_skill = 		"guicai|guidao|tiandu|zhuwei|huanshi"
 	sgs.wizard_harm_skill = "guicai|guidao"
 	sgs.lose_equip_skill = 	"xiaoji|xuanlue"

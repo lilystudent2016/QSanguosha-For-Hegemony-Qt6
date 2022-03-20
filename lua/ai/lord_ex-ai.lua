@@ -473,7 +473,7 @@ quanjin_skill.getTurnUseCard = function(self, inclusive)
   if not self.player:hasUsed("QuanjinCard") then
     local can_quanjin = false
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if p:getMark("Global_InjuredTimes_Phase") > 0 then
+      if p:getMark("Global_InjuredTimes_Phase") > 0 and p:objectName() ~= self.player:objectName() then
         can_quanjin = true
       end
     end
@@ -497,7 +497,7 @@ sgs.ai_skill_use_func.QuanjinCard= function(qjcard, use, self)
     if card_num > maxcard_num then
       maxcard_num = card_num
     end
-    if p:getMark("Global_InjuredTimes_Phase") > 0 then
+    if p:getMark("Global_InjuredTimes_Phase") > 0 and p:objectName() ~= self.player:objectName() then
       if card_num > maxhurt_num  then
         maxhurt_num = card_num
         maxcard_hurt = p

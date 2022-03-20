@@ -120,7 +120,7 @@ function sgs.getDefenseSlash(player, self)
 			niaoxiang_BA = true
 		end
 	end
-	local need_double_jink = attacker:hasShownSkill("wushuang") or niaoxiang_BA
+	local need_double_jink = attacker:hasShownSkills("wushuang|wushuang_lvlingqi") or niaoxiang_BA
 	if need_double_jink and knownJink < 2 and unknownJink < 1.5 then
 		defense = 0
 	end
@@ -2044,7 +2044,7 @@ function SmartAI:useCardDuel(duel, use)
 	duel:setFlags("AI_Using")
 	local n1 = self:getCardsNum("Slash")
 	duel:setFlags("-AI_Using")
-	if self.player:hasSkill("wushuang") then n1 = n1 * 2 end
+	if self.player:hasSkills("wushuang|wushuang_lvlingqi") then n1 = n1 * 2 end
 	local huatuo = sgs.findPlayerByShownSkillName("jijiu")
 	local targets = {}
 
@@ -2103,7 +2103,7 @@ function SmartAI:useCardDuel(duel, use)
 	for _, enemy in ipairs(enemies) do
 		local useduel
 		local n2 = getCardsNum("Slash", enemy, self.player)--ai经常对明天兵决斗？
-		if enemy:hasSkill("wushuang") then n2 = n2 * 2 end
+		if enemy:hasSkills("wushuang|wushuang_lvlingqi") then n2 = n2 * 2 end
 		if sgs.card_lack[enemy:objectName()]["Slash"] == 1 then n2 = 0 end
 		if noresponselist and table.contains(noresponselist,enemy:objectName()) then
 			noresponse = true

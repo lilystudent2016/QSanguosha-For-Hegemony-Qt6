@@ -636,3 +636,36 @@ end
 function sgs.ai_cardneed.yanzheng(to, card, self)
 	return to:getHandcardNum() < 2
 end
+
+--吕玲绮
+sgs.ai_skill_invoke.guowu =  function(self, data)
+	return true--暂时简化
+end
+
+local zhuangrong_skill = {}
+zhuangrong_skill.name = "zhuangrong"
+table.insert(sgs.ai_skills, zhuangrong_skill)
+zhuangrong_skill.getTurnUseCard = function(self)
+	if self.player:hasUsed("ZhuangrongCard") or self.player:hasSkill("wushuang") then return end
+	local cards = self.player:getCards("he")
+	cards = sgs.QList2Table(cards)
+	self:sortByUseValue(cards, true)
+	for _, card in ipairs(cards) do
+		if card:getTypeId() == sgs.Card_TypeTrick and self:getUseValue(card) < 5 then--值多少合适？
+			local card_str = ("@ZhuangrongCard=%d&zhuangrong"):format(card:getId())
+			return sgs.Card_Parse(card_str)
+		end
+	end
+end
+
+sgs.ai_skill_use_func.ZhuangrongCard = function(card, use, self)
+	use.card = card
+end
+
+sgs.ai_use_priority.ZhuangrongCard = 4.2
+
+sgs.ai_skill_invoke.wushuang_lvlingqi = sgs.ai_skill_invoke.wushuang
+
+sgs.ai_cardneed.wushuang_lvlingqi = sgs.ai_cardneed.wushuang
+
+sgs.ai_skill_invoke.shenwei = true

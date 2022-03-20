@@ -182,7 +182,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 	if self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
 		return true
 	end
-	if self.player:hasSkill("wushuang") then
+	if self.player:hasSkills("wushuang|wushuang_lvlingqi") then
 		if getKnownCard(target, target, "Jink", true, "he") >= 2 then return false end
 		return getCardsNum("Jink", target, self.player) < 2
 	end
