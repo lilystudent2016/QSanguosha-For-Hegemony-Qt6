@@ -479,7 +479,7 @@ sgs.ai_skill_cardask["@qianhuan-put"] = function(self, data, pattern, target, ta
 	cards=sgs.QList2Table(cards)
 	self:sortByKeepValue(cards)
 	if self.player:hasTreasure("WoodenOx") and not self.player:getPile("wooden_ox"):isEmpty() then
-		local WoodenOx = self.player:getTreasure()
+		local WoodenOx = sgs.Sanguosha:getCard(self.player:getTreasure():getEffectiveId())
 		if self:getKeepValue(WoodenOx) > sgs.ai_keep_value.Peach then
 			table.removeOne(cards, WoodenOx)
 		end
@@ -621,7 +621,7 @@ function sgs.ai_slash_weaponfilter.DragonPhoenix(self, to, player)
 	return getCardsNum("Peach", to, self.player) + getCardsNum("Jink", to, self.player) < 1
 		and (sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) == 0)
 ]]
-	return to:getHandcardNum() <= 2
+	return to:getHandcardNum() <= 2 or sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) < 1
 end
 
 --[[新飞龙夺凤技能修改
@@ -766,8 +766,8 @@ sgs.ai_skill_discard.DragonPhoenix = function(self, discard_num, min_num, option
 			else return 0
 			end
 		else
-			if self.player:getMark("#qianxi+no_suit_red") > 0 and card:isRed() and not card:isKindOf("Peach") then return 0 end
-			if self.player:getMark("#qianxi+no_suit_black") > 0 and card:isBlack() then return 0 end
+			if self.player:getMark("##qianxi+no_suit_red") > 0 and card:isRed() and not card:isKindOf("Peach") then return 0 end
+			if self.player:getMark("##qianxi+no_suit_black") > 0 and card:isBlack() then return 0 end
 			if self:isWeak() then return 5 else return 0 end
 		end
 	end

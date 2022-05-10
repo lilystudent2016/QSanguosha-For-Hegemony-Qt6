@@ -154,7 +154,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
     return "."
   end
   if self:willSkipDrawPhase()
-  and not (self.player:hasSkill("qiaobian") and self.player:getHandcardNum() == 1)
+  and not (self.player:hasSkill("qiaobian") and self.player:getHandcardNum() < 2)
   and not (self.player:hasSkill("elitegeneralflag") and self.player:getHandcardNum() < 3) then
     return "."
   end
@@ -617,10 +617,12 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
   local enough_pxslash = false
   if self:getCardsNum("Slash") > 0 then
     local yongjue_slash = 0
-    for _, p in ipairs(self.friends) do
-      if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) and self.player:getSlashCount() == 0 then
-        yongjue_slash = 1--考虑没出牌时？有一张杀
-        break
+    if self.player:getMark("GlobalPlayCardUsedTimes") == 0 then--考虑没出牌时,有一张杀
+      for _, p in ipairs(self.friends) do
+        if p:hasShownSkill("yongjue") and self.player:isFriendWith(p) then
+          yongjue_slash = 1
+          break
+        end
       end
     end
     if yongjue_slash + self.player:getSlashCount() + self:getCardsNum("Slash") >= 2 then--getCardsNum包含转化的杀
@@ -684,7 +686,7 @@ sgs.ai_skill_choice.xuanhuo = function(self, choices)
     self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可铁骑")
     can_tieqi = true
   end
-  if not has_liegong and table.contains(choices,"liegong") and (target:getHandcardNum() >= self.player:getHp() or target:getHandcardNum() <= self.player:getAttackRange()) then
+  if not has_liegong and table.contains(choices,"liegong") and target:getHp() >= self.player:getHp() then
     self.room:writeToConsole(sgs.Sanguosha:translate(string.format("SEAT(%s)",self.player:getSeat()))..":眩惑可烈弓")
     can_liegong = true--符合烈弓发动条件
   end
@@ -926,7 +928,7 @@ wusheng_xh_skill.getTurnUseCard = function(self, inclusive)
 	return cards[1]
 end
 
-sgs.ai_suit_priority.wusheng_xh = "club|spade|diamond|heart"
+sgs.ai_suit_priority.wusheng_xh = "club|spade|heart|diamond"
 
 --咆哮
 sgs.ai_skill_invoke.paoxiao_xh = true
@@ -1018,8 +1020,15 @@ end
 --烈弓
 sgs.ai_skill_invoke.liegong_xh = function(self, data)
 	local target = data:toPlayer()
-	return not self:isFriend(target)
+	if not self:isFriend(target) then
+		self.liegong_tg = target
+		return true
+	end
+	return false
+	--return not self:isFriend(target)
 end
+
+sgs.ai_skill_choice.liegong_xh = sgs.ai_skill_choice.liegong
 
 --狂骨
 sgs.ai_skill_invoke.kuanggu_xh = function(self, data)
@@ -1231,6 +1240,14 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
     end
   end
 
+  local damage = data:toDamage()
+  if not self:damageIsEffective_(damage) then
+    return "."
+  end
+  if damage.damage > 1 and self.player:hasArmorEffect("SilverLion") then--无视防具？
+    return "."
+  end
+
   local function canKeshouDiscard(card)
     if isCard("Peach", card, self.player) or (card:isKindOf("Analeptic") and self.player:getHp() == 1) then
       return false
@@ -1238,31 +1255,31 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
     return true
   end
 
-    local cards = self.player:getHandcards() -- 获得所有手牌
-    cards=sgs.QList2Table(cards) -- 将列表转换为表
-    local keshou_cards = {}
-    if self.player:getHandcardNum() == 2  then--两张手牌的情况
-      if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
-        table.insert(keshou_cards, cards[1]:getId())
-        table.insert(keshou_cards, cards[2]:getId())
-        return "$" .. table.concat(keshou_cards, "+")
-      end
-    else--三张及以上手牌
-      self:sortByKeepValue(cards) -- 按保留值排序
-      if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
-        table.insert(keshou_cards, cards[1]:getId())
-        table.insert(keshou_cards, cards[2]:getId())
-        return "$" .. table.concat(keshou_cards, "+")
-      elseif cards[1]:sameColorWith(cards[3]) and canKeshouDiscard(cards[1])and canKeshouDiscard(cards[3]) then
-        table.insert(keshou_cards, cards[1]:getId())
-        table.insert(keshou_cards, cards[3]:getId())
-        return "$" .. table.concat(keshou_cards, "+")
-      elseif cards[2]:sameColorWith(cards[3]) and canKeshouDiscard(cards[2]) and canKeshouDiscard(cards[3]) then
-        table.insert(keshou_cards, cards[2]:getId())
-        table.insert(keshou_cards, cards[3]:getId())
-        return "$" .. table.concat(keshou_cards, "+")
-      end
+  local cards = self.player:getHandcards() -- 获得所有手牌
+  cards=sgs.QList2Table(cards) -- 将列表转换为表
+  local keshou_cards = {}
+  if self.player:getHandcardNum() == 2  then--两张手牌的情况
+    if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
+      table.insert(keshou_cards, cards[1]:getId())
+      table.insert(keshou_cards, cards[2]:getId())
+      return "$" .. table.concat(keshou_cards, "+")
     end
+  else--三张及以上手牌
+    self:sortByKeepValue(cards) -- 按保留值排序
+    if cards[1]:sameColorWith(cards[2]) and canKeshouDiscard(cards[1]) and canKeshouDiscard(cards[2]) then
+      table.insert(keshou_cards, cards[1]:getId())
+      table.insert(keshou_cards, cards[2]:getId())
+      return "$" .. table.concat(keshou_cards, "+")
+    elseif cards[1]:sameColorWith(cards[3]) and canKeshouDiscard(cards[1])and canKeshouDiscard(cards[3]) then
+      table.insert(keshou_cards, cards[1]:getId())
+      table.insert(keshou_cards, cards[3]:getId())
+      return "$" .. table.concat(keshou_cards, "+")
+    elseif cards[2]:sameColorWith(cards[3]) and canKeshouDiscard(cards[2]) and canKeshouDiscard(cards[3]) then
+      table.insert(keshou_cards, cards[2]:getId())
+      table.insert(keshou_cards, cards[3]:getId())
+      return "$" .. table.concat(keshou_cards, "+")
+    end
+  end
   return "."
 end
 
@@ -1589,12 +1606,12 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
     end
   end
 
-  if self.player:getHp() == 1 and self:isWeak() then--保君主
+  if self.player:getHp() == 1 and self:isWeak() and self.player:canRecover() then--保君主
     recover_target = self.player
     table.removeOne(targets, self.player)
   end
   for _, p in ipairs(targets) do
-    if self:isWeak(p) and not recover_target and p:hasShownSkills(sgs.priority_skill) then--先回复重要队友
+    if self:isWeak(p) and p:canRecover() and not recover_target and p:hasShownSkills(sgs.priority_skill) then--先回复重要队友
       recover_target = p
       table.removeOne(targets,p)
       break
@@ -1603,7 +1620,7 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 
   if not recover_target then
     for _, p in ipairs(targets) do
-      if self:isWeak(p) and not recover_target then
+      if self:isWeak(p) and p:canRecover() and not recover_target then
         recover_target = p
         table.removeOne(targets,p)
         break
@@ -1613,7 +1630,7 @@ sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 
   if not recover_target then
     for _, p in ipairs(targets) do
-      if p:isWounded() and not recover_target then
+      if p:canRecover() and not recover_target then
         recover_target = p
         table.removeOne(targets,p)
         break

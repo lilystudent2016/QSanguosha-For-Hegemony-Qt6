@@ -807,7 +807,7 @@ function SmartAI:useCardLureTiger(LureTiger, use)
 			end
 		end
 		if (self.player:hasShownSkill("jizhi") and players:length() > 0) or (aoedraw and players:length() > 1) then
-			sgs.ai_use_priority.LureTiger = 0.3
+			sgs.ai_use_priority.LureTiger = 0.4
 			use.card = LureTiger
 			if use.to then use.to = sgs.PlayerList2SPlayerList(players) end
 			return
@@ -1162,6 +1162,7 @@ function SmartAI:useCardThreatenEmperor(card, use)
 	local cardPlace = self.room:getCardPlace(card:getEffectiveId())--修改后无法使用装备，考虑手牌区
 	if self.player:getCardCount(false) < 1 + (cardPlace == sgs.Player_PlaceHand and 1 or 0) then return end
 	if not self:trickIsEffective(card, self.player, self.player) then return end
+	if self.player:hasSkill("shensu") and sgs.ai_skill_use["@@shensu3"](self) ~= "." then return end
 	if self.player:hasSkills("qiaobian|qiaobian_egf") and (self.player:getHandcardNum() - self.player:getMaxCards() > 1) then return end
 	use.card = card
 end
@@ -1308,8 +1309,7 @@ sgs.ai_skill_use["@@JadeSeal!"] = function(self, prompt, method)
 		end
 		return "known_both:JadeSeal[no_suit:0]=.&->" .. table.concat(tos, "+")
 	end
-	self:sort(self.enemies, "handcard")
-	self.enemies = sgs.reverse(self.enemies)
+	self:sort(self.enemies, "handcard", true)
 	local targets = sgs.PlayerList()
 	for _, enemy in ipairs(self.enemies) do
 		if self:getKnownNum(enemy, self.player) ~= enemy:getHandcardNum() and card:targetFilter(targets, enemy, self.player) and not targets:contains(enemy) then
@@ -1318,8 +1318,7 @@ sgs.ai_skill_use["@@JadeSeal!"] = function(self, prompt, method)
 			self.knownboth_choice[enemy:objectName()] = "handcards"
 		end
 	end
-	self:sort(self.friends_noself, "handcard")
-	self.friends_noself = sgs.reverse(self.friends_noself)
+	self:sort(self.friends_noself, "handcard", true)
 	for _, friend in ipairs(self.friends_noself) do
 		if self:getKnownNum(friend, self.player) ~= friend:getHandcardNum() and card:targetFilter(targets, friend, self.player) and not targets:contains(friend) then
 			targets:append(friend)
@@ -1329,8 +1328,7 @@ sgs.ai_skill_use["@@JadeSeal!"] = function(self, prompt, method)
 	end
 
 	local players = sgs.QList2Table(self.room:getOtherPlayers(self.player))
-	self:sort(players, "handcard")
-	players = sgs.reverse(players)
+	self:sort(players, "handcard", true)
 	for _, player in ipairs(players) do
 		if card:targetFilter(targets, player, self.player) and not targets:contains(player) then
 			targets:append(player)
@@ -1375,6 +1373,7 @@ end
 
 function sgs.ai_slash_weaponfilter.Halberd(self, to, player)
 	return player:distanceTo(to) <= math.max(sgs.weapon_range.Halberd, player:getAttackRange())
+		and (sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) < 1)
 end
 
 function sgs.ai_weapon_value.Halberd(self, enemy, player)
@@ -1421,8 +1420,8 @@ sgs.ai_use_priority.WoodenOx = 5.8
 
 --Blade
 function sgs.ai_slash_weaponfilter.Blade(self, to, player)
-	return player:distanceTo(to) <= math.max(sgs.weapon_range.Blade, player:getAttackRange())
-		and not to:hasShownAllGenerals()
+	return player:distanceTo(to) <= math.max(sgs.weapon_range.Blade, player:getAttackRange()) and not to:hasShownAllGenerals()
+		and (sgs.card_lack[to:objectName()]["Jink"] == 1 or getCardsNum("Jink", to, self.player) < 1)
 end
 
 function sgs.ai_weapon_value.Blade(self, enemy, player)

@@ -385,3 +385,230 @@ end
 sgs.ai_skill_invoke.mingzhe = true
 
 --全琮
+
+
+--郭淮
+sgs.ai_skill_playerchosen.jingce = sgs.ai_skill_playerchosen.damage--选择目标怎样合适？
+
+sgs.ai_skill_choice.startcommand_jingce = sgs.ai_skill_choice.startcommand_to
+
+sgs.ai_skill_choice["docommand_jingce"] = function(self, choices, data)
+  local source = data:toPlayer()
+  local index = self.player:getMark("command_index")
+  local is_enemy = self:isEnemy(source)
+  local is_friend = self:isFriend(source)
+  if index == 1 then
+    if not is_enemy and not is_friend then
+      return "yes"
+    end
+    if is_friend and not self:isWeak(source) then
+      for _, p in ipairs(self.enemies) do
+        if p:getHp() == 1 and self:isWeak(p) and self:isEnemy(source, p) then
+          return "yes"
+        end
+      end
+    end
+  end
+  if index == 5 and not self.player:faceUp() then
+    return "yes"
+  end
+  if is_enemy then
+    if index == 2 then
+      return "yes"
+    end
+    if index == 3 and self.player:hasSkill("hongfa") and not self.player:getPile("heavenly_army"):isEmpty() then
+      return "yes"
+    end
+    if index == 4 then
+      if self.player:getMark("command4_effect") > 0 then
+        return "yes"
+      end
+      local has_peach = false
+      for _, c in sgs.qlist(self.player:getHandcards()) do
+        if isCard("Peach", c, self.player) then--有实体卡桃可回血
+          has_peach = true
+        end
+      end
+      if has_peach then
+        for _, p in ipairs(self.friends) do
+          if p:getHp() == 1 and self:isWeak(p) and source:canSlash(self.player, nil, true) then
+            return "no"
+          end
+        end
+      end
+      if not source:canSlash(self.player, nil, true) then
+        return "yes"
+      end
+    end
+    if index == 6 and self.player:getEquips():length() < 3 and self.player:getHandcardNum() < 3 then
+      return "yes"
+    end
+  end
+  return "no"
+end
+
+sgs.ai_skill_playerchosen["command_jingce"] = sgs.ai_skill_playerchosen.damage
+
+--杨修
+sgs.ai_skill_invoke.danlao = function(self, data)
+	local use = data:toCardUse()
+    local ucard = use.card
+	if ucard:isKindOf("GodSalvation") and self.player:canRecover() then
+		return false
+    elseif ucard:isKindOf("AmazingGrace") and self:playerGetRound(self.player) < self.room:alivePlayerCount()/2 then
+		return false
+	elseif ucard:isKindOf("IronChain") and self.player:isChained() then
+        return false
+    elseif ucard:isKindOf("AwaitExhausted") and self.player:getHandcardNum() > 2
+      and self:getCardsNum({"Peach", "Jink"}) == 0 then
+        return false
+    elseif ucard:isKindOf("AllianceFeast") and use.from == self.player then
+        return false
+    elseif ucard:isKindOf("Conquering") then
+        return false
+    elseif ucard:isKindOf("ExNihilo") or ucard:isKindOf("BefriendAttacking") then
+        return false
+    elseif self:isFriend(use.from) and (ucard:isKindOf("Snatch") or ucard:isKindOf("Dismantlement")) then
+        return false
+	else
+		return true
+	end
+end
+
+sgs.ai_skill_invoke.jilei = function(self, data)
+	local damage = data:toDamage()
+	return self:isEnemy(damage.from)
+end
+
+sgs.ai_skill_choice.jilei = function(self, choices, data)
+	local dfrom = data:toDamage().from
+    if (self:hasCrossbowEffect(dfrom) and dfrom:inMyAttackRange(self.player))
+		or dfrom:isCardLimited(sgs.cloneCard("ex_nihilo"), sgs.Card_MethodUse, true)
+        or (dfrom:getHp() < 2 and getCardsNum("Peach", dfrom, self.player) > 0) then
+		return "BasicCard"
+	else
+		return "TrickCard"
+	end
+end
+
+--祖茂
+
+
+
+--伏完
+sgs.ai_skill_invoke.moukui = function(self, data)
+    if not self:willShowForAttack() then return false end
+	local target = data:toPlayer()
+	if self:isFriend(target) then
+        return self:needToThrowArmor(target)
+    end
+    return true
+end
+
+sgs.ai_skill_choice.moukui = function(self, choices, data)
+	local target = data:toPlayer()
+    Global_room:writeToConsole("谋溃目标防御值：" ..sgs.getDefenseSlash(target, self))
+    if not self:isFriend(target) and self:getDangerousCard(target) then
+        return "discard"
+    end
+    if self:isFriend(target) and self:needToThrowArmor(target) then
+        return "discard"
+    end
+	if (self:isEnemy(target) and self:doNotDiscard(target)) or sgs.getDefenseSlash(target, self) < 2 then
+		return "draw"
+	end
+	return "discard"
+end
+
+--陈到
+sgs.ai_skill_invoke.wanglie = function(self, data)
+	local ucard = data:toCardUse().card
+    local num = 0
+    for _, c in ipairs(self:getTurnUse()) do
+        if not c:isKindOf("SkillCard") then--转化成普通卡的技能卡？
+            num = num + 1
+        end
+    end
+    if num == 0 then--需要配合调整出牌优先度
+        return true
+    end
+    if ucard:isKindOf("Slash") and ucard:hasFlag("drank")
+    and (self:getOverflow() <= 1 or num <= 1) then
+        return true
+    end
+    return false
+end
+
+--田豫
+sgs.ai_skill_invoke.zhenxi = function(self, data)
+	local target = data:toPlayer()
+    return not self:isFriend(target)
+end
+
+sgs.ai_skill_choice.zhenxi = function(self, choices, data)
+	local target = data:toPlayer()
+    --"usecard"简单写法
+	return "discard"
+end
+
+sgs.ai_skill_choice.zhenxi_discard = "yes"
+
+sgs.ai_skill_invoke.jiansu = true
+
+--马良
+
+
+sgs.ai_skill_invoke.naman = true
+
+sgs.ai_skill_playerchosen["naman_target"] = function(self, targets)
+    local use = self.player:getTag("NamaneUsedata"):toCardUse()
+    local card = use.card
+    local from = use.from
+    local is_friend = self:isFriend(from)
+    local tos = sgs.QList2Table(use.to)
+    local targetlist = sgs.QList2Table(targets)
+
+    if card:isKindOf("AwaitExhausted") then
+        return {}
+    end
+    if card:isKindOf("ArcheryAttack") or card:isKindOf("SavageAssault") then
+        self:sort(tos, "hp")
+        for _, p in ipairs(tos) do
+            if self.player:isFriendWith(p) and self:aoeIsEffective(card, p, from) then
+                return p
+            end
+        end
+        for _, p in ipairs(tos) do
+            if self.player:isFriendWith(p) and self:aoeIsEffective(card, p, from) then
+                return p
+            end
+        end
+    end
+    if card:isKindOf("GodSalvation") then
+        self:sort(tos, "hp")
+        for _, p in ipairs(tos) do
+            if self:isEnemy(p) and self:trickIsEffective(card, p, from) then
+                return p
+            end
+        end
+        for _, p in ipairs(tos) do
+            if not self:isFriend(p) and self:trickIsEffective(card, p, from) then
+                return p
+            end
+        end
+    end
+    if card:isKindOf("AmazingGrace") then
+        self:sort(tos, "handcard")
+        for _, p in ipairs(tos) do
+            if self:isEnemy(p) and self:trickIsEffective(card, p, from) then
+                return p
+            end
+        end
+        for _, p in ipairs(tos) do
+            if not self:isFriend(p) and self:trickIsEffective(card, p, from) then
+                return p
+            end
+        end
+    end
+    --连环、戮力同心、调虎离山、联军，考虑使用和目标敌我，太复杂了
+end

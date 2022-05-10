@@ -97,7 +97,7 @@ end
 
 function sgs.ai_weapon_value.Fan(self, enemy,player)
 	if enemy and enemy:hasArmorEffect("Vine") then return 6 end
-	if player:hasShownSkills("liegong|liegong_xh") then return 3.1 end
+	--if player:hasShownSkills("liegong|liegong_xh") then return 3.1 end
 end
 
 function sgs.ai_armor_value.Vine(player, self)
@@ -175,9 +175,8 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 		end
 	end
 
-	local hcard = target:getHandcardNum()
-	if self.player:hasSkills("liegong|liegong_xh") and not (hcard >= self.player:getHp() or hcard <= self.player:getAttackRange()) then
-		return false
+	if self:canLiegong(target, self.player) then
+		return true
 	end
 	if self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
 		return true
@@ -192,7 +191,7 @@ function SmartAI:shouldUseAnaleptic(target, card_use)
 	if self.player:hasShownSkill("jianchu") and (target:hasEquip() or target:getCardCount(true) == 1) then
 		return true
 	end
-	if target:getMark("#qianxi+no_suit_red") > 0 and not target:hasShownSkill("qingguo") then
+	if target:getMark("##qianxi+no_suit_red") > 0 and not target:hasShownSkill("qingguo") then
 		return true
 	end
 	if self.player:hasWeapon("DragonPhoenix") and target:getCardCount(true) == 1 then
@@ -279,9 +278,9 @@ function SmartAI:useCardSupplyShortage(card, use)
 		if enemy:hasShownSkills(sgs.cardneed_skill) then
 			value = value + 5
 		end
-		if enemy:hasShownSkills(sgs.drawcard_skill) or (enemy:hasShownSkill("zaiqi") and enemy:getLostHp() > 2) then
+		--[[if enemy:hasShownSkills(sgs.drawcard_skill) or (enemy:hasShownSkill("zaiqi") and enemy:getLostHp() > 2) then
 			value = value + 5
-		end
+		end]]
 		if self:isWeak(enemy) then value = value + 5 end
 		if enemy:isLord() then value = value + 1 end
 		if enemy:getRole() == "careerist" and enemy:getActualGeneral1():getKingdom() == "careerist" then
@@ -716,7 +715,7 @@ function SmartAI:useCardFireAttack(fire_attack, use)
 		if enemy:hasShownSkill("mingshi") and not self.player:hasShownAllGenerals() then
 			damage = damage - 1
 		end
-		if enemy:getMark("#xiongnve_avoid") > 0 then
+		if enemy:getMark("##xiongnve_avoid") > 0 then
 			damage = damage - 1
 		end
 		local gongqing_avoid = false

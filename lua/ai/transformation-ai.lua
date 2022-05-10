@@ -1165,7 +1165,7 @@ sgs.ai_skill_invoke.jihun = true
 
 --沙摩柯
 sgs.ai_skill_invoke.jili = function(self, data)
-	if not self:willShowForAttack() then return false end
+	if not self:willShowForAttack() and not self:willShowForDefence() then return false end
 	return true
 end
 
@@ -1175,17 +1175,11 @@ function SmartAI:shamokeUseWeaponPriority(card)
 	local v = self:getUsePriority(card)
 	if self.player:hasSkill("jili") and not self.player:isKongcheng()
 	and card:isKindOf("Weapon") and not card:isKindOf("Crossbow") then
-		--Global_room:writeToConsole("进入shamokeUseWeapon函数")
 		local hcards = self.player:getHandcards()
 		hcards = sgs.QList2Table(hcards)
 		self:sortByUsePriority(hcards)
 		local firstcard = hcards[1]
-		--assert(self.player:getMark("jili"))--沙摩柯标记
-		--Global_room:writeToConsole("jilimark:")
-		--Global_room:writeToConsole(self.player:getMark("jili"))
-		--assert(sgs.Sanguosha:correctAttackRange(self.player,true,false))--攻击距离修正技能
-		--Global_room:writeToConsole(sgs.Sanguosha:correctAttackRange(self.player,true,false))
-		if self.player:getMark("jili") + 2 == sgs.weapon_range[class_name] + sgs.Sanguosha:correctAttackRange(self.player,true,false)
+		if self.player:getCardUsedTimes(".") + self.player:getCardRespondedTimes(".") + 2 == sgs.weapon_range[class_name] + sgs.Sanguosha:correctAttackRange(self.player,true,false)
 		and v ~= self:getUsePriority(firstcard) then--防止无限自增死循环，防止两把武器相同距离死循环
 			if not (firstcard:isKindOf("Weapon") and sgs.weapon_range[class_name] == sgs.weapon_range[firstcard:getClassName()]) then
 				v = self:getUsePriority(firstcard) + 0.1
@@ -1435,7 +1429,7 @@ end
 
 --凌统
 sgs.ai_skill_playerchosen.xuanlue = function(self, targets)
-	if not self:willShowForAttack() then return nil end
+	if not (self:willShowForAttack() or self:willShowForDefence()) then return nil end
 	return self:findPlayerToDiscard()
 end
 
@@ -1454,6 +1448,15 @@ sgs.ai_choicemade_filter.cardChosen.xuanlue = function(self, player, promptlist)
 	end
 	sgs.updateIntention(player, target, intention)
 end
+
+sgs.xuanlue_keep_value = {--相当于过河拆桥
+	Weapon = 3.44,
+	Armor = 3.45,
+	OffensiveHorse = 3.44,
+	DefensiveHorse = 3.44,
+	SixDragons = 3.45,
+	Treasure = 3.45
+}
 
 sgs.ai_cardneed.xuanlue = sgs.ai_cardneed.equip
 
@@ -1538,7 +1541,7 @@ sgs.ai_skill_use["@@yongjin_move"] = function(self, prompt, method)
 	local YJMoveCard = "@YongjinMoveCard=.&->"
 
 		for _, friend in ipairs(self.friends_noself) do
-			if not friend:getCards("e"):isEmpty() and friend:hasShownSkills(sgs.lose_equip_skill) and self:getMoveCardorTarget(friend, "." ,"e") then
+			if friend:hasEquip() and friend:hasShownSkills(sgs.lose_equip_skill) and self:getMoveCardorTarget(friend, "." ,"e") then
 				return YJMoveCard .. friend:objectName() .. "+" .. self:getMoveCardorTarget(friend, "target" ,"e"):objectName()
 			end
 		end
@@ -1822,7 +1825,7 @@ sgs.ai_skill_choice["transform_diancai"] = function(self, choices)
 		Global_room:writeToConsole("典财无副将")
 		return "yes"
 	end
-	if (sgs.general_value[g2name] and sgs.general_value[g2name] < 7) or self.player:inDeputySkills("yinghun_sunjian") then
+	if (sgs.general_value[g2name] and sgs.general_value[g2name] < 7) then--or self.player:inDeputySkills("yinghun_sunjian")
 		Global_room:writeToConsole("典财副将值小于7")
 		return "yes"
 	end
@@ -1863,6 +1866,12 @@ sgs.ai_skill_cardchosen.jubao = function(self, who, flags, method, disable_list)
 	if not self:isFriend(who) then
 		if self:isWeak(who) and who:getHandcardNum() <= 2 then
 			return self:askForCardChosen(who, "h", "jubao_snatch", method, disable_list)
+		end
+		return who:getTreasure():getId()
+	end
+	if self.player:objectName() == who:objectName() then
+		if self:needToThrowArmor() then
+			return who:getArmor():getId()
 		end
 		return who:getTreasure():getId()
 	end
@@ -2029,7 +2038,7 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 		return "haoshi_flamemap"--手牌充裕时好施给队友
 	end
 
-	if self.player:getHandcardNum() == 0 and not (self.player:hasSkills("yingzi_zhouyu|yingzi_sunce|haoshi") or self.player:hasTreasure("JadeSeal") or congcha_draw) then
+	if self.player:isKongcheng() and not (self.player:hasSkills("yingzi_zhouyu|yingzi_sunce|haoshi") or self.player:hasTreasure("JadeSeal") or congcha_draw) then
 		table.removeOne(choices, "duoshi_flamemap")--0张手牌，没额外摸牌技移除度势
 	end
 
