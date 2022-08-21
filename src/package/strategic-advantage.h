@@ -106,6 +106,7 @@ class Drowning : public SingleTargetTrick
 public:
     Q_INVOKABLE Drowning(Card::Suit suit, int number);
 
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
 
@@ -119,6 +120,7 @@ class BurningCamps : public AOE
 public:
     Q_INVOKABLE BurningCamps(Card::Suit suit, int number, bool is_transferable = false);
 
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool isAvailable(const Player *player) const;
     virtual void onUse(Room *room, const CardUseStruct &card_use) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
@@ -133,6 +135,7 @@ public:
 
     virtual QString getSubtype() const;
 
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const;
     //virtual void use(Room *room, ServerPlayer *source, QList<ServerPlayer *> &targets) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
@@ -149,7 +152,7 @@ public:
 
     virtual bool isAvailable(const Player *player) const;
 
-    virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const;
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool targetsFeasible(const QList<const Player *> &targets, const Player *Self) const;
     virtual void onUse(Room *room, const CardUseStruct &card_use) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
@@ -164,6 +167,7 @@ public:
 
     virtual QString getSubtype() const;
 
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const;
     virtual void onUse(Room *room, const CardUseStruct &card_use) const;
     virtual void use(Room *room, ServerPlayer *source, QList<ServerPlayer *> &targets) const;
@@ -177,6 +181,8 @@ class ThreatenEmperor : public SingleTargetTrick
 
 public:
     Q_INVOKABLE ThreatenEmperor(Card::Suit suit, int number);
+
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual void onUse(Room *room, const CardUseStruct &card_use) const;
     virtual void onEffect(const CardEffectStruct &effect) const;
     virtual bool isAvailable(const Player *player) const;
@@ -188,6 +194,8 @@ class ImperialOrder : public GlobalEffect
 
 public:
     Q_INVOKABLE ImperialOrder(Card::Suit suit, int number);
+
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
 
     virtual bool isAvailable(const Player *player) const;
 

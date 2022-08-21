@@ -511,7 +511,12 @@ sgs.ai_skill_use["@@zhaofu2"] = function(self, prompt, method)
     end
     local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
     self:useCardByClassName(clonecard, dummyuse)
+<<<<<<< HEAD
     if dummyuse.card and not dummyuse.to:isEmpty() then
+=======
+    if dummyuse.card and (not dummyuse.to:isEmpty()
+            or card_name == "savage_assault" or card_name == "archery_attack" or card_name == "burning_camps") then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
         local target_objectname = {}
         for _, p in sgs.qlist(dummyuse.to) do
             table.insert(target_objectname, p:objectName())
@@ -611,14 +616,39 @@ end
 
 sgs.ai_skill_invoke.jilei = function(self, data)
 	local damage = data:toDamage()
+<<<<<<< HEAD
 	return self:isEnemy(damage.from)
+=======
+	return not self:isFriend(damage.from)
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 end
 
 sgs.ai_skill_choice.jilei = function(self, choices, data)
 	local dfrom = data:toDamage().from
+<<<<<<< HEAD
     if (self:hasCrossbowEffect(dfrom) and dfrom:inMyAttackRange(self.player))
 		or dfrom:isCardLimited(sgs.cloneCard("ex_nihilo"), sgs.Card_MethodUse, true)
         or (dfrom:getHp() < 2 and getCardsNum("Peach", dfrom, self.player) > 0) then
+=======
+    local b_limited = dfrom:getMark("##jilei+BasicCard") > 0
+    local t_limited = dfrom:getMark("##jilei+TrickCard") > 0
+    local e_limited = dfrom:getMark("##jilei+EquipCard") > 0
+    if b_limited and t_limited then
+        return "EquipCard"
+    elseif b_limited and e_limited then
+        return "TrickCard"
+    elseif t_limited and e_limited then
+        return "BasicCard"
+    end
+    if self:slashIsAvailable(dfrom) and not b_limited then
+        for _, p in ipairs(self.friends) do
+            if dfrom:inMyAttackRange(p) then
+                return "BasicCard"
+            end
+        end
+    end
+    if dfrom:getHp() < 2 and getCardsNum("Peach", dfrom, self.player) > 0 and not b_limited then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 		return "BasicCard"
 	else
 		return "TrickCard"
@@ -636,11 +666,22 @@ sgs.ai_skill_exchange["yinbingx"] = function(self,pattern,max_num,min_num,expand
     local discardEquip = false
     for _, c in ipairs(cards) do
         if discardEquip and self.room:getCardPlace(c:getEffectiveId()) == sgs.Player_PlaceEquip then
+<<<<<<< HEAD
         elseif #result < m_num and not c:isKindOf("BasicCard") and self:getKeepValue(c) < 2.5 then--详细考虑？
             table.insert(result, c:getEffectiveId())
         end
         if self.player:hasSkills(sgs.lose_equip_skill) and self.room:getCardPlace(c:getEffectiveId()) == sgs.Player_PlaceEquip then
             discardEquip = true
+=======
+        elseif not c:isKindOf("BasicCard") and self:getKeepValue(c) < 2.5 then--详细考虑？
+            table.insert(result, c:getEffectiveId())
+            if self.player:hasSkills(sgs.lose_equip_skill) and self.room:getCardPlace(c:getEffectiveId()) == sgs.Player_PlaceEquip then
+                discardEquip = true
+            end
+        end
+        if #result == m_num then
+            break
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
         end
     end
     return result
@@ -744,11 +785,93 @@ end
 
 sgs.ai_skill_choice.zhenxi = function(self, choices, data)
 	local target = data:toPlayer()
+<<<<<<< HEAD
     --"usecard"简单写法
 	return "discard"
 end
 
 sgs.ai_skill_choice.zhenxi_discard = "yes"
+=======
+    if self:doNotDiscard(target) then
+        return "usecard"
+    end
+
+    local need_i = self:getOverflow(target) >= 0 and not target:containsTrick("indulgence")
+                and self:trickIsEffective(sgs.cloneCard("indulgence", sgs.Card_Diamond), target, self.player)
+    local need_s = target:getHandcardNum() <= 2 and not target:containsTrick("supply_shortage")
+                and self:trickIsEffective(sgs.cloneCard("supply_shortage", sgs.Card_Club), target, self.player)
+
+    local cards = self.player:getCards("he")
+    for _, id in sgs.qlist(self.player:getHandPile()) do
+		cards:prepend(sgs.Sanguosha:getCard(id))
+	end
+	cards = sgs.QList2Table(cards)
+    self:sortByUseValue(cards, true)
+    for _, acard in ipairs(cards) do
+		if not acard:isKindOf("TrickCard") and not self:isValuableCard(acard)
+        and ((need_i and acard:getSuit() == sgs.Card_Diamond) or (need_s and acard:getSuit() == sgs.Card_Club)) then
+			self.zhenxi_card = acard
+            return "usecard"
+		end
+	end
+
+	return "discard"
+end
+
+sgs.ai_skill_choice.zhenxi_discard = function(self, choices, data)--无目标data
+    return "yes"
+end
+
+sgs.ai_skill_use["@@zhenxi_trick"] = function(self, prompt, method)
+    local target
+    local target_name = self.player:property("zhenxi_target"):toString()
+    for _, p in sgs.qlist(self.room:getAlivePlayers()) do
+        if p:objectName() == target_name then
+            target = p
+            break
+        end
+    end
+
+    local card = self.zhenxi_card or nil
+    self.zhenxi_card = nil
+
+    if not card then
+        local cards = self.player:getCards("he")
+        for _, id in sgs.qlist(self.player:getHandPile()) do
+            cards:prepend(sgs.Sanguosha:getCard(id))
+        end
+        cards = sgs.QList2Table(cards)
+        self:sortByUseValue(cards, true)
+
+        local need_i = self:getOverflow(target) >= 0 and not target:containsTrick("indulgence")
+                and self:trickIsEffective(sgs.cloneCard("indulgence", sgs.Card_Diamond), target, self.player)
+        local need_s = target:getHandcardNum() <= 2 and not target:containsTrick("supply_shortage")
+                and self:trickIsEffective(sgs.cloneCard("supply_shortage", sgs.Card_Club), target, self.player)
+
+        for _, acard in ipairs(cards) do
+            if not acard:isKindOf("TrickCard") and not self:isValuableCard(acard)
+            and ((need_i and acard:getSuit() == sgs.Card_Diamond) or (need_s and acard:getSuit() == sgs.Card_Club)) then
+                card = acard
+                break
+            end
+        end
+    end
+
+    if card and target then
+        local suit = card:getSuitString()
+        local number = card:getNumberString()
+        local card_id = card:getEffectiveId()
+        local card_str
+        if suit == "diamond" then
+            card_str = ("indulgence:_zhenxi[diamond:%s]=%d&"):format(number, card_id)
+        elseif suit == "club" then
+            card_str = ("supply_shortage:_zhenxi[club:%s]=%d&"):format(number, card_id)
+        end
+        return card_str .. "->" .. target_name
+    end
+    return "."
+end
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 
 sgs.ai_skill_invoke.jiansu = true
 
@@ -823,7 +946,11 @@ mumeng_skill.getTurnUseCard = function(self, inclusive)
         local suit = b_card:getSuitString()
         local number = b_card:getNumberString()
         local card_id = b_card:getEffectiveId()
+<<<<<<< HEAD
         local card_str = ("befriend_attacking:mumeng[%s:%s]=%d%s"):format(suit, number, card_id, "&mumeng")
+=======
+        local card_str = ("befriend_attacking:mumeng[%s:%s]=%d&mumeng"):format(suit, number, card_id)
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
         local skillcard = sgs.Card_Parse(card_str)
 
         assert(skillcard)

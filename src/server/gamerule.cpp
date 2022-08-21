@@ -164,6 +164,9 @@ void GameRule::onPhaseProceed(ServerPlayer *player) const
         Q_ASSERT(false);
     }
     case Player::RoundStart:{
+        //ask for show general(s)
+        bool change = (player->getMark("HaventShowGeneral") > 0 && player->getMark("Global_RoundCount") == 1);
+        player->askForGeneralShow("GameRule_AskForGeneralShow", true, true, true, true, change);
         break;
     }
     case Player::Start: {
@@ -373,21 +376,11 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
 #ifndef QT_NO_DEBUG
             if (player->isAlive() && !player->getAI() && player->askForSkillInvoke("userdefine:playNormally")) {
                 room->addPlayerMark(player, "Global_RoundCount");
-
-                //ask for show general(s)
-                bool change = (player->getMark("HaventShowGeneral") > 0 && player->getMark("Global_RoundCount") == 1);
-                player->askForGeneralShow("GameRule_AskForGeneralShow", true, true, true, true, change);
-
                 player->play();
             }
 #endif
         } else if (player->isAlive()) {
             room->addPlayerMark(player, "Global_RoundCount");
-
-            //ask for show general(s)
-            bool change = (player->getMark("HaventShowGeneral") > 0 && player->getMark("Global_RoundCount") == 1);
-            player->askForGeneralShow("GameRule_AskForGeneralShow", true, true, true, true, change);
-
             player->play();
         }
 
@@ -524,6 +517,9 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
             QList<ServerPlayer *> targets = card_use.to;
 
             if (card_use.from && !targets.isEmpty()) {
+                thread->trigger(TargetChoosing, room, card_use.from, data);
+                card_use = data.value<CardUseStruct>();
+                targets = card_use.to;
                 QList<ServerPlayer *> targets_copy = targets;
                 foreach (ServerPlayer *to, targets_copy) {
                     if (targets.contains(to)) {
@@ -583,6 +579,12 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
     case EventLoseSkill: {
         QString skill_name = data.toString().split(":").first();
         const Skill *skill = Sanguosha->getSkill(skill_name);
+
+        if (skill->getFrequency() == Skill::Limited && !skill->getLimitMark().isEmpty()
+                && !player->ownSkill(skill_name)) {
+            room->setPlayerMark(player, skill->getLimitMark(), 0);
+        }
+
         bool refilter = skill->inherits("FilterSkill");
 
         if (!refilter && skill->inherits("TriggerSkill")) {
@@ -620,9 +622,8 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
 
         const Card *cheak_peach = Sanguosha->cloneCard("peach", Card::NoSuit, 0);
 
-        if (player->isProhibited(dying.who, cheak_peach) || player->isLocked(cheak_peach)) break;
-
         while (dying.who->getHp() <= 0) {
+            if (player->isProhibited(dying.who, cheak_peach) || player->isLocked(cheak_peach)) break;
             peach = NULL;
             if (dying.who->isAlive())
                 peach = room->askForSinglePeach(player, dying.who);
@@ -798,6 +799,10 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
     case SlashHit: {
         SlashEffectStruct effect = data.value<SlashEffectStruct>();
         int x = effect.slash->tag["addcardinality"].toInt() + effect.drank + 1;
+        QStringList AddDamage_List = effect.slash->tag["AddDamage_List"].toStringList();
+        foreach (QString name, AddDamage_List) {
+            if (name == effect.to->objectName()) x++;
+        }
         room->damage(DamageStruct(effect.slash, effect.from, effect.to, x, effect.nature));
 
         break;
@@ -845,8 +850,8 @@ bool GameRule::effect(TriggerEvent triggerEvent, Room *room, ServerPlayer *playe
                     if (p->hasShownOneGeneral()) {
                         room->setPlayerProperty(p, "role", "careerist");
                     } else {
-                        p->setRole("careerist");
-                        room->notifyProperty(p, p, "role");
+                        //p->setRole("careerist");
+                        room->notifyProperty(p, p, "role", "careerist");
                     }
                 }
             }

@@ -36,10 +36,14 @@ public:
     {
     }
 
-    virtual bool isProhibited(const Player *, const Player *to, const Card *card, const QList<const Player *> &) const
+    virtual bool isProhibited(const Player *from, const Player *to, const Card *card, const QList<const Player *> &) const
     {
-        if (to->isRemoved() && card->getTypeId() != Card::TypeSkill) return true;
-        if (card->isKindOf("DelayedTrick") && to->containsTrick(card->objectName())) return true;
+        if (card->getTypeId() != Card::TypeSkill) {
+            if (to->isRemoved()) return true;
+            if (from && from->hasFlag("DisabledTargetOthers") && to != from) return true;
+            if (card->isKindOf("DelayedTrick") && to->containsTrick(card->objectName())) return true;
+        }
+
         return false;
     }
 };
@@ -69,7 +73,7 @@ class GlobalRecord : public TriggerSkill
 public:
     GlobalRecord() : TriggerSkill("#global-record")
     {
-        events << CardsMoveOneTime << Death << PreDamageDone << CardUsed << CardResponded << TargetChosen;
+        events << CardsMoveOneTime << Dying << Death << PreDamageDone << CardUsed << CardResponded << TargetChosen;
         global = true;
     }
 
@@ -110,7 +114,23 @@ public:
                         }
                     }
                 }
+                if (player->getPhase() != Player::NotActive && move.to_place == Player::DiscardPile) {
+                    foreach (int id, move.card_ids) {
+                        if (Sanguosha->getCard(id)->isRed())
+                            room->addPlayerMark(player, "GlobalZaiqiCount");
+                    }
+
+                }
             }
+
+        } else if (triggerEvent == Dying) {
+            DyingStruct dying = data.value<DyingStruct>();
+            if (dying.who != player) return;
+            ServerPlayer *killer = dying.damage ? dying.damage->from : NULL;
+            ServerPlayer *current = room->getCurrent();
+
+            if (killer && current && current->getPhase() != Player::NotActive)
+                room->addPlayerMark(killer, "GlobalDyingCausedCount");
 
         } else if (triggerEvent == Death) {
             DeathStruct death = data.value<DeathStruct>();
@@ -176,6 +196,10 @@ public:
                         room->setPlayerFlag(player, "DuanliangEGFCannot");
                 }
 
+                if (card->isKindOf("Analeptic") && !card->hasFlag("UsedBySecondWay") && use.m_addHistory)
+                    room->addPlayerMark(player, "AnalepticUsedTimes");
+
+
             } else {
                 CardResponseStruct response = data.value<CardResponseStruct>();
                 if (!response.m_isUse)
@@ -191,12 +215,17 @@ public:
 
                 if (current && current->getPhase() != Player::NotActive) {
 
-                    if (player->getCardUsedTimes("Slash") == 1)
-                        room->setCardFlag(card, "GlobalSecondSlash");
+                    if (is_use) {
+                        if (player->getCardUsedTimes("Slash") == 1)
+                            room->setCardFlag(card, "GlobalSecondSlash");
+                    }
 
                     if (current->getPhase() == Player::Play) {
-                        if (player->getCardUsedTimes(".|play")==0) {
-                            room->setCardFlag(card, "GlobalFirstUsedCardinPlay");
+
+                        if (is_use) {
+                            room->addPlayerMark(player, "GlobalPlayCardUsedTimes");
+                            if (player->getMark("GlobalPlayCardUsedTimes") == 1)
+                                room->setCardFlag(card, "GlobalFirstUsedCardinPlay");
                         }
 
                     }
@@ -227,16 +256,19 @@ public:
                     if (current->getPhase() == Player::Play) {
                         QVariantList card_list = player->tag[tag3_name].toList();
 
-                        bool xibing = true;
-                        foreach (QVariant card_data, card_list) {
-                            const Card *card = card_data.value<const Card *>();
-                            if (card && card->isBlack() && (card->isNDTrick() || card->isKindOf("Slash"))) {
-                                xibing = false;
-                                break;
+                        if (is_use) {
+                            bool xibing = true;
+                            foreach (QVariant card_data, card_list) {
+                                const Card *card = card_data.value<const Card *>();
+                                if (card && card->isBlack() && (card->isNDTrick() || card->isKindOf("Slash"))) {
+                                    xibing = false;
+                                    break;
+                                }
                             }
+                            if (xibing && card->isBlack() && (card->isNDTrick() || card->isKindOf("Slash")))
+                                room->setCardFlag(card, "GlobalXiBing");
+
                         }
-                        if (xibing && card->isBlack() && (card->isNDTrick() || card->isKindOf("Slash")))
-                            room->setCardFlag(card, "GlobalXiBing");
 
                         card_list << QVariant::fromValue(card);
                         player->tag[tag3_name] = card_list;
@@ -300,6 +332,7 @@ public:
                 foreach (ServerPlayer *p, room->getAlivePlayers()) {
                     room->setPlayerMark(p, "GlobalRuleDisCardCount", 0);
                     room->setPlayerMark(p, "GlobalDisCardCount", 0);
+                    room->setPlayerMark(p, "GlobalDyingCausedCount", 0);
                     room->setPlayerMark(p, "GlobalKilledCount", 0);
                     room->setPlayerMark(p, "GlobalInjuredCount", 0);
                     room->setPlayerMark(p, "Global_MaxcardsIncrease", 0);
@@ -317,6 +350,10 @@ public:
                     room->setPlayerMark(p, "Global_DamagePiont_Round", 0);
                     room->setPlayerMark(p, "Global_InjuredPiont_Round", 0);
 
+                    room->setPlayerMark(p, "AnalepticUsedTimes", 0);
+
+                    room->setPlayerMark(p, "GlobalZaiqiCount", 0);
+
 
                 }
             }
@@ -326,6 +363,7 @@ public:
                 room->setPlayerMark(p, "Global_InjuredTimes_Phase", 0);
                 room->setPlayerMark(p, "Global_DamageTimes_Phase", 0);
                 room->setPlayerProperty(p, "Global_DamagePlayers_Phase", QVariant());
+                room->setPlayerMark(player, "GlobalPlayCardUsedTimes", 0);
             }
         }
     }

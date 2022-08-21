@@ -843,7 +843,7 @@ huoji_skill.getTurnUseCard = function(self)
 	local suit = card:getSuitString()
 	local number = card:getNumberString()
 	local card_id = card:getEffectiveId()
-	local card_str = ("fire_attack:huoji[%s:%s]=%d%s"):format(suit, number, card_id, "&huoji")
+	local card_str = ("fire_attack:huoji[%s:%s]=%d&huoji"):format(suit, number, card_id)
 	local skillcard = sgs.Card_Parse(card_str)
 
 	assert(skillcard)

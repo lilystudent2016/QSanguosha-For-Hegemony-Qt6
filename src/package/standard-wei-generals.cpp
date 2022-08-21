@@ -185,22 +185,12 @@ public:
     }
 };
 
-class Ganglie : public TriggerSkill
+class Ganglie : public MasochismSkill
 {
 public:
-    Ganglie() : TriggerSkill("ganglie")
+    Ganglie() : MasochismSkill("ganglie")
     {
-        events << Damaged;
-    }
 
-    virtual QStringList triggerable(TriggerEvent triggerEvent, Room *, ServerPlayer *player, QVariant &data, ServerPlayer* &) const
-    {
-        if (triggerEvent != Damaged || !TriggerSkill::triggerable(player)) return QStringList();
-        DamageStruct damage = data.value<DamageStruct>();
-        QStringList trigger_skill;
-        for (int i = 1; i <= damage.damage; i++)
-            trigger_skill << objectName();
-        return trigger_skill;
     }
 
     virtual bool cost(TriggerEvent, Room *room, ServerPlayer *player, QVariant &data, ServerPlayer *) const
@@ -215,11 +205,11 @@ public:
         return false;
     }
 
-    virtual bool effect(TriggerEvent, Room *room, ServerPlayer *xiahou, QVariant &data, ServerPlayer *) const
+    virtual void onDamaged(ServerPlayer *xiahou, const DamageStruct &damage) const
     {
-        DamageStruct damage = data.value<DamageStruct>();
+        Room *room = xiahou->getRoom();
         ServerPlayer *from = damage.from;
-        if (xiahou->isDead()) return false;
+        if (xiahou->isDead()) return;
 
         JudgeStruct judge;
         judge.pattern = ".";
@@ -230,7 +220,7 @@ public:
         room->judge(judge);
 
         if (judge.pattern == ".|red") {
-            if (from && from->isAlive() && xiahou->isAlive())
+            if (from && from->isAlive())
                 room->damage(DamageStruct(objectName(), xiahou, from));
         } else if (judge.pattern == ".|black") {
             if (from && from->isAlive() && xiahou->isAlive() && xiahou->canDiscard(from, "he")) {
@@ -241,7 +231,6 @@ public:
             }
 
         }
-        return false;
     }
 };
 
@@ -312,7 +301,7 @@ public:
             if (player->getPhase() == Player::NotActive) {
                 QList<ServerPlayer *> allplayers = room->getAlivePlayers();
                 foreach (ServerPlayer *p, allplayers) {
-                    room->removePlayerTip(p, "#luoyi");
+                    room->setPlayerMark(p, "##luoyi", 0);
                 }
             }
         }
@@ -339,7 +328,7 @@ public:
 
     virtual bool effect(TriggerEvent, Room *room, ServerPlayer *player, QVariant &, ServerPlayer *) const
     {
-        room->addPlayerTip(player, "#luoyi");
+        room->addPlayerMark(player, "##luoyi");
         return false;
     }
 };
@@ -355,10 +344,10 @@ public:
 
     virtual QStringList triggerable(TriggerEvent, Room *, ServerPlayer *player, QVariant &data, ServerPlayer * &) const
     {
-        if (player != NULL && player->isAlive() && player->getMark("#luoyi") > 0) {
+        if (player != NULL && player->isAlive() && player->getMark("##luoyi") > 0) {
             DamageStruct damage = data.value<DamageStruct>();
             if (damage.card != NULL && (damage.card->isKindOf("Slash") || damage.card->isKindOf("Duel"))
-                    && !damage.chain && !damage.transfer && damage.by_user) {
+                    && !damage.chain && !damage.transfer) {
                 return QStringList(objectName());
             }
         }
@@ -583,19 +572,13 @@ bool ShensuCard::targetFilter(const QList<const Player *> &targets, const Player
 
 void ShensuCard::use(Room *, ServerPlayer *source, QList<ServerPlayer *> &targets) const
 {
-    if (targets.length() > 0) {
-        QString index = "2";
-        if (Sanguosha->currentRoomState()->getCurrentCardUsePattern().endsWith("1"))
-            index = "1";
-
-        QVariantList target_list;
-        foreach (ServerPlayer *target, targets) {
-            target_list << QVariant::fromValue(target);
-        }
-
-        source->tag["shensu_invoke" + index] = target_list;
-        source->setFlags("shensu" + index);
+    QStringList target_list = source->tag["shensu_target"].toStringList();
+    QStringList p_list;
+    foreach (ServerPlayer *to, targets) {
+        p_list.append(to->objectName());
     }
+    target_list << p_list;
+    source->tag["shensu_target"] = target_list;
 }
 
 class ShensuViewAsSkill : public ViewAsSkill
@@ -617,23 +600,24 @@ public:
 
     virtual bool viewFilter(const QList<const Card *> &selected, const Card *to_select) const
     {
-        if (Sanguosha->currentRoomState()->getCurrentCardUsePattern().endsWith("1"))
-            return false;
-        else
+        if (Sanguosha->currentRoomState()->getCurrentCardUsePattern().endsWith("2"))
             return selected.isEmpty() && to_select->isKindOf("EquipCard") && !Self->isJilei(to_select);
+        return false;
     }
 
     virtual const Card *viewAs(const QList<const Card *> &cards) const
     {
-        if (Sanguosha->currentRoomState()->getCurrentCardUsePattern().endsWith("1")) {
-            if (cards.isEmpty()) {
+        if (Sanguosha->currentRoomState()->getCurrentCardUsePattern().endsWith("2")) {
+            if (cards.length() == 1) {
                 ShensuCard *shensu = new ShensuCard;
+                shensu->addSubcards(cards);
                 return shensu;
             }
-        } else if (cards.length() == 1) {
-            ShensuCard *card = new ShensuCard;
-            card->addSubcards(cards);
-            return card;
+            return NULL;
+        }
+        if (cards.isEmpty()) {
+            ShensuCard *shensu = new ShensuCard;
+            return shensu;
         }
         return NULL;
     }
@@ -655,17 +639,14 @@ public:
 
     virtual QStringList triggerable(TriggerEvent, Room *, ServerPlayer *xiahouyuan, QVariant &data, ServerPlayer * &) const
     {
-        if (!TriggerSkill::triggerable(xiahouyuan))
+        if (!TriggerSkill::triggerable(xiahouyuan) || !Slash::IsAvailable(xiahouyuan))
             return QStringList();
-        if (!Slash::IsAvailable(xiahouyuan))
-            return QStringList();
-
         PhaseChangeStruct change = data.value<PhaseChangeStruct>();
         if (change.to == Player::Judge && !xiahouyuan->isSkipped(Player::Judge) && !xiahouyuan->isSkipped(Player::Draw)) {
-            xiahouyuan->tag.remove("shensu_invoke1");
             return QStringList(objectName());
-        } else if (change.to == Player::Play && xiahouyuan->canDiscard(xiahouyuan, "he") && !xiahouyuan->isSkipped(Player::Play)) {
-            xiahouyuan->tag.remove("shensu_invoke2");
+        } else if (change.to == Player::Play && !xiahouyuan->isNude() && !xiahouyuan->isSkipped(Player::Play)) {
+            return QStringList(objectName());
+        } else if (change.to == Player::Discard && !xiahouyuan->isSkipped(Player::Discard)) {
             return QStringList(objectName());
         }
 
@@ -676,46 +657,40 @@ public:
     {
         PhaseChangeStruct change = data.value<PhaseChangeStruct>();
         if (change.to == Player::Judge && room->askForUseCard(xiahouyuan, "@@shensu1", "@shensu1", 1)) {
-            if (xiahouyuan->hasFlag("shensu1") && xiahouyuan->tag.contains("shensu_invoke1")) {
-                xiahouyuan->skip(Player::Judge);
-                xiahouyuan->skip(Player::Draw);
-                return true;
-            }
+            xiahouyuan->skip(Player::Judge);
+            xiahouyuan->skip(Player::Draw);
+            return true;
         } else if (change.to == Player::Play && room->askForUseCard(xiahouyuan, "@@shensu2", "@shensu2", 2, Card::MethodDiscard)) {
-            if (xiahouyuan->hasFlag("shensu2") && xiahouyuan->tag.contains("shensu_invoke2")) {
-                xiahouyuan->skip(Player::Play);
-                return true;
-            }
+            xiahouyuan->skip(Player::Play);
+            return true;
+        } else if (change.to == Player::Discard && room->askForUseCard(xiahouyuan, "@@shensu3", "@shensu3", 3)) {
+            room->loseHp(xiahouyuan);
+            xiahouyuan->skip(Player::Discard);
+            return true;
         }
         return false;
     }
 
-    virtual bool effect(TriggerEvent, Room *room, ServerPlayer *player, QVariant &data, ServerPlayer *) const
+    virtual bool effect(TriggerEvent, Room *room, ServerPlayer *player, QVariant &, ServerPlayer *) const
     {
-        PhaseChangeStruct change = data.value<PhaseChangeStruct>();
-        QVariantList target_list;
-        if (change.to == Player::Judge) {
-            target_list = player->tag["shensu_invoke1"].toList();
-            player->tag.remove("shensu_invoke1");
-        } else {
-            target_list = player->tag["shensu_invoke2"].toList();
-            player->tag.remove("shensu_invoke2");
-        }
+        QStringList target_list = player->tag["shensu_target"].toStringList();
+        if (target_list.isEmpty()) return false;
+        QString p_list = target_list.takeLast();
+        player->tag["shensu_target"] = target_list;
+        QStringList p_names = p_list.split("+");
 
         Slash *slash = new Slash(Card::NoSuit, 0);
         slash->setSkillName("_shensu");
         QList<ServerPlayer *> targets;
-        foreach (QVariant x, target_list) {
-            targets << x.value<ServerPlayer *>();
+        foreach (QString p_name, p_names) {
+            ServerPlayer *p = room->findPlayerbyobjectName(p_name);
+            if (p)
+                targets << p;
         }
+        if (!targets.isEmpty())
+            room->useCard(CardUseStruct(slash, player, targets), false);
 
-        room->useCard(CardUseStruct(slash, player, targets));
         return false;
-    }
-
-    virtual int getEffectIndex(const ServerPlayer *, const Card *card) const
-    {
-        return card->getSubcards().length() + 1;
     }
 };
 
@@ -1027,22 +1002,6 @@ QiangxiCard::QiangxiCard()
 {
 }
 
-bool QiangxiCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const
-{
-    if (!targets.isEmpty() || to_select == Self)
-        return false;
-
-    int rangefix = 0;
-    if (!subcards.isEmpty() && Self->getWeapon() && Self->getWeapon()->getId() == subcards.first()) {
-        const Weapon *card = qobject_cast<const Weapon *>(Self->getWeapon()->getRealCard());
-        rangefix += card->getRange() - 1;
-    }
-    int distance = Self->distanceTo(to_select, rangefix);
-    if (distance == -1)
-        return false;
-    return distance <= Self->getAttackRange();
-}
-
 void QiangxiCard::extraCost(Room *room, const CardUseStruct &card_use) const
 {
     if (card_use.card->getSubcards().isEmpty())
@@ -1291,11 +1250,12 @@ public:
 
         if (to) {
             Room *room = caopi->getRoom();
-            if (room->askForDiscard(to, "fangzhu_discard", 1, 1, true, true, "@fangzhu-discard:::"+QString::number(caopi->getLostHp())))
+            int x = caopi->getLostHp();
+            if (x > 0 && room->askForDiscard(to, "fangzhu_discard", x, x, true, true, "@fangzhu-discard:::"+QString::number(x)))
                 room->loseHp(to);
             else {
-                if (caopi->isAlive() && caopi->isWounded())
-                    to->drawCards(caopi->getLostHp(), objectName());
+                if (caopi->isAlive() && x > 0)
+                    to->drawCards(x, objectName());
                 to->turnOver();
             }
 
@@ -1333,7 +1293,9 @@ bool Xiaoguo::cost(TriggerEvent, Room *room, ServerPlayer *player, QVariant &, S
 bool Xiaoguo::effect(TriggerEvent, Room *room, ServerPlayer *player, QVariant &, ServerPlayer *ask_who) const
 {
     if (player->isDead()) return false;
-    if (!room->askForCard(player, ".Equip", "@xiaoguo-discard", QVariant()))
+    if (room->askForCard(player, ".Equip", "@xiaoguo-discard", QVariant()))
+        ask_who->drawCards(1, objectName());
+    else
         room->damage(DamageStruct("xiaoguo", ask_who, player));
 
     return false;
@@ -1355,7 +1317,7 @@ void StandardPackage::addWeiGenerals()
     simayi->addSkill(new Fankui);
     simayi->addSkill(new Guicai);
 
-    General *xiahoudun = new General(this, "xiahoudun", "wei"); // WEI 003
+    General *xiahoudun = new General(this, "xiahoudun", "wei", 5); // WEI 003
     xiahoudun->addCompanion("xiahouyuan");
     xiahoudun->addSkill(new Ganglie);
 
@@ -1375,7 +1337,7 @@ void StandardPackage::addWeiGenerals()
     zhenji->addSkill(new Qingguo);
     zhenji->addSkill(new Luoshen);
 
-    General *xiahouyuan = new General(this, "xiahouyuan", "wei", 5); // WEI 008
+    General *xiahouyuan = new General(this, "xiahouyuan", "wei"); // WEI 008
     xiahouyuan->addSkill(new Shensu);
 
     General *zhanghe = new General(this, "zhanghe", "wei"); // WEI 009

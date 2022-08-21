@@ -75,7 +75,7 @@ void ServerPlayer::broadcastSkillInvoke(const Card *card) const
 
     QString skill_name = card->getSkillName();
     const Skill *skill = Sanguosha->getSkill(skill_name);
-    if (skill == NULL) {
+    if (skill == NULL || skill_name == "aozhan") {
         if (card->getCommonEffectName().isNull())
             broadcastSkillInvoke(card->objectName());
         else
@@ -85,7 +85,7 @@ void ServerPlayer::broadcastSkillInvoke(const Card *card) const
         int index = skill->getEffectIndex(this, card);
         if (index == 0) return;
 
-        if ((index == -1 && skill->getSources().isEmpty()) || index == -2) {
+        if (index == -2) {
             if (card->getCommonEffectName().isNull())
                 broadcastSkillInvoke(card->objectName());
             else

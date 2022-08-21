@@ -1970,15 +1970,21 @@ void RoomScene::getCards(int moveId, QList<CardsMoveStruct> card_moves)
             if (!reason.m_skillName.isEmpty() && movement.from && movement.to_place != Player::PlaceHand && movement.to_place != Player::PlaceSpecial
                     && movement.to_place != Player::PlaceEquip && movement.to_place != Player::PlaceDelayedTrick) {
                 ClientPlayer *target = ClientInstance->getPlayer(movement.from->objectName());
-                if (!reason.m_playerId.isEmpty() && reason.m_playerId != movement.from->objectName()) target = ClientInstance->getPlayer(reason.m_playerId);
-                if (!reason.m_eventName.isEmpty() && reason.m_eventName == target->getActualGeneral1Name()
-                        || reason.m_eventName == target->getActualGeneral2Name())
+                if (!reason.m_playerId.isEmpty() && reason.m_playerId != movement.from->objectName())
+                    target = ClientInstance->getPlayer(reason.m_playerId);
+
+                if (!reason.m_eventName.isEmpty() && (reason.m_eventName == target->getActualGeneral1Name()
+                        || reason.m_eventName == target->getActualGeneral2Name()))
                     card->showAvatar(reason.m_eventName == target->getActualGeneral1Name() ? target->getGeneral() : target->getGeneral2(), reason.m_skillName);
                 else if (target->hasSkill(reason.m_skillName) && !target->getSkillList().contains(Sanguosha->getSkill(reason.m_skillName)))
                     card->showAvatar(target->hasShownGeneral1() ? target->getGeneral() : target->getGeneral2(), reason.m_skillName);
-                else if (target->inHeadSkills(reason.m_skillName) || (target->getActualGeneral1() ? target->getActualGeneral1()->hasSkill(reason.m_skillName) : NULL))
+                else if (target->getActualGeneral1() && target->getActualGeneral1()->ownSkill(reason.m_skillName))
+                    card->showAvatar(target->getActualGeneral1(), reason.m_skillName);
+                else if (target->getActualGeneral2() && target->getActualGeneral2()->ownSkill(reason.m_skillName))
+                    card->showAvatar(target->getActualGeneral2(), reason.m_skillName);
+                else if (target->inHeadSkills(reason.m_skillName))
                     card->showAvatar(target->getGeneral(), reason.m_skillName);
-                else if (target->inDeputySkills(reason.m_skillName) || (target->getActualGeneral2() ? target->getActualGeneral2()->hasSkill(reason.m_skillName) : NULL))
+                else if (target->inDeputySkills(reason.m_skillName))
                     card->showAvatar(target->getGeneral2(), reason.m_skillName);
             }
 
@@ -2049,7 +2055,7 @@ QString RoomScene::_translateMovement(const CardsMoveStruct &move)
     }
 
     QString result(playerName + targetName);
-    result.append(Sanguosha->translate(reason.m_eventName));
+    //result.append(Sanguosha->translate(reason.m_eventName));
     //result.append(Sanguosha->translate(reason.m_skillName));
     if ((reason.m_reason & CardMoveReason::S_MASK_BASIC_REASON) == CardMoveReason::S_REASON_USE && reason.m_skillName.isEmpty()) {
         result.append(Sanguosha->translate("use"));
@@ -2264,7 +2270,7 @@ void RoomScene::addSkillButton(const Skill *skill, const bool &head)
         connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), dashboard, &Dashboard::skillButtonActivated);
         if (btn->getSkill()->objectName() == "yigui")
             connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), this, &RoomScene::onYiguiActivated);
-        if (btn->getSkill()->objectName() == "huashen")
+        else if (btn->getSkill()->objectName() == "huashen")
             connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), this, &RoomScene::onHuashenActivated);
         else
             connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), this, &RoomScene::onSkillActivated);
@@ -2291,7 +2297,7 @@ void RoomScene::addSkillButton(const Skill *skill, const bool &head)
         if (guhuo->getSkillName() != "yigui")
             connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), guhuo, &GuhuoBox::popup);
         connect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_deactivated), guhuo, &GuhuoBox::clear);
-        disconnect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), this, &RoomScene::onSkillActivated);
+        //disconnect(btn, (void (QSanSkillButton::*)())(&QSanSkillButton::skill_activated), this, &RoomScene::onSkillActivated);
         connect(guhuo, &GuhuoBox::onButtonClick, this, &RoomScene::onSkillActivated);
     }
 
@@ -2673,8 +2679,10 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
                 Sanguosha->currentRoomState()->getCurrentCardUsePattern());
         }
         foreach (TransferButton *button, dashboard->getTransferButtons()) {
-            button->setEnabled(enabled);
-            if (enabled)
+            const Card *to_select = button->getCardItem()->getCard();
+            bool view_filter = Sanguosha->getTransfer()->viewFilter(QList<const Card *>(), to_select);
+            button->setEnabled(enabled && view_filter);
+            if (enabled && view_filter)
                 button->getCardItem()->setTransferable(true);
         }
     }
@@ -3140,9 +3148,11 @@ void RoomScene::onSkillActivated()
 {
     QSanSkillButton *button = qobject_cast<QSanSkillButton *>(sender());
     const ViewAsSkill *skill = NULL;
-    if (button)
+    if (button) {
         skill = button->getViewAsSkill();
-    else { //by Xusine
+        if (skill && guhuo_items.contains(skill->objectName()))
+            Self->tag.remove(skill->objectName());
+    } else { //by Xusine
         GuhuoBox *guhuo = qobject_cast<GuhuoBox *>(sender());
         if (guhuo) {
             skill = Sanguosha->getViewAsSkill(guhuo->getSkillName());
@@ -3161,8 +3171,11 @@ void RoomScene::onSkillActivated()
 
         const Card *card = dashboard->getPendingCard();
 
-        if (card && card->targetFixed() && card->isAvailable(Self))
-            useSelectedCard();
+        if (card && card->targetFixed() && card->isAvailable(Self)) {
+            if (!guhuo_items.contains(skill->objectName()))
+                useSelectedCard();
+        }
+
     }
 }
 
@@ -3228,6 +3241,7 @@ void RoomScene::onYiguiActivated()
     if (skill == NULL) return;
     clearRemainBox();
 
+    Self->tag.remove("yigui");
     Self->tag.remove("yigui_general");
 
     dashboard->startPending(skill);
@@ -4505,7 +4519,7 @@ void RoomScene::setEmotion(const QString &who, const QString &emotion, bool perm
 void RoomScene::showSkillInvocation(const QString &who, const QString &skill_name)
 {
     const ClientPlayer *player = ClientInstance->findChild<const ClientPlayer *>(who);
-    if (!player->hasSkill(skill_name) && !player->hasEquipSkill(skill_name)) return;
+    if (!player->hasSkill(skill_name) && !player->hasEquipSkill(skill_name) && !player->ownSkill(skill_name)) return;
     const Skill *skill = Sanguosha->getSkill(skill_name);
     if (skill && (skill->inherits("SPConvertSkill") || !skill->isVisible())) return;
     QString type = "#InvokeSkill";
@@ -4726,7 +4740,7 @@ void RoomScene::showIndicator(const QString &from, const QString &to)
     QPointF start = obj1->sceneBoundingRect().center();
     QPointF finish = obj2->sceneBoundingRect().center();
 
-    IndicatorItem *indicator = new IndicatorItem(start, finish, ClientInstance->getPlayer(from));
+    IndicatorItem *indicator = new IndicatorItem(start, finish, ClientInstance->getPlayer(from), 5);
 
     qreal x = qMin(start.x(), finish.x());
     qreal y = qMin(start.y(), finish.y());
@@ -4806,11 +4820,11 @@ void RoomScene::surrender()
         return;
     }
 
-    if (!Self->hasShownOneGeneral()) return;
+    if (!Self->hasShownGeneral1()) return;
     const Player *enemy = Self->getAliveSiblings().first();
     if (Self->isFriendWith(enemy)) return;
     foreach (const Player *p, Self->getAliveSiblings()) {
-        if (!p->hasShownOneGeneral() || !p->isFriendWith(enemy)) return;
+        if (!p->hasShownGeneral1() || !p->isFriendWith(enemy)) return;
     }
 
     QMessageBox::StandardButton button;

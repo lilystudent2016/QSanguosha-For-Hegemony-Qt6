@@ -163,7 +163,11 @@ function SetInitialTables()
 	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
 						"tuntian|shoucheng|yicheng|qianhuan|jizhao|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
+<<<<<<< HEAD
 						"xibing|zhente|qiao|shejian|yusui|yuanyu|mingzhe"
+=======
+						"xibing|zhente|qiao|shejian|yusui|mingde|yuanyu|mingzhe|jilei"
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 	sgs.usefull_skill = "tiandu|qiaobian|xingshang|xiaoguo|wusheng|guanxing|qicai|jizhi|kuanggu|lianhuan|huoshou|juxiang|shushen|zhiheng|keji|" ..
 						"duoshi|xiaoji|hongyan|haoshi|guzheng|zhijian|shuangxiong|guidao|guicai|xiongyi|mashu|lirang|yizhi|shengxi|" ..
 						"xunxun|wangxi|yingyang|hunshang|biyue"
@@ -490,17 +494,30 @@ function SmartAI:objectiveLevel(player)
 	elseif string.find(gameProcess, ">") then
 		local kingdom = gameProcess:split(">")[1]
 		if string.find(gameProcess, ">>>>") then
+<<<<<<< HEAD
 			if string.find(gameProcess, self_kingdom..">>>>") and not selfIsCareerist then
+=======
+			local longest = string.match(gameProcess, "%p+>")--最多的>
+			if string.find(gameProcess, self_kingdom..longest) and not selfIsCareerist then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 				if sgs.shown_kingdom[self_kingdom] < upperlimit and sgs.isAnjiang(player)
 					and (player_kingdom_evaluate == self_kingdom or string.find(player_kingdom_evaluate, self_kingdom)) then return 0
 				elseif player_kingdom_evaluate == "unknown" and sgs.turncount <= 0 then return 0
 				else return 5
 				end
+<<<<<<< HEAD
 			elseif selfIsCareerist and string.find(gameProcess, "careerist>>>>") then
 				return 5
 			else
 				if string.find(gameProcess, player_kingdom_explicit..">>>>") then return 5
 				elseif string.find(gameProcess, player_kingdom_evaluate..">>>>") then return 5
+=======
+			elseif selfIsCareerist and string.find(gameProcess, "careerist"..longest) then
+				return 5
+			else
+				if string.find(gameProcess, player_kingdom_explicit..longest) then return 5
+				elseif string.find(gameProcess, player_kingdom_evaluate..longest) then return 5
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 				elseif player_kingdom_evaluate == "unknown" then return -1
 				elseif not string.find(player_kingdom_evaluate, kingdom) then return -1
 				else return 0
@@ -6673,7 +6690,11 @@ function SmartAI:willSkipDrawPhase(player, NotContains_Null)
 		if friend_null + friend_snatch_dismantlement > 1 then return false end
 		if (self:getFinalRetrial(player) == 1 and self:isFriend(player)) or (self:getFinalRetrial(player) == 2 and self:isEnemy(player)) then
 			local _, wP = self:getFinalRetrial(player)
+<<<<<<< HEAD
 			if getKnownCard(wP, self.player, "club", true, "h") then
+=======
+			if wP and getKnownCard(wP, self.player, "club", true, "h") then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 				return false
 			end
 		end

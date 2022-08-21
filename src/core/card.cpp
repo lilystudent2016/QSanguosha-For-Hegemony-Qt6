@@ -350,6 +350,13 @@ QString Card::getName() const
     return Sanguosha->translate(objectName());
 }
 
+bool Card::sameCardNameWith(const Card *other) const
+{
+    if (isKindOf("Slash") && other->isKindOf("Slash")) return true;
+    if (isKindOf("Nullification") && other->isKindOf("Nullification")) return true;
+    return objectName() == other->objectName();
+}
+
 QString Card::getSkillName(bool removePrefix) const
 {
     if (m_skillName.startsWith("_") && removePrefix)
@@ -713,9 +720,14 @@ bool Card::targetsFeasible(const QList<const Player *> &targets, const Player *)
         return !targets.isEmpty();
 }
 
+bool Card::targetRated(const Player *to_select, const Player *Self) const
+{
+    return to_select != Self;
+}
+
 bool Card::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const
 {
-    return targets.isEmpty() && to_select != Self;
+    return targets.isEmpty() && targetRated(to_select, Self);
 }
 
 bool Card::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self, int &maxVotes) const
@@ -783,6 +795,7 @@ void Card::onUse(Room *room, const CardUseStruct &use) const
         CardMoveReason reason(CardMoveReason::S_REASON_USE, player->objectName(), QString(), card_use.card->getSkillName(), general);
         if (card_use.to.size() == 1)
             reason.m_targetId = card_use.to.first()->objectName();
+        reason.m_useStruct = card_use;
         foreach (int id, used_cards) {
             CardsMoveStruct move(id, NULL, Player::PlaceTable, reason);
             moves.append(move);
@@ -854,8 +867,9 @@ void Card::onUse(Room *room, const CardUseStruct &use) const
         }
     }
 
+    if (!hasFlag("slashDisableExtraTarget"))
+        thread->trigger(TargetSelected, room, player, data);
 
-    thread->trigger(TargetChoosing, room, player, data);
     thread->trigger(CardUsed, room, player, data);
     thread->trigger(CardFinished, room, player, data);
 
@@ -864,6 +878,7 @@ void Card::onUse(Room *room, const CardUseStruct &use) const
         DummyCard dummy(table_cardids);
         CardMoveReason reason(CardMoveReason::S_REASON_USE, player->objectName(), QString(), this->getSkillName(), this->objectName());
         if (card_use.to.size() == 1) reason.m_targetId = card_use.to.first()->objectName();
+        reason.m_useStruct = card_use;
         room->moveCardTo(&dummy, player, NULL, Player::DiscardPile, reason, true);
     }
 
@@ -1191,6 +1206,7 @@ TransferCard::TransferCard()
 {
     will_throw = false;
     mute = true;
+    handling_method = Card::MethodNone;
 }
 
 bool TransferCard::targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const

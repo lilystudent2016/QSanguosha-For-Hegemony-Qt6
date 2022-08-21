@@ -522,10 +522,10 @@ luanji_skill.getTurnUseCard = function(self)
 			end
 		end
 		--去除保留牌的花色，优先使用同色
-		if self:getSuitNum("heart", "h", self.player) > 1 + heartKeepnum or
-		self:getSuitNum("diamond", "h", self.player) > 1 + diamondKeepnum or
-		self:getSuitNum("spade", "h", self.player) > 1 + spadeKeepnum or
-		self:getSuitNum("club", "h", self.player) > 1 + clubKeepnum then
+		if self:getSuitNum("heart", false, self.player) > 1 + heartKeepnum or
+		self:getSuitNum("diamond", false, self.player) > 1 + diamondKeepnum or
+		self:getSuitNum("spade", false, self.player) > 1 + spadeKeepnum or
+		self:getSuitNum("club", false, self.player) > 1 + clubKeepnum then
 		   hasSamesuit = true
 	   end
 
@@ -1312,7 +1312,11 @@ sgs.ai_skill_playerchosen.kuangfu = function(self, targets)
 	if self:getOverflow() > 1 or self.player:getHandcardNum() < 2 then
 		no_loss = true
 	end
+<<<<<<< HEAD
 	if self:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
+=======
+	if self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 		no_loss = true
 	end
 	if no_loss then

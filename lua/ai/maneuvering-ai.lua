@@ -751,14 +751,28 @@ function SmartAI:useCardFireAttack(fire_attack, use)
 	if self.fireattack_onlyview then
 		if #targets == 0 and #self.enemies > 0 then
 			for _,p in ipairs(self.enemies) do
+<<<<<<< HEAD
 				table.insert(targets, p)
 				break
+=======
+				if not p:isKongcheng() then
+					table.insert(targets, p)
+					break
+				end
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 			end
 		end
 		if #targets == 0 then
 			for _,p in sgs.qlist(self.room:getOtherPlayers(self.player)) do
+<<<<<<< HEAD
 				table.insert(targets, p)
 				break
+=======
+				if not p:isKongcheng() then
+					table.insert(targets, p)
+					break
+				end
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 			end
 		end
 	end

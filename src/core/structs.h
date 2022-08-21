@@ -130,6 +130,8 @@ public:
     // judgement!!! It will not accurately reflect the real reason.
     QString m_skillName; // skill that triggers movement of the cards, such as "longdang", "dimeng"
     QString m_eventName; // additional arg such as "lebusishu" on top of "S_REASON_JUDGE"
+    CardUseStruct m_useStruct;
+
     inline CardMoveReason()
     {
         m_reason = S_REASON_UNKNOWN;
@@ -579,6 +581,7 @@ enum TriggerEvent
     BeforeGameOverJudge,
     GameOverJudge,
     GameFinished,
+    DeathFinished,
 
     SlashEffected,
     SlashProceed,
@@ -598,6 +601,7 @@ enum TriggerEvent
     PlayCard,
 
     PreCardUsed,
+    TargetSelected,
     CardUsed,
     TargetChoosing, //distinguish "choose target" and "confirm target"
     TargetConfirming,

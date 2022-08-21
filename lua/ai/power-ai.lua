@@ -153,7 +153,11 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
   if self.player:isKongcheng() then
     return "."
   end
+<<<<<<< HEAD
   if self:willSkipDrawPhase()
+=======
+  if self:willSkipDrawPhase()--手中最后一张牌是无懈？
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
   and not (self.player:hasSkill("qiaobian") and self.player:getHandcardNum() < 2)
   and not (self.player:hasSkill("elitegeneralflag") and self.player:getHandcardNum() < 3) then
     return "."

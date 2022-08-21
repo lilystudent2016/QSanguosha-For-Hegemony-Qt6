@@ -804,6 +804,7 @@ private:
 XuanhuoAttachCard::XuanhuoAttachCard()
 {
     target_fixed = true;
+    handling_method = Card::MethodNone;
 }
 
 void XuanhuoAttachCard::onUse(Room *room, const CardUseStruct &card_use) const
@@ -840,7 +841,7 @@ void XuanhuoAttachCard::onUse(Room *room, const CardUseStruct &card_use) const
 
 void XuanhuoAttachCard::use(Room *room, ServerPlayer *source, QList<ServerPlayer *> &) const
 {
-    if (source->isNude() || !room->askForDiscard(source, "xuanhuo_discard", 1, 1, true, true, "@xuanhuo-discard")) return;
+    if (source->isNude() || !room->askForDiscard(source, "xuanhuo_discard", 1, 1, false, true, "@xuanhuo-discard")) return;
 
     QString all_skills = "wusheng+paoxiao+longdan+tieqi+liegong+kuanggu";
     QStringList skill_list;
@@ -853,11 +854,9 @@ void XuanhuoAttachCard::use(Room *room, ServerPlayer *source, QList<ServerPlayer
     }
 
     foreach (QString skill_name, all_skills.split("+")) {
-
-
         bool can_choose = true;
         foreach (const Skill *s, skills) {
-            if (s->objectName() == skill_name) {
+            if (s->objectName() == skill_name || s->objectName() == skill_name + "_xh") {
                 can_choose = false;
                 break;
             }
@@ -969,10 +968,12 @@ public:
 
     virtual bool viewFilter(const Card *card) const
     {
-        const Player *lord = Self->getLord();
-        if (lord == NULL || !lord->hasLordSkill("shouyue") || !lord->hasShownGeneral1())
-            if (!card->isRed())
+        if (!card->isRed()) {
+            if (!Self->hasShownSkill(objectName())) return false;
+            const Player *lord = Self->getLord();
+            if (lord == NULL || !lord->hasLordSkill("shouyue") || !lord->hasShownGeneral1())
                 return false;
+        }
 
         if (Sanguosha->currentRoomState()->getCurrentCardUseReason() == CardUseStruct::CARD_USE_REASON_PLAY) {
             Slash *slash = new Slash(Card::SuitToBeDecided, -1);
@@ -1114,11 +1115,10 @@ public:
     virtual QStringList triggerable(TriggerEvent, Room *, ServerPlayer *player, QVariant &data, ServerPlayer* &) const
     {
         CardUseStruct use = data.value<CardUseStruct>();
-        if (TriggerSkill::triggerable(player) && player->getPhase() == Player::Play && use.card != NULL && use.card->isKindOf("Slash")) {
+        if (TriggerSkill::triggerable(player) && use.card != NULL && use.card->isKindOf("Slash")) {
             QStringList targets;
             foreach (ServerPlayer *to, use.to) {
-                int handcard_num = to->getHandcardNum();
-                if (handcard_num >= player->getHp() || handcard_num <= player->getAttackRange())
+                if (to->getHp() >= player->getHp())
                     targets << to->objectName();
             }
             if (!targets.isEmpty())
@@ -1136,14 +1136,19 @@ public:
         return false;
     }
 
-    virtual bool effect(TriggerEvent, Room *, ServerPlayer *target, QVariant &data, ServerPlayer *huangzhong) const
+    virtual bool effect(TriggerEvent, Room *room, ServerPlayer *target, QVariant &data, ServerPlayer *huangzhong) const
     {
         CardUseStruct use = data.value<CardUseStruct>();
-        QVariantList jink_list = huangzhong->tag["Jink_" + use.card->toString()].toList();
-
-        doLiegong(target, use, jink_list);
-
-        huangzhong->tag["Jink_" + use.card->toString()] = jink_list;
+        QString choice = room->askForChoice(huangzhong, objectName(), "nojink+adddamage", data, "@liegong-choice::"+ target->objectName());
+        if (choice == "nojink") {
+            QVariantList jink_list = huangzhong->tag["Jink_" + use.card->toString()].toList();
+            doLiegong(target, use, jink_list);
+            huangzhong->tag["Jink_" + use.card->toString()] = jink_list;
+        } else if (choice == "adddamage") {
+            QStringList AddDamage_List = use.card->tag["AddDamage_List"].toStringList();
+            AddDamage_List << target->objectName();
+            use.card->setTag("AddDamage_List", AddDamage_List);
+        }
         return false;
     }
 
@@ -1480,7 +1485,7 @@ public:
         player->obtainCard(judge->card);
 
         ServerPlayer *current = room->getCurrent();
-        if (current != NULL && current->getPhase() != Player::NotActive) {
+        if (current != NULL && current->isAlive() && current->getPhase() != Player::NotActive) {
             if (room->askForChoice(player, objectName(), "yes+no", data, "@zhuwei-choose:" + current->objectName()) == "yes") {
                 room->addPlayerMark(current, "#zhuwei");
 
@@ -1867,7 +1872,7 @@ public:
         if (player->getPhase() == Player::Start && player->getSeemingKingdom() == "wei" && player->hasShownOneGeneral()) {
             if (getAvailableGenerals(player).isEmpty() || player->isNude()) return QStringList();
             ServerPlayer *lord = room->getLord("wei");
-            if (lord != NULL && lord->hasLordSkill("jianan") && lord->hasShownGeneral1() && !getAvailableSkills(room).isEmpty())
+            if (lord != NULL && lord->hasLordSkill("jianan") && lord->hasShownGeneral1())
                 return QStringList(objectName());
         }
         return QStringList();

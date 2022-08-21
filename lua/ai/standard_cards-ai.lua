@@ -1931,7 +1931,7 @@ function SmartAI:useCardAmazingGrace(card, use)
 	use.card = card
 end
 
-sgs.ai_use_value.AmazingGrace = 3
+sgs.ai_use_value.AmazingGrace = 2
 sgs.ai_keep_value.AmazingGrace = -1
 sgs.ai_use_priority.AmazingGrace = 1.2
 sgs.dynamic_value.benefit.AmazingGrace = true
@@ -1961,7 +1961,11 @@ function SmartAI:willUseGodSalvation(card)
 			good = good + 10 * getCardsNum("Nullification", friend, self.player)
 		end
 		if self:trickIsEffective(card, friend, self.player) then
+<<<<<<< HEAD
 			if friend:isWounded() then
+=======
+			if friend:canRecover() then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 				wounded_friend = wounded_friend + 1
 				good = good + 10
 				if friend:isLord() then good = good + 10 / math.max(friend:getHp(), 1) end
@@ -1987,7 +1991,11 @@ function SmartAI:willUseGodSalvation(card)
 			bad = bad + 10 * getCardsNum("Nullification", enemy, self.player)
 		end
 		if self:trickIsEffective(card, enemy, self.player) then
+<<<<<<< HEAD
 			if enemy:isWounded() then
+=======
+			if enemy:canRecover() then
+>>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 				wounded_enemy = wounded_enemy + 1
 				bad = bad + 10
 				if enemy:isLord() then
@@ -2015,6 +2023,7 @@ function SmartAI:useCardGodSalvation(card, use)
 	end
 end
 
+sgs.ai_use_value.GodSalvation = 2
 sgs.ai_use_priority.GodSalvation = 1.1
 sgs.ai_keep_value.GodSalvation = 3.30
 sgs.dynamic_value.benefit.GodSalvation = true

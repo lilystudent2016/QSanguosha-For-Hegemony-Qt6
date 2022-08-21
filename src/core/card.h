@@ -103,6 +103,7 @@ public:
     QString getFullName(bool include_suit = false) const;
     QString getLogName() const;
     QString getName() const;
+    bool sameCardNameWith(const Card *other) const;
     QString getSkillName(bool removePrefix = true) const;
     virtual void setSkillName(const QString &skill_name);
     QString getDescription(bool inToolTip = true) const;
@@ -155,6 +156,7 @@ public:
     virtual bool targetFixed() const;
     virtual bool targetsFeasible(const QList<const Player *> &targets, const Player *Self) const;
     // @todo: the following two functions should be merged into one.
+    virtual bool targetRated(const Player *to_select, const Player *Self) const;
     virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self) const;
     virtual bool targetFilter(const QList<const Player *> &targets, const Player *to_select, const Player *Self,
         int &maxVotes) const;
