@@ -496,7 +496,7 @@ local invoke_qianhuan = function(self, use)
 	if (use.from and self:isFriend(use.from)) then return false end
 	if use.to:isEmpty() then return false end
 	if use.card:isKindOf("Peach") or use.card:isKindOf("Analeptic") then return false end
-	if use.card:isKindOf("Lightning") then return end
+	if use.card:isKindOf("Lightning") or use.card:isKindOf("KnownBoth") then return end
 	local to = use.to:first()
 	if use.card:isKindOf("Slash") and not self:slashIsEffective(use.card, to, use.from) then return end
 	if use.card:isKindOf("TrickCard") and not self:trickIsEffective(use.card, to, use.from) then return end

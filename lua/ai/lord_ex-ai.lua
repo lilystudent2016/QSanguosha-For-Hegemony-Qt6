@@ -959,7 +959,7 @@ local paiyi_skill = {}
 paiyi_skill.name = "paiyi"
 table.insert(sgs.ai_skills, paiyi_skill)
 paiyi_skill.getTurnUseCard = function(self)
-	if (self.player:getPile("power_pile"):length() > 0 and not self.player:hasUsed("PaiyiCard")) then
+	if (self.player:getPile("power_pile"):length() > 0 and self.player:usedTimes("PaiyiCard") < 2) then
 		return sgs.Card_Parse("@PaiyiCard=" .. self.player:getPile("power_pile"):first())
 	end
 	return nil
@@ -968,7 +968,7 @@ end
 sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
   sgs.ai_use_priority.PaiyiCard = 2.4
 	local target
-  if self.player:getPile("power_pile"):length() > 3 then
+  --if self.player:getPile("power_pile"):length() > 3 then--技能修改
     self:sort(self.friends, "defense")
 	  for _, friend in ipairs(self.friends) do
 		  if friend:getHandcardNum() < 2 and not self:needKongcheng(friend, true) and self.player:isFriendWith(friend) then
@@ -979,7 +979,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
 	  if not target then
 		  target = self.player
 	  end
-  else--4权以下，排异打伤害优先度多少合适？
+  --[[else--4权以下，排异打伤害优先度多少合适？
  	  self:sort(self.enemies, "hp")
 	  if not target then
 		  for _, enemy in ipairs(self.enemies) do
@@ -994,7 +994,7 @@ sgs.ai_skill_use_func.PaiyiCard = function(card, use, self)
 			  end
 	    end
     end
-  end
+  end]]
   if self.player:getPile("power_pile"):length() > 7 then
     sgs.ai_use_priority.PaiyiCard = 10
   end
@@ -2596,7 +2596,8 @@ sgs.ai_card_intention.Conquering = -80
 
 sgs.ai_skill_playerchosen["conquering_slash"] = function(self, targets)
   local target = sgs.ai_skill_playerchosen.zero_card_as_slash(self, targets)
-	if self:isFriend(target) then--缺势力锦囊使用者和使用卡信息hasFlag("CompleteEffect")，无法判断势力加成。蜀加成杀基数+1，暂不考虑队友
+	if self:isFriend(target) or not self:slashIsEffective(sgs.cloneCard("slash"), target) then
+  --缺势力锦囊使用者和使用卡信息hasFlag("CompleteEffect")，无法判断势力加成。蜀加成杀基数+1，暂不考虑队友
 		return {}
 	end
   return target

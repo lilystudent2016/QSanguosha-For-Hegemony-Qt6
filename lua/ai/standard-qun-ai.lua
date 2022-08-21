@@ -1312,11 +1312,7 @@ sgs.ai_skill_playerchosen.kuangfu = function(self, targets)
 	if self:getOverflow() > 1 or self.player:getHandcardNum() < 2 then
 		no_loss = true
 	end
-<<<<<<< HEAD
-	if self:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
-=======
 	if self.player:hasWeapon("Axe") and self.player:getCardCount(true) > 4 then
->>>>>>> 15f038277a7df49133b81918ed127cff972d2148
 		no_loss = true
 	end
 	if no_loss then

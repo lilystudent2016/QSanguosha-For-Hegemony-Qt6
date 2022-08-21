@@ -153,11 +153,7 @@ sgs.ai_skill_use["@@jieyue"] = function(self, prompt, method)
   if self.player:isKongcheng() then
     return "."
   end
-<<<<<<< HEAD
-  if self:willSkipDrawPhase()
-=======
   if self:willSkipDrawPhase()--手中最后一张牌是无懈？
->>>>>>> 15f038277a7df49133b81918ed127cff972d2148
   and not (self.player:hasSkill("qiaobian") and self.player:getHandcardNum() < 2)
   and not (self.player:hasSkill("elitegeneralflag") and self.player:getHandcardNum() < 3) then
     return "."
@@ -1237,7 +1233,8 @@ sgs.ai_skill_cardask["@keshou"] = function(self, data, pattern, target, target2)
     return "."
   end
 
-  if self.player:hasSkill("tianxiang") then--配合小乔
+  if self.player:hasSkill("tianxiang")
+  and not (self.player:hasFlag("tianxiang1used") and self.player:hasFlag("tianxiang2used")) then--配合小乔
     for _,card in sgs.qlist(self.player:getHandcards()) do
       if card:getSuit() == sgs.Card_Heart or (self.player:hasSkill("hongyan") and card:getSuit() == sgs.Card_Spade) then
         return "."

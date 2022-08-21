@@ -1,12 +1,12 @@
 lord_caocao							11
 caocao								7
 simayi								8
-xiahoudun							7
+xiahoudun							8
 zhangliao							8
 xuchu								6
 guojia								9
 zhenji								9
-xiahouyuan							6
+xiahouyuan							5
 zhanghe								6
 xuhuang								6
 caoren								5
@@ -15,7 +15,7 @@ xunyu								7
 caopi								10
 yuejin								5
 dengai								7
-caohong	   							4
+caohong	   							5
 lidian								8
 zangba								4
 xunyou								9
@@ -42,7 +42,7 @@ zhurong								6
 ganfuren							6
 jiangwei							5
 jiangwanfeiyi						8
-mifuren								4
+mifuren								5
 madai								7
 shamoke								9
 masu								5
@@ -100,9 +100,9 @@ lijueguosi							7
 new_zuoci							10
 yuanshu								8
 zhangxiu							8
-yanbaihu							4
+yanbaihu							5
 huangzu								7
-zhonghui							9
+zhonghui							8
 simazhao							9
 sunchen								7
 gongsunyuan							8
@@ -111,8 +111,8 @@ tangzi								7
 zhanglu								6
 mifangfushiren						5
 liuqi								7
-shixie								4
-xuyou								9
+shixie								6
+xuyou								8
 xiahouba							6
 panjun								8
 wenqin								8
@@ -140,8 +140,11 @@ yangxiu								7
 zumao								5
 fuwan								7
 chendao								8
-tianyu								7
 maliang								6
+huaxiong							5
+zhangchunhua						6
+tianyu								7
+liufuren							7
 duyu								9
 
 
