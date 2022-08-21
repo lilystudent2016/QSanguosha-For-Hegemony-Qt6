@@ -152,7 +152,7 @@ for i = sgs.NonTrigger, sgs.NumOfEvents, 1 do
 end
 
 function SetInitialTables()
-	sgs.ai_type_name = {"Skill", "Basic", "Trick", "Equip"}
+	sgs.ai_type_name = {"SkillCard", "BasicCard", "TrickCard", "EquipCard"}
 	sgs.priority_skill = 	"jianan|yiji|fangzhu|tuxi|luoshen|jixi|qice|jieyue|zaoyun|" ..
 							"shouyue|paoxiao|jizhi|tieqi|liegong|jili|xuanhuo|tongdu|" ..
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
@@ -361,7 +361,7 @@ function SmartAI:getTurnUse()
 		local dummy_use = { isDummy = true }
 
 		local type = card:getTypeId()
-		self["use" .. sgs.ai_type_name[type + 1] .. "Card"](self, card, dummy_use)
+		self["use" .. sgs.ai_type_name[type + 1]](self, card, dummy_use)
 
 		if dummy_use.card then
 			if dummy_use.card:isKindOf("Slash") then
@@ -406,7 +406,7 @@ function SmartAI:activate(use)
 			or (card:canRecast() and not self.player:isCardLimited(card, sgs.Card_MethodRecast)) then
 			local type = card:getTypeId()
 
-			self["use" .. sgs.ai_type_name[type + 1] .. "Card"](self, card, use)
+			self["use" .. sgs.ai_type_name[type + 1]](self, card, use)
 
 			if use:isValid(nil) then
 				self.toUse = nil
@@ -1323,17 +1323,16 @@ function SmartAI:assignKeep(start)
 			peach-2 = 5.8 jink-1 = 5.2
 			peach-3 = 4.5 AllianceFeast = 4.4 ConsolidateCountry = 4.3 JadeSeal = 4.2 LuminousPearl = 4.2
 			analeptic-1 = 4.1 jink-2 = 4.0 BefriendAttacking-1 = 3.9 ExNihilo-1= 3.88 Conquering = 3.88
-			nullification-1 = 3.8 thunderslash-1 = 3.66 fireslash-1 = 3.63
+			HegNullification 3.82 nullification-1 = 3.8 thunderslash-1 = 3.66 fireslash-1 = 3.63
 			slash-1 = 3.6 indulgence-1 = 3.5 RuleTheWorld = 3.5 SupplyShortage-1 = 3.48 Chaos = 3.47 snatch-1 = 3.46 Dismantlement-1 = 3.44 Duel-1 = 3.42 Drownning -3.40
 				BurningCamps = 3.38 Collateral-1 = 3.36 ArcheryAttack-1 = 3.35 SavageAssault-1 = 3.34 FightTogether = 3.33 IronChain = 3.32 GodSalvation-1 = 3.30
-				Fireattack-1 = 3.28  KnownBoth = 3.24 LureTiger = 3.22 ThreatenEmperor = 3.2 peach-4 = 3.1
-			analeptic-2 = 2.9 jink-3 = 2.7 ExNihilo-2 = 2.7 nullification-2 = 2.6 thunderslash-2 = 2.46 fireslash-2 = 2.43 slash-2 = 2.4
+				Fireattack-1 = 3.28  KnownBoth = 3.24 AwaitExhausted = 3.22 ThreatenEmperor = 3.2 peach-4 = 3.1
+			analeptic-2 = 2.9 jink-3 = 2.7 ExNihilo-2 = 2.7 nullification-2 = 2.6 LureTiger = 2.5 thunderslash-2 = 2.46 fireslash-2 = 2.43 slash-2 = 2.4
 			...
 			Weapon-1 = 2.08 Armor-1 = 2.06 Treasure = 2.05 DefensiveHorse-1 = 2.04 OffensiveHorse-1 = 2
 			...
-			AwaitExhausted = 1
 			imperial_order = 0
-			AmazingGrace-1 = -9 Lightning-1 = -10
+			AmazingGrace-1 = -1 Lightning-1 = -2
 		]]
 
 		self.keepdata = {}
@@ -1674,12 +1673,12 @@ function SmartAI:getUseValue(card)
 		if card:isKindOf("Duel") then v = v + self:getCardsNum("Slash") * 2 end
 		if self.player:hasSkill("jizhi") then v = v + 4 end
 		if card:isKindOf("HegNullification") then v = v + 2 end
+		if card:isKindOf("AllianceFeast") and self.player:getLostHp() > 1 then v = v + 5 end
 		if card:isKindOf("ThreatenEmperor") then v = v + (self.player:isBigKingdomPlayer() and 4 or -4) end
 	end
 
-	if self.player:hasSkills(sgs.need_kongcheng) then
-		if self.player:getHandcardNum() == 1 then v = 10 end
-	end
+	if self.player:hasSkills(sgs.need_kongcheng) and self.player:getHandcardNum() == 1 then v = 10 end
+
 	if self.player:getHandPile():contains(card:getEffectiveId()) then
 		v = v + 1
 	end
@@ -1765,6 +1764,7 @@ function SmartAI:adjustUsePriority(card, v)
 		if card:getSkillName() == "aozhan" then v = v - 0.1 end--鏖战
 		if card:getSkillName() == "longdan" then v = v + 0.1 end--龙胆，打出闪和万箭没办法分开
 	end
+	if card:isKindOf("HegNullification") then v = v - 0.1 end
 
 	local noresponselist = card:getTag("NoResponse"):toStringList()--新增卡牌无法响应
 	if noresponselist and #noresponselist > 0 then
@@ -6586,7 +6586,6 @@ function SmartAI:imitateDrawNCards(player, skills)
 			elseif skillname == "yingzi_sunce" then count = count + 1
 			elseif skillname == "yingzi_zhouyu" then count = count + 1
 			elseif skillname == "yingzi_flamemap" then count = count + 1
-			elseif skillname == "yingzi" then count = count + 1
 			elseif skillname == "haoshi" and sgs.ai_skill_invoke.haoshi(sgs.ais[player:objectName()]) then count = count + 2
 			elseif skillname == "haoshi_flamemap" and sgs.ai_skill_invoke.haoshi(sgs.ais[player:objectName()]) then count = count + 2
 			elseif skillname == "jieyue" then count = count + player:getMark("JieyueExtraDraw")*3

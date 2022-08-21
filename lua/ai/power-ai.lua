@@ -1036,7 +1036,8 @@ sgs.ai_skill_invoke.kuanggu_xh = function(self, data)
 end
 
 sgs.ai_skill_choice.kuanggu_xh = function(self, choices)
-	if self.player:getHp() <= 2 or not self:slashIsAvailable() or self.player:getMark("GlobalBattleRoyalMode") > 0 then
+	if self.player:getHp() <= 2 or not self:slashIsAvailable() or self.player:getMark("GlobalBattleRoyalMode") > 0
+  and self.player:canRecover() then
 		return "recover"
 	end
 	return "draw"
@@ -1695,7 +1696,7 @@ sgs.ai_skill_cardask["@elitegeneralflag"] = function(self, data, pattern, target
   if self.player:hasSkill("jieyue") then--和五子良将纛同一时机触发的技能，设置优先发动jieyue
     table.insert(jianan_skills ,"jieyue")
   end
-  if #jianan_skills == 0 and not self.player:getMark("JieyueExtraDraw") > 0 then--没有技能可选，参考眩惑预选
+  if #jianan_skills == 0 and self.player:getMark("JieyueExtraDraw") < 1 then--没有技能可选，参考眩惑预选
     return "."
   end
   local choice = sgs.ai_skill_choice.jianan_skill(self ,table.concat(jianan_skills,"+"))

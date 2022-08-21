@@ -127,7 +127,7 @@ zhangjiao zhangxiu								20 20
 huangzu	mateng									22 21
 huangzu	zhangxiu								23 23
 xunchen zhangxiu								22 22
-xunchen zoushi									18 17
+xunchen zoushi									20 19
 miheng dongzhuo									20 19
 miheng tianfeng									19 18
 miheng zhangxiu									21 21

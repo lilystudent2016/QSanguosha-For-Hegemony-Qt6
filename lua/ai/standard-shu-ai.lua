@@ -104,7 +104,7 @@ sgs.ai_skill_use_func.RendeCard = function(rdcard, use, self)
 		if card:isAvailable(self.player) and (card:isKindOf("Slash") or card:isKindOf("Duel") or card:isKindOf("Snatch") or card:isKindOf("Dismantlement")) then
 			local dummy_use = { isDummy = true, to = sgs.SPlayerList() }
 			local cardtype = card:getTypeId()
-			self["use" .. sgs.ai_type_name[cardtype + 1] .. "Card"](self, card, dummy_use)
+			self["use" .. sgs.ai_type_name[cardtype + 1]](self, card, dummy_use)
 			if dummy_use.card and dummy_use.to:length() > 0 then
 				if card:isKindOf("Slash") or card:isKindOf("Duel") then
 					local t1 = dummy_use.to:first()
@@ -484,12 +484,12 @@ sgs.ai_skill_playerchosen["longdan_recover"] = function(self, targets)
 	targets = sgs.QList2Table(targets)
 	self:sort(targets, "hp")
 	for _,p in ipairs(targets) do
-		if self:isFriendWith(p) then
+		if self:isFriendWith(p) and p:canRecover() then
 			return p
 		end
 	end
 	for _,p in ipairs(targets) do
-		if self:isFriend(p) then
+		if self:isFriend(p) and p:canRecover() then
 			return p
 		end
 	end
@@ -713,7 +713,8 @@ function sgs.ai_cardneed.kuanggu(to, card, self)
 end
 
 sgs.ai_skill_choice.kuanggu = function(self, choices)
-	if self.player:getHp() <= 2 or not self:slashIsAvailable() or self.player:getMark("GlobalBattleRoyalMode") > 0 then
+	if (self.player:getHp() <= 2 or not self:slashIsAvailable() or self.player:getMark("GlobalBattleRoyalMode") > 0)
+	and self.player:canRecover() then
 		return "recover"
 	end
 	return "draw"
@@ -796,16 +797,18 @@ local huoji_skill = {}
 huoji_skill.name = "huoji"
 table.insert(sgs.ai_skills, huoji_skill)
 huoji_skill.getTurnUseCard = function(self)
+	if not self:willShowForAttack() then
+		return nil
+	end
+
 	local cards = self.player:getCards("h")
 	for _, id in sgs.qlist(self.player:getHandPile()) do
 		cards:prepend(sgs.Sanguosha:getCard(id))
 	end
 	cards = sgs.QList2Table(cards)
-
-	local card
-
 	self:sortByUseValue(cards, true)
 
+	local card
 	for _,acard in ipairs(cards) do
 		local fireValue = sgs.ai_use_value.FireAttack
 		if self.player:hasSkill("jizhi") and acard:isKindOf("TrickCard") then
@@ -835,11 +838,8 @@ huoji_skill.getTurnUseCard = function(self)
 			end
 		end
 	end
-
-	if not self:willShowForAttack() then
-		return nil
-	end
 	if not card then return nil end
+
 	local suit = card:getSuitString()
 	local number = card:getNumberString()
 	local card_id = card:getEffectiveId()
@@ -1193,6 +1193,7 @@ end
 sgs.ai_card_intention.ShushenCard = -80
 
 sgs.ai_skill_invoke.shenzhi = function(self, data)
+	if not self.player:canRecover() then return false end
 	if self:getCardsNum("AllianceFeast") > 0 then return false end
 	if self:getCardsNum("Peach") > 0 and self.player:getMark("GlobalBattleRoyalMode") == 0 then return false end
 	if self.player:hasSkill("rende") and #self.friends_noself > 0

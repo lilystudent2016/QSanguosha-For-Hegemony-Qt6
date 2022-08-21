@@ -131,17 +131,17 @@ dengzhi								7
 xunchen								7
 yanghu								7
 beimihu								8
-caozhen								9
+caozhen								8
 liaohua								7
 zhugejin							7
-quancong							0
+quancong							7
 guohuai								7
 yangxiu								7
-zumao								0
+zumao								5
 fuwan								7
 chendao								8
-tianyu								5
-maliang								4
+tianyu								7
+maliang								6
 duyu								9
 
 

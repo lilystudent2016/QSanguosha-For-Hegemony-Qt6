@@ -1008,7 +1008,7 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
   if #self.enemies == 0 then
     local targets = {}
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if not self.player:willBeFriendWith(p) and not p:getMark("##qizhan") then
+      if not self.player:willBeFriendWith(p) and p:getMark("##qizhan") < 1 then
         table.insert(targets, p)
       end
     end
@@ -1016,7 +1016,7 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
     target = targets[1]
   else
     for _, p in ipairs(self.enemies) do
-      if not p:getMark("##qizhan") then
+      if p:getMark("##qizhan") < 1 then
         target = p
         break
       end
@@ -1067,7 +1067,7 @@ qizhanzongheng_skill.getTurnUseCard = function(self)
   if #self.enemies == 0 then
     local targets = {}
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if not self.player:isFriendWith(p) and not p:getMark("##qizhan") then
+      if not self.player:isFriendWith(p) and p:getMark("##qizhan") < 1 then
         table.insert(targets, p)
       end
     end
@@ -1075,7 +1075,7 @@ qizhanzongheng_skill.getTurnUseCard = function(self)
     target = targets[1]
   else
     for _, p in ipairs(self.enemies) do
-      if not p:getMark("##qizhan") then
+      if p:getMark("##qizhan") < 1 then
         target = p
         break
       end

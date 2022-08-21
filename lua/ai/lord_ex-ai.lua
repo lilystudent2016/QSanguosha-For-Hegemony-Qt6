@@ -902,7 +902,7 @@ sgs.ai_skill_invoke.jilix = function(self, data)
     return true
   else
     local prompt_list = prompt:split(":")
-    if prompt_list[2] == self.player:objectName() or prompt_list[4]:match("Peach") or prompt_list[4]:match("BefriendAttacking") then
+    if prompt_list[2] == self.player:objectName() or prompt_list[4]:match("peach") or prompt_list[4]:match("befriend_attacking") then
       return true
     end
   end
@@ -911,7 +911,7 @@ end
 
 --钟会
 sgs.ai_skill_invoke.quanji = function(self, data)
-	if not self:willShowForMasochism() or not self:willShowForAttack() then
+	if not self:willShowForMasochism() and not self:willShowForAttack() then
     return false
   end
 	return true

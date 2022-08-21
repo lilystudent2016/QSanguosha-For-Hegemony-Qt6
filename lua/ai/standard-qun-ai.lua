@@ -143,7 +143,7 @@ sgs.ai_skill_cardchosen.chuli = function(self, who, flags, method, disable_list)
 	return self:askForCardChosen(who, flags, "chuli_dismantlement", method, disable_list)
 end
 
-sgs.ai_use_value.ChuliCard = 5
+sgs.ai_use_value.ChuliCard = 5.7
 sgs.ai_use_priority.ChuliCard = 4.6
 
 sgs.ai_card_intention.ChuliCard = function(self, card, from, tos)

@@ -829,7 +829,7 @@ end
 
 sgs.ai_use_value.LureTiger = 4.8
 sgs.ai_use_priority.LureTiger = 4.9
-sgs.ai_keep_value.LureTiger = 3.22
+sgs.ai_keep_value.LureTiger = 2.5
 
 --FightTogether
 function SmartAI:useCardFightTogether(card, use)
@@ -1166,7 +1166,7 @@ function SmartAI:useCardThreatenEmperor(card, use)
 	if self.player:hasSkills("qiaobian|qiaobian_egf") and (self.player:getHandcardNum() - self.player:getMaxCards() > 1) then return end
 	use.card = card
 end
-sgs.ai_use_value.ThreatenEmperor = 8
+sgs.ai_use_value.ThreatenEmperor = 6
 sgs.ai_use_priority.ThreatenEmperor = 0
 sgs.ai_keep_value.ThreatenEmperor = 3.2
 

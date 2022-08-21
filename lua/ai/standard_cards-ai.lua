@@ -973,7 +973,7 @@ function SmartAI:canHit(to, from, conservative)
 end
 
 function SmartAI:useCardPeach(card, use)
-	if not self.player:isWounded() then return end
+	if not self.player:canRecover() then return end
 
 	local mustusepeach = false
 	local peaches = 0
@@ -3124,8 +3124,8 @@ end
 
 sgs.ai_use_priority.Lightning = 0
 sgs.dynamic_value.lucky_chance.Lightning = true
-
-sgs.ai_keep_value.Lightning = -1
+sgs.ai_use_value.Lightning = 0
+sgs.ai_keep_value.Lightning = -2
 
 sgs.ai_skill_askforag.amazing_grace = function(self, card_ids)--更新火烧等重要卡牌
 
@@ -3539,11 +3539,10 @@ end
 function SmartAI:useCardAwaitExhausted(AwaitExhausted, use)
 	if not AwaitExhausted:isAvailable(self.player) then return end
 	use.card = AwaitExhausted
-	return
 end
 sgs.ai_use_priority.AwaitExhausted = 2.8
 sgs.ai_use_value.AwaitExhausted = 4.9
-sgs.ai_keep_value.AwaitExhausted = 1
+sgs.ai_keep_value.AwaitExhausted = 3.22
 
 sgs.ai_card_intention.AwaitExhausted = function(self, card, from, tos)
 	for _, to in ipairs(tos) do

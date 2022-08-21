@@ -542,7 +542,7 @@ xiongsuan_skill.getTurnUseCard = function(self)
 	if self.player:getMark("Global_TurnCount") < 2 and not self.player:hasShownOneGeneral() then return end
 	local cards = self.player:getHandcards()
 	cards = sgs.QList2Table(cards)
-	self:sortByKeepValue(cards)
+	self:sortByUseValue(cards, true)
 	for _, acard in ipairs(cards) do
 		if not self:isValuableCard(acard) then
 			return sgs.Card_Parse("@XiongsuanCard=".. acard:getEffectiveId() .."&xiongsuan")
@@ -2278,17 +2278,6 @@ duoshi_flamemap_skill.getTurnUseCard = function(self, inclusive)
 				local dummy_use = { isDummy = true }
 				self:useTrickCard(card, dummy_use)
 				if dummy_use.card then shouldUse = false end
-			end
-
-			local sunshangxiang = false
-			if self.player:hasSkill("xiaoji") and self.player:hasEquip() then
-				sunshangxiang = true
-			end
-			for _, player in ipairs(self.friends) do
-				if player:hasShownSkill("xiaoji") and player:hasEquip() then
-					sunshangxiang = true
-					break
-				end
 			end
 
 			if shouldUse and not card:isKindOf("Peach") then

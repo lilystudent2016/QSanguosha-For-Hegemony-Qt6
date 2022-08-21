@@ -408,9 +408,9 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 	local canShowHead = string.find(choices, "show_head_general")
 	local canShowDeputy = string.find(choices, "show_deputy_general")
 
-	local firstShow = ("luanji|niepan|bazhen|jianglve|diaodu|huoshui|qianhuan|chenglve|jinghe|dangxian|wanglie"):split("|")
+	local firstShow = ("luanji|niepan|bazhen|jianglve|diaodu|huoshui|qianhuan|chenglve|jinghe|dangxian|wanglie|sidi"):split("|")
 	local bothShow = ("luanji+shuangxiong|luanji+huoshui|guanxing+yizhi"):split("|")
-	local followShow = ("wusheng|liegong|bazhen|cunsi|diaodu|xiongyi|huoshui|qianhuan|jihun|chenglve|dangxian|wanglie"):split("|")
+	local followShow = ("wusheng|liegong|bazhen|cunsi|diaodu|xiongyi|huoshui|qianhuan|jihun|chenglve|dangxian|wanglie|sidi"):split("|")
 
 	if sgs.GetConfig("EnableLordConvertion", true) and self.player:getMark("Global_RoundCount") == 1 and canShowHead then--君主
 		if self.player:inHeadSkills("rende") or self.player:inHeadSkills("guidao")

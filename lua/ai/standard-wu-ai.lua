@@ -406,7 +406,7 @@ local function getKurouCard(self, not_slash)
     local hold_crossbow = (self:getCardsNum("Slash") > 1)
     local cards = self.player:getHandcards()
     cards = sgs.QList2Table(cards)
-    self:sortByKeepValue(cards)
+    self:sortByUseValue(cards, true)
     local lightning = self:getCard("Lightning")
 
     if self:needToThrowArmor() then
@@ -1149,19 +1149,22 @@ duoshi_skill.getTurnUseCard = function(self, inclusive)
 				if dummy_use.card then shouldUse = false end
 			end
 
-			local sunshangxiang = false
-			if self.player:hasSkill("xiaoji") and self.player:hasEquip() then
-				sunshangxiang = true
-			end
-			for _, player in ipairs(self.friends) do
-				if player:hasShownSkill("xiaoji") and player:hasEquip() then
-					sunshangxiang = true
-					break
-				end
-			end
 
-			if not self:willShowForDefence() and not sunshangxiang then
-				shouldUse = false
+
+			if not self:willShowForDefence() then
+				local sunshangxiang = false
+				if self.player:hasSkill("xiaoji") and self.player:hasEquip() then
+					sunshangxiang = true
+				end
+				for _, player in ipairs(self.friends) do
+					if player:hasShownSkill("xiaoji") and player:hasEquip() then
+						sunshangxiang = true
+						break
+					end
+				end
+				if not sunshangxiang then
+					shouldUse = false
+				end
 			end
 
 			if shouldUse and not card:isKindOf("Peach") then
@@ -1228,6 +1231,7 @@ sgs.ai_skill_use_func.JieyinCard = function(card, use, self)
 	table.removeOne(arr2, self.player)
 	local target = nil
 
+	local num = 0
 	repeat
 		if #arr1 > 0 and (self:isWeak(arr1[1]) or self:isWeak() or self:getOverflow() >= 1) then
 			target = arr1[1]
@@ -1237,6 +1241,8 @@ sgs.ai_skill_use_func.JieyinCard = function(card, use, self)
 			target = arr2[1]
 			break
 		end
+		num = num + 1
+		Global_room:writeToConsole("jieyin死循环？" ..num)
 	until true
 
 	if not target and self:isWeak() and self:getOverflow() >= 2 and (self.role == "careerist" or self.player:getMark("GlobalBattleRoyalMode") > 0) then
@@ -1278,7 +1284,7 @@ sgs.xiaoji_keep_value = {
 	Weapon = 4.9,
 	Armor = 5,
 	OffensiveHorse = 4.8,
-	DefensiveHorse = 5,
+	DefensiveHorse = 4.9,
 	SixDragons = 5,
 	Treasure = 5
 }
@@ -2468,7 +2474,7 @@ sgs.ai_skill_use_func.FenxunCard = function(card, use, self)
 	end
 end
 
-sgs.ai_use_value.FenxunCard = 5.5
+sgs.ai_use_value.FenxunCard = 3
 sgs.ai_use_priority.FenxunCard = 8
 sgs.ai_card_intention.FenxunCard = 50
 
