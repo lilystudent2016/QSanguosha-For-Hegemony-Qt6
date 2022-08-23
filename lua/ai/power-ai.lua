@@ -1557,7 +1557,7 @@ end
 sgs.ai_skill_use_func.HuibianCard = function(card, use, self)
 	--Global_room:writeToConsole("使用挥鞭")
   local can_huibian = false
-  local maixueskills = {"fangzhu","yiji","wangxi","shicai","bushi","zhiyu"}--不同卖血技能有优先顺序，是否可以用need_damage判断
+  local maixueskills = {"fangzhu","yiji","wangxi","bushi","shicai","zhiyu"}--不同卖血技能有优先顺序，是否可以用need_damage判断
   local drawcard_target, recover_target
   local targets = {}
   self:sort(self.friends, "hp")--从小到大排序

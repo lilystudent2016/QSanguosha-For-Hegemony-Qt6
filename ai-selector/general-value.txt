@@ -111,7 +111,7 @@ tangzi								7
 zhanglu								6
 mifangfushiren						5
 liuqi								7
-shixie								6
+shixie								8
 xuyou								8
 xiahouba							6
 panjun								8
@@ -141,10 +141,14 @@ zumao								5
 fuwan								7
 chendao								8
 maliang								6
-huaxiong							5
-zhangchunhua						6
+huaxiong							6
+zhangchunhua						5
 tianyu								7
 liufuren							7
+yijibo								7
+zhangyi								7
+chengpu								6
+chengyu								7
 duyu								9
 
 

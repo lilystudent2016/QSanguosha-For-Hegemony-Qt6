@@ -100,6 +100,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 				if string.find(choices, "fudi") then
 					return "fudi"
 				end
+				--新技能只弃2，考虑手牌质量与其他买血摸牌技能先后？
 				return "shicai"
 			end
 		end
@@ -115,6 +116,7 @@ sgs.ai_skill_choice["GameRule:TriggerOrder"] = function(self, choices, data)--�
 			end
 		end
 		if string.find(choices, "jieming") then return "jieming" end--先发动节命
+		if string.find(choices, "benyu") then return "benyu" end--先发动贲育
 		if string.find(choices, "zhiyu") then return "zhiyu" end--先发动智愚亮牌
 		if string.find(choices, "wangxi") and string.find(choices, "fankui") then
 			local from = data:toDamage().from
@@ -265,8 +267,9 @@ sgs.ai_skill_choice["GameRule:TurnStart"] = function(self, choices, data)--旧�
 
 	if self.player:inHeadSkills("baoling") then
 		if (self.player:hasSkill("luanwu") and self.player:getMark("@chaos") ~= 0)
-			or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") ~= 0) then
-			canShowHead = false
+		or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") ~= 0)
+		or (self.player:hasSkill("yaowu") and not self.player:hasShownGeneral2()) then
+			canShowHead = nil
 		end
 	end
 	if self.player:inHeadSkills("baoling") then
@@ -428,7 +431,7 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 		return "show_both_generals"
 	end
 
-	if self.player:hasSkills("mingde|zhenxi") then
+	if self.player:hasSkills("deshao|zhenxi") then
 		return "show_both_generals"
 	end
 
@@ -489,14 +492,17 @@ sgs.ai_skill_choice.GameRule_AskForGeneralShow = function(self, choices)
 
 	if self.player:inHeadSkills("baoling") then
 		if (self.player:hasSkill("luanwu") and self.player:getMark("@chaos") ~= 0)
-			or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") ~= 0) then
-			canShowHead = false
+		or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") ~= 0) then
+			canShowHead = nil
+		end
+		if (self.player:hasSkill("yaowu") and not self.player:hasShownGeneral2()) then
+			return "cancel"
 		end
 	end
 	if self.player:inHeadSkills("baoling") then
 		if (self.player:hasSkill("mingshi") and allshown >= (self.room:alivePlayerCount() - 1))
-			or (self.player:hasSkill("luanwu") and self.player:getMark("@chaos") == 0)
-			or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") == 0) then
+			or (self.player:hasSkill("xiongyi") and self.player:getMark("@arise") == 0)
+			or (self.player:hasSkill("yaowu") and self.player:getMark("##yaowu") > 0) then
 			if canShowHead then
 				return "show_head_general"
 			end
