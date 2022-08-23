@@ -157,13 +157,14 @@ function SetInitialTables()
 							"shouyue|paoxiao|jizhi|tieqi|liegong|jili|xuanhuo|tongdu|" ..
 							"jiahe|xiaoji|guose|tianxiang|fanjian|buqu|xuanlue|diaodu|" ..
 							"hongfa|jijiu|luanji|wansha|jianchu|qianhuan|yigui|fudi|yongsi|"..
-							"paiyi|suzhi|shilu|huaiyi|shicai|congcha|jinfa|"..
+							"paiyi|suzhi|shilu|huaiyi|chenglve|congcha|jinfa|lixia|"..
 							"zhukou|jinghe|guowu|shenwei|wanggui|boyan|kuangcai|"..
-							"guishu|sidi|danlao|wanglie|miewu"
-	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi"
+							"miewu|guishu|sidi|danlao|wanglie|zhuidu"
+	sgs.masochism_skill = "yiji|fankui|jieming|ganglie|fangzhu|hengjiang|jianxiong|qianhuan|zhiyu|jihun|fudi|" ..
+						  "bushi|shicai|quanji|zhaoxin|fankui_simazhao|wanggui|sidi|shangshi|benyu"
 	sgs.defense_skill = "qingguo|longdan|kongcheng|niepan|bazhen|kanpo|xiangle|tianxiang|liuli|qianxun|leiji|duanchang|beige|weimu|" ..
 						"tuntian|shoucheng|yicheng|qianhuan|jizhao|wanwei|enyuan|buyi|keshou|qiuan|biluan|jiancai|aocai|" ..
-						"xibing|zhente|qiao|shejian|yusui|mingde|yuanyu|mingzhe|jilei"
+						"xibing|zhente|qiao|shejian|yusui|deshao|yuanyu|mingzhe|jilei|shigong|dingke"
 	sgs.usefull_skill = "tiandu|qiaobian|xingshang|xiaoguo|wusheng|guanxing|qicai|jizhi|kuanggu|lianhuan|huoshou|juxiang|shushen|zhiheng|keji|" ..
 						"duoshi|xiaoji|hongyan|haoshi|guzheng|zhijian|shuangxiong|guidao|guicai|xiongyi|mashu|lirang|yizhi|shengxi|" ..
 						"xunxun|wangxi|yingyang|hunshang|biyue"
@@ -185,7 +186,7 @@ function SetInitialTables()
 	sgs.notActive_cardneed_skill =	"guicai|xiaoguo|kanpo|guidao|beige|jijiu|liuli|tianxiang|zhendu|qianhuan|keshou|fudi|shejian|huanshi"
 	sgs.cardneed_skill =  	sgs.Active_cardneed_skill .. "|" .. sgs.notActive_cardneed_skill
 	sgs.use_lion_skill =	"duanliang|guicai|guidao|lijian|qingcheng|zhiheng|qixi|fenxun|kurou|diaogui|quanji|jinfa|xishe"
-	sgs.need_equip_skill = 	"shensu|huyuan|beige|qingcheng|xiaoji|xuanlue|diaodu"
+	sgs.need_equip_skill = 	"shensu|huyuan|beige|qingcheng|xiaoji|xuanlue|diaodu|biluan|xishe"
 	sgs.judge_reason =		"bazhen|EightDiagram|supply_shortage|indulgence|lightning|leiji|beige|tieqi|luoshen|ganglie|tuntian"
 
 	sgs.rule_skill = "transfer|aozhan|companion|halfmaxhp|firstshow|careerman|showhead|showdeputy"
@@ -1260,7 +1261,7 @@ function sgs.getChaofeng(player)--嘲讽值
 		defense = defense + #huashens
 	end
 	if player:hasShownSkill("paiyi") then defense = defense + player:getPile("power_pile"):length() end
-	if player:hasShownSkill("zisui") then defense = defense + player:getPile("disloyalty"):length() end
+	if player:hasShownSkill("zisui") then defense = defense + player:getPile("&disloyalty"):length() end
 	if player:hasShownSkill("xiongnve") then defense = defense + player:getMark("#massacre") end
 	if player:hasShownSkill("sidi") then defense = defense + player:getPile("drive"):length() end
 
@@ -5793,7 +5794,8 @@ function SmartAI:useEquipCard(card, use)
 		return
 	end
 	local same = self:getSameEquip(card)
-	local zzzh, isfriend_zzzh, isenemy_zzzh = sgs.findPlayerByShownSkillName("guzheng")
+	local zzzh = sgs.findPlayerByShownSkillName("guzheng")
+	local isfriend_zzzh, isenemy_zzzh = false, false
 	if zzzh then
 		if self:isFriend(zzzh) then isfriend_zzzh = true
 		else isenemy_zzzh = true
@@ -6602,7 +6604,7 @@ function SmartAI:imitateDrawNCards(player, skills)
 				if congcha_draw then
 					count = count + 2
 				end
-			elseif skillname == "zisui" then count = count + player:getPile("disloyalty"):length() end
+			elseif skillname == "zisui" then count = count + player:getPile("&disloyalty"):length() end
 		end
 	end
 	return count

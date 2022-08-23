@@ -135,8 +135,8 @@ sgs.ai_skill_choice.xibing = function(self, choices, data)
     if self.player:hasSkill("xiongnve") and self.player:getMark("#massacre") > 0 then
       return "deputy"
     end
-    if self.player:hasSkill("zisui") and not self.player:getPile("disloyalty"):isEmpty() then
-      if self.player:getPile("disloyalty"):length() >= self.player:getMaxHp() then
+    if self.player:hasSkill("zisui") and not self.player:getPile("&disloyalty"):isEmpty() then
+      if self.player:getPile("&disloyalty"):length() >= self.player:getMaxHp() then
         return "head"
       end
       return "deputy"
@@ -966,13 +966,13 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
 end
 
 --羊祜
-sgs.ai_skill_invoke.mingde = function(self, data)
+sgs.ai_skill_invoke.deshao = function(self, data)
   if not self:willShowForDefence() then
     return false
   end
   local target = data:toPlayer()
   --暂时用不到
-  --local use = self.player:getTag("MingdeUsedata"):toCardUse()
+  --local use = self.player:getTag("DeshaoUsedata"):toCardUse()
   --local card = use.card
   if target and self:isFriend(target) then
     if self:needToThrowArmor(target) then
@@ -983,15 +983,15 @@ sgs.ai_skill_invoke.mingde = function(self, data)
   return true
 end
 
-local qizhan_skill = {}
-qizhan_skill.name = "qizhan"
-table.insert(sgs.ai_skills, qizhan_skill)
-qizhan_skill.getTurnUseCard = function(self)
-	if self.player:hasUsed("QizhanCard") then return end
-	return sgs.Card_Parse("@QizhanCard=.&qizhan")
+local mingfa_skill = {}
+mingfa_skill.name = "mingfa"
+table.insert(sgs.ai_skills, mingfa_skill)
+mingfa_skill.getTurnUseCard = function(self)
+	if self.player:hasUsed("MingfaCard") then return end
+	return sgs.Card_Parse("@MingfaCard=.&mingfa")
 end
 
-sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
+sgs.ai_skill_use_func.MingfaCard = function(card, use, self)
   local target
 
   local compare_func = function(a, b)
@@ -1005,10 +1005,13 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
 	end
 
   table.sort(self.enemies, compare_func)
+  if math.min(self.player:getHandcardNum(), self:getOverflow(self.player,true)) < 2 then--牌少时摸牌
+    sgs.reverse(self.enemies)
+  end
   if #self.enemies == 0 then
     local targets = {}
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if not self.player:willBeFriendWith(p) and p:getMark("##qizhan") < 1 then
+      if not self.player:willBeFriendWith(p) and p:getMark("##mingfa") < 1 then
         table.insert(targets, p)
       end
     end
@@ -1016,7 +1019,7 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
     target = targets[1]
   else
     for _, p in ipairs(self.enemies) do
-      if p:getMark("##qizhan") < 1 then
+      if p:getMark("##mingfa") < 1 then
         target = p
         break
       end
@@ -1028,7 +1031,7 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
     target = nil
   end
   if target then
-    Global_room:writeToConsole("期战目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("明伐目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -1036,9 +1039,9 @@ sgs.ai_skill_use_func.QizhanCard = function(card, use, self)
   end
 end
 
-sgs.ai_use_priority.QizhanCard = 2
+sgs.ai_use_priority.MingfaCard = 0.5
 
-sgs.ai_skill_choice.qizhan = function(self, choices, data)
+sgs.ai_skill_choice.mingfa = function(self, choices, data)
   local target = data:toPlayer()
   if self:isFriend(target) then
     return "yes"
@@ -1046,11 +1049,11 @@ sgs.ai_skill_choice.qizhan = function(self, choices, data)
   return "no"
 end
 
-local qizhanzongheng_skill = {}
-qizhanzongheng_skill.name = "qizhanzongheng"
-table.insert(sgs.ai_skills, qizhanzongheng_skill)
-qizhanzongheng_skill.getTurnUseCard = function(self)
-	if self.player:hasUsed("QizhanZonghengCard") or self.player:isNude() then return end
+local mingfazongheng_skill = {}
+mingfazongheng_skill.name = "mingfazongheng"
+table.insert(sgs.ai_skills, mingfazongheng_skill)
+mingfazongheng_skill.getTurnUseCard = function(self)
+	if self.player:hasUsed("MingfaZonghengCard") or self.player:isNude() then return end
   local target
 
   local compare_func = function(a, b)
@@ -1067,7 +1070,7 @@ qizhanzongheng_skill.getTurnUseCard = function(self)
   if #self.enemies == 0 then
     local targets = {}
     for _, p in sgs.qlist(self.room:getAlivePlayers()) do
-      if not self.player:isFriendWith(p) and p:getMark("##qizhan") < 1 then
+      if not self.player:isFriendWith(p) and p:getMark("##mingfa") < 1 then
         table.insert(targets, p)
       end
     end
@@ -1075,7 +1078,7 @@ qizhanzongheng_skill.getTurnUseCard = function(self)
     target = targets[1]
   else
     for _, p in ipairs(self.enemies) do
-      if p:getMark("##qizhan") < 1 then
+      if p:getMark("##mingfa") < 1 then
         target = p
         break
       end
@@ -1089,15 +1092,15 @@ qizhanzongheng_skill.getTurnUseCard = function(self)
     local cards = self.player:getCards("he")
     cards = sgs.QList2Table(cards)
     self:sortByUseValue(cards, true)
-    return sgs.Card_Parse("@QizhanZonghengCard=" .. cards[1]:getEffectiveId() .."&qizhanzongheng")
+    return sgs.Card_Parse("@MingfaZonghengCard=" .. cards[1]:getEffectiveId() .."&mingfazongheng")
   end
 end
 
-sgs.ai_skill_use_func.QizhanZonghengCard = function(card, use, self)
+sgs.ai_skill_use_func.MingfaZonghengCard = function(card, use, self)
   if self.qzzh_target then
     local target = self.qzzh_target
     self.qzzh_target = nil
-    Global_room:writeToConsole("期战纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
+    Global_room:writeToConsole("明伐纵横目标:"..sgs.Sanguosha:translate(target:getGeneralName()).."/"..sgs.Sanguosha:translate(target:getGeneral2Name()))
 	  use.card = card
     if use.to then
       use.to:append(target)
@@ -1105,4 +1108,4 @@ sgs.ai_skill_use_func.QizhanZonghengCard = function(card, use, self)
   end
 end
 
-sgs.ai_use_priority.QizhanZonghengCard = 2
+sgs.ai_use_priority.MingfaZonghengCard = 2

@@ -393,7 +393,7 @@ sgs.ai_card_intention.ShangyiCard = 50
 
 --徐盛
 sgs.ai_skill_invoke.yicheng = function(self, data)
-	if not self:willShowForDefence() then
+	if not self:willShowForDefence() and not self:willShowForAttack() then
 		return false
 	end
 	return true
@@ -401,7 +401,7 @@ end
 
 sgs.ai_skill_discard.yicheng = function(self, discard_num, min_num, optional, include_equip)
 	if self.player:hasSkill("hongyan") then
-		return self:askForDiscard("dummyreason", 1, 1, false, true)
+		return self:askForDiscard("dummyreason", discard_num, min_num, false, true)
 	end
 
 	local unpreferedCards = {}
@@ -448,8 +448,10 @@ sgs.ai_skill_discard.yicheng = function(self, discard_num, min_num, optional, in
 		if not self.player:isJilei(sgs.Sanguosha:getCard(unpreferedCards[index])) then return { unpreferedCards[index] } end
 	end
 
-	return self:askForDiscard("dummyreason", 1, 1, false, true)
+	return self:askForDiscard("dummyreason", discard_num, min_num, false, true)
 end
+
+sgs.ai_skill_choice.yicheng = "yes"
 
 --于吉
 sgs.ai_skill_invoke.qianhuan = function(self, data)

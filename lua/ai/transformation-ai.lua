@@ -1695,9 +1695,16 @@ sgs.ai_skill_invoke.diaodu = function(self, data)
 end
 
 sgs.ai_skill_playerchosen.diaodu = function(self, targets)--还可以细化条件，装备转移？
-	for _, hcard in sgs.qlist(self.player:getCards("h")) do
-		if hcard:isKindOf("EquipCard") and self:getSameEquip(hcard) then--重复先拿自己
-			return self.player
+	if targets:length() > 1 then
+		for _, hcard in sgs.qlist(self.player:getCards("h")) do
+			if hcard:isKindOf("EquipCard") and self:getSameEquip(hcard) then--重复先拿自己
+				return self.player
+			end
+		end
+		for _,p in sgs.qlist(targets) do
+			if p:hasSkills(sgs.lose_equip_skill) then
+				return p
+			end
 		end
 	end
 	for _,p in sgs.qlist(targets) do
@@ -1705,15 +1712,10 @@ sgs.ai_skill_playerchosen.diaodu = function(self, targets)--还可以细化条�
 			return p
 		end
 	end
-	for _,p in sgs.qlist(targets) do
-		if p:hasSkills(sgs.lose_equip_skill) then
-			return p
-		end
-	end
 	if self.player:getEquips():length() == 1 and self.player:hasTreasure("WoodenOx") and self.player:getPile("wooden_ox"):length() > 0 then
 		return {}
 	end
-	return self.player
+	return {}
 end
 
 sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method, disable_list)
@@ -1730,7 +1732,7 @@ sgs.ai_skill_cardchosen.diaodu = function(self, who, flags, method, disable_list
 	return self.diaodu_id
 end
 
-sgs.ai_skill_playerchosen["diaodu_give"] = function(self, targets)
+sgs.ai_skill_playerchosen["diaodu_give"] = function(self, targets, max_num, min_num)
 	local diaodu_card
 	if self.diaodu_id then
 		diaodu_card = sgs.Sanguosha:getCard(self.diaodu_id)
@@ -1758,6 +1760,13 @@ sgs.ai_skill_playerchosen["diaodu_give"] = function(self, targets)
 		if c and friend and self:isFriendWith(friend) and self:isFriendWith(friend) and targets:contains(friend) then
 		return friend
 		end]]
+	end
+	if min_num > 0 then
+		for _,p in sgs.qlist(targets) do
+			if self:isFriendWith(p) then
+				return p
+			end
+		end
 	end
 	return {}
 end
