@@ -512,15 +512,14 @@ end
 
 sgs.ai_skill_use["@@zhaofu2"] = function(self, prompt, method)
     local card_name = prompt:split(":")[4]
-    Global_room:writeToConsole("招附有目标:"..card_name)
+    Global_room:writeToConsole("招附手选目标:"..card_name)
     local clonecard = sgs.cloneCard(card_name)
     if self:getUseValue(clonecard) >= 5.2--更优化的值，多个赏标记时考虑杀等缺使用者信息getMark("#reward") > 0
     or card_name == "duel"
     or (self.player:getMark("GlobalBattleRoyalMode") > 0 and (card_name == "slash" or card_name == "fire_slash"or card_name == "thunder_slash")) then
         local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
         self:useCardByClassName(clonecard, dummyuse)
-        if dummyuse.card and (not dummyuse.to:isEmpty()
-                or card_name == "savage_assault" or card_name == "archery_attack" or card_name == "burning_camps") then
+        if dummyuse.card and not dummyuse.to:isEmpty() then
             local target_objectname = {}
             for _, p in sgs.qlist(dummyuse.to) do
                 table.insert(target_objectname, p:objectName())
@@ -1064,6 +1063,26 @@ sgs.ai_skill_invoke.guojue = function(self, data)
     return not self:isFriend(target)
 end
 
+sgs.ai_skill_use["@@shangshi"] = function(self, prompt, method)
+
+    local discard = {}
+    local give = {}
+    local cards = self.player:getCards("h")
+
+	cards = sgs.QList2Table(cards)
+    if self.player:getPhase() <= sgs.Player_Play then
+		self:sortByUseValue(cards, true)
+	else
+		self:sortByKeepValue(cards)
+	end
+
+    for _, card in ipairs(cards) do
+            Global_room:writeToConsole("伤逝弃牌")
+            return "@ShangshiCard=".. card:getEffectiveId()
+    end
+    return "."
+end
+
 --刘夫人
 sgs.ai_skill_invoke.zhuidu = function(self, data)
 	local target = data:toPlayer()
@@ -1116,7 +1135,7 @@ sgs.ai_skill_playerchosen.dingke = function(self, targets)
     targets = sgs.QList2Table(targets)
     self:sort(targets, "handcard")
     for _, p in ipairs(targets) do
-        if self.player:isFriendWith(p) and not self:needkongcheng(p) then
+        if self.player:isFriendWith(p) and not self:needKongcheng(p) then
             if self.player:hasSkill("shengxi") or self.player:getHandcardNum() > 2
             or (not self:isWeak() and p:getHandcardNum() < 2) then
                 return p
@@ -1168,13 +1187,11 @@ sgs.ai_skill_invoke.kangrui = function(self, data)
 		if not self:damageIsEffective_(damage) then
             return false
         end
-        local enemy_slashnum = getCardsNum("Slash", target, self.player)
+        local need_slashnum = getCardsNum("Slash", target, self.player) + 1
         if target:hasSkills("wushuang|wushuang_lvlingqi") then
-            enemy_slashnum = enemy_slashnum * 2
+            need_slashnum = need_slashnum * 2
         end
-        if getCardsNum("Slash", friend, self.player) > enemy_slashnum + 1 then
-            self.room:getCurrent():setFlags("AI_KangruiDuel")
-            Global_room:writeToConsole("亢锐决斗flag")
+        if getCardsNum("Slash", friend, self.player) > need_slashnum then
             return true
         end
     end
@@ -1182,11 +1199,26 @@ sgs.ai_skill_invoke.kangrui = function(self, data)
 end
 
 sgs.ai_skill_choice.kangrui = function(self, choices, data)
-    choices = choices:split("+")
-    if self.room:getCurrent():hasFlag("AI_KangruiDuel") and table.contains(choices, "useduel") then
-        self.room:getCurrent():setFlags("-AI_KangruiDuel")
-        Global_room:writeToConsole("亢锐被决斗")
-        return "useduel"
+    if string.find(choices, "useduel") then
+        local target = data:toPlayer()
+        if target:hasArmorEffect("SilverLion") or (target:hasShownSkill("gongqing") and self.player:getAttackRange() < 3) then
+            return "fillhandcards"
+        end
+		local damage = {}
+		damage.to = target
+		damage.from = self.player
+		damage.damage = 2
+		if not self:damageIsEffective_(damage) then
+            return "fillhandcards"
+        end
+        local need_slashnum = getCardsNum("Slash", target, self.player) + 1
+        if target:hasSkills("wushuang|wushuang_lvlingqi") then
+            need_slashnum = need_slashnum * 2
+        end
+        if self:getCardsNum("Slash") > need_slashnum  then
+            Global_room:writeToConsole("亢锐被决斗")
+            return "useduel"
+        end
     end
     return "fillhandcards"
 end
@@ -1300,18 +1332,26 @@ sgs.ai_skill_use["@@yuancong_usecard"] = function(self, prompt, method)
 	self:sortByUseValue(cards)
 
     for _, card in ipairs(cards) do
-        local dummyuse = { isDummy = true, to = sgs.SPlayerList() }
+        local dummyuse = { isDummy = true }
+        if not card:targetFixed() then
+            dummyuse.to = sgs.SPlayerList()
+        end
         local type = card:getTypeId()
         self["use" .. sgs.ai_type_name[type + 1]](self, card, dummyuse)
+
         Global_room:writeToConsole("元从dummyuse")
         if dummyuse.card and not card:isKindOf("Analeptic") then--详细考虑？
             Global_room:writeToConsole("元从使用牌")
-            if dummyuse.to then
-                local target_objectname = {}
-                for _, p in sgs.qlist(dummyuse.to) do
-                    table.insert(target_objectname, p:objectName())
+            if not card:targetFixed() then
+                if dummyuse.to and not dummyuse.to:isEmpty() then
+                    local target_objectname = {}
+                    for _, p in sgs.qlist(dummyuse.to) do
+                        table.insert(target_objectname, p:objectName())
+                    end
+                    return card:toString() .."->" .. table.concat(target_objectname, "+")
+                else
+                    return "."
                 end
-                return card:toString() .."->" .. table.concat(target_objectname, "+")
             end
             return card:toString()--"@YuancongUseCard=".. card:getEffectiveId()--正确写法？？
         end

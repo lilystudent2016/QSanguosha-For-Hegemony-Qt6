@@ -688,11 +688,10 @@ function sgs.viewNextPlayerDeputy()
 			end
 			names[2] = np:getActualGeneral2Name()
 			player:setTag("KnownBoth_" .. np:objectName(), sgs.QVariant(table.concat(names, "+")))
-			Global_room:writeToConsole(np:objectName().."查看下家的副将:"..table.concat(names, "+"))
+			Global_room:writeToConsole(player:objectName().."查看下家的副将:"..table.concat(names, "+"))
 		end
 	end
 end
-
 
 --鏖战桃
 local aozhan_skill = {}
@@ -812,6 +811,10 @@ end
 sgs.ai_skill_use_func.HalfMaxHpCard= function(card, use, self)
 	--Global_room:writeToConsole("阴阳鱼摸牌判断开始")
 	if self.player:isKongcheng() and self:isWeak() and not self:needKongcheng() and self.player:getMark("@firstshow") < 1 then
+		use.card = card
+		return
+	end
+	if self.player:hasSkill("dingke") and self.player:getMark("@halfmaxhp") > 1 then--技能定科
 		use.card = card
 		return
 	end
@@ -954,6 +957,7 @@ sgs.ai_choicemade_filter.skillChoice.firstshow_see = function(self, from, prompt
 				names[2] = to:getActualGeneral2Name()
 			end
 			from:setTag("KnownBoth_" .. to:objectName(), sgs.QVariant(table.concat(names, "+")))
+			Global_room:writeToConsole(from:objectName().."先驱查看暗将:"..table.concat(names, "+"))
 			break
 		end
 	end

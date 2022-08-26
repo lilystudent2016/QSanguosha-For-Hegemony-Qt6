@@ -1599,7 +1599,7 @@ local huaiyi_skill = {
       if self.player:getPile("&disloyalty"):length() == self.player:getMaxHp() then
         return nil
       end
-      if self.player:getPile("&disloyalty"):length() + 1 == self.player:getMaxHp() and math.random(1, 5) > 2 then
+      if self.player:getPile("&disloyalty"):length() + 1 == self.player:getMaxHp() and math.random(1, 5) > 3 then
         return nil
       end
       local handcards = self.player:getHandcards()
@@ -2298,7 +2298,8 @@ qingyin_skill.getTurnUseCard = function(self)
   local count = 0
 	for _, friend in ipairs(self.friends) do
 		if self.player:isFriendWith(friend) and friend:canRecover()
-    and (friend:getHp() <= 1 or (friend:getHp() <= 2 and friend:getHandcardNum() < 2) or friend:getLostHp() > 2) then
+    and (friend:getHp() <= 1 or friend:getLostHp() > 2
+      or (friend:getHp() <= 2 and friend:getHandcardNum() < 2 and friend:getLostHp() > 1)) then
       count = count + 1
 		end
 	end

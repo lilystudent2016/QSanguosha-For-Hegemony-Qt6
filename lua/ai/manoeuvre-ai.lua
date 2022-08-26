@@ -920,6 +920,11 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
     return n
   end
 
+  local anyong_damage = damageCount(target ,original_num)
+  if target:hasArmorEffect("Breastplate") and anyong_damage >= target:getHp() then
+    return false
+  end
+
   local allshown_invoke = target:hasShownAllGenerals()
                       and (self.player:getHp() > 1 or (self:getCardsNum("Peach") + self:getCardsNum("Analeptic")) > 0)
   local oneshown_invoke = not target:hasShownAllGenerals() and target:hasShownOneGeneral()
@@ -956,7 +961,6 @@ sgs.ai_skill_invoke.anyong =  function(self, data)
     end
   end
 
-  local anyong_damage = damageCount(target ,original_num)
   if chained_invoke or (not self:isFriend(target) and not target:hasShownOneGeneral() and anyong_damage > 1)
   or (self:isEnemy(target) and anyong_damage > 1 and ((self:isWeak(target) and target:getHp() == 1)
       or oneshown_invoke or (anyong_damage > 2 and allshown_invoke))) then
@@ -1006,7 +1010,8 @@ sgs.ai_skill_use_func.MingfaCard = function(card, use, self)
 
   table.sort(self.enemies, compare_func)
   if math.min(self.player:getHandcardNum(), self:getOverflow(self.player,true)) < 2 then--牌少时摸牌
-    sgs.reverse(self.enemies)
+    Global_room:writeToConsole("明伐牌少时")
+    self.enemies = sgs.reverse(self.enemies)
   end
   if #self.enemies == 0 then
     local targets = {}
@@ -1016,6 +1021,9 @@ sgs.ai_skill_use_func.MingfaCard = function(card, use, self)
       end
     end
     table.sort(targets, compare_func)
+    if math.min(self.player:getHandcardNum(), self:getOverflow(self.player,true)) < 2 then--牌少时摸牌
+      targets = sgs.reverse(targets)
+    end
     target = targets[1]
   else
     for _, p in ipairs(self.enemies) do

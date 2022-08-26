@@ -1826,6 +1826,10 @@ function SmartAI:getDynamicUsePriority(card)
 			and self:getSameEquip(card) and self:getSameEquip(card):isBlack() then
 				return 3.3
 		end
+		if (self.player:hasSkills("xiaoji+guose") or self.player:hasSkills("xuanlue+guose"))
+			and self:getSameEquip(card) and self:getSameEquip(card):getSuit() == sgs.Card_Diamond then
+				return 0.4
+		end
 		local lvfan = sgs.findPlayerByShownSkillName("diaodu")--重复装备时应比烽火优先度20低
 		if (lvfan and self.player:isFriendWith(lvfan)) or self.player:hasSkills(sgs.lose_equip_skill) then value = value + 6 end
 
@@ -2381,6 +2385,9 @@ sgs.ai_choicemade_filter.Yiji.general = function(self, f, promptlist)
 end
 
 function SmartAI:filterEvent(event, player, data)
+	--self.room:writeToConsole("事件记录："..event)
+	--self.room:outputEventStack()
+	--self.room:throwEvent(event)
 	if not sgs.recorder then
 		sgs.recorder = self
 	end
@@ -2445,7 +2452,7 @@ function SmartAI:filterEvent(event, player, data)
 	end
 
 	if event == sgs.GameStart and sgs.GetConfig("ViewNextPlayerDeputyGeneral", true) then--查看下家副将，不是每次游戏开始都会进入filterEvent？
-		Global_room:writeToConsole("查看下家的副将")
+		self.room:writeToConsole("查看下家的副将")
 		sgs.viewNextPlayerDeputy()
 	end
 
@@ -2579,6 +2586,7 @@ function SmartAI:filterEvent(event, player, data)
 			local card = sgs.Sanguosha:getCard(card_id)
 
 			if move.to_place == sgs.Player_PlaceHand and to and player:objectName() == to:objectName() then
+				self.room:writeToConsole("手牌可见事件记录")
 				if card:hasFlag("visible") then
 					if isCard("Slash", card, player) then sgs.card_lack[player:objectName()]["Slash"] = 0 end
 					if isCard("Jink", card, player) then sgs.card_lack[player:objectName()]["Jink"] = 0 end
@@ -2615,7 +2623,7 @@ function SmartAI:filterEvent(event, player, data)
 	elseif event == sgs.EventPhaseEnd and player:getPhase() == sgs.Player_Player then
 		player:setFlags("AI_Playing")
 		if player:getTag("AI_FireAttack_NoSuit"):toString() ~= "" then--火攻失败标记处理
-			Global_room:writeToConsole("回合结束火攻失败标记去除")
+			self.room:writeToConsole("回合结束火攻失败标记去除")
 			player:removeTag("AI_FireAttack_NoSuit")
 		end
 	elseif event == sgs.EventPhaseStart then
@@ -3665,7 +3673,7 @@ function SmartAI:getCardNeedPlayer(cards, friends_table, skillname)
 
 	local found
 	local xunyu, huatuo
-	local friends_table = friends_table or self.friends_noself
+	friends_table = friends_table or self.friends_noself
 	for i = 1, #friends_table do
 		local player = friends_table[i]
 		local exclude = self:needKongcheng(player) or self:willSkipPlayPhase(player)
@@ -3730,7 +3738,7 @@ function SmartAI:getCardNeedPlayer(cards, friends_table, skillname)
 	end
 
 	if (skillname == "rende" and self.player:hasSkill("rende") and self.player:isWounded() and self.player:getMark("rende") < 2) and not self.player:hasSkill("kongcheng") then
-		if (self.player:getHandcardNum() < 3 and self.player:getMark("rende") == 0 and self:getOverflow() <= 0) then return end
+		if (self.player:getHandcardNum() < 2 and self.player:getMark("rende") == 0 and self:getOverflow() <= 0) then return end
 	end
 
 	for _, friend in ipairs(friends) do
@@ -5197,7 +5205,7 @@ function SmartAI:exclude(players, card, from)
 		for _, id in sgs.qlist(from:getHandPile()) do
 			table.insert(cards, sgs.Sanguosha:getCard(id))
 		end
-		for _,acard in ipairs(cards)  do
+		for _,acard in ipairs(cards) do
 			if acard:isBlack() and (acard:isKindOf("BasicCard") or acard:isKindOf("EquipCard")) and (self:getUseValue(acard) < sgs.ai_use_value.SupplyShortage) then
 				duanliang_count = duanliang_count + 1
 			end

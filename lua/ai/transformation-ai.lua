@@ -2035,11 +2035,11 @@ sgs.ai_skill_choice.flamemap = function(self, choices)
 	end
 
 	if self.player:hasSkill("haoshi") and table.contains(choices, "haoshi_flamemap") then
-		if sgs.ai_skill_invoke.haoshi(self) and self.haoshi_target then
-			return "haoshi_flamemap"--有目标时双好施
+		table.removeOne(choices, "haoshi_flamemap")--太复杂情况不考虑
+		--[[if sgs.ai_skill_invoke.haoshi(self) and self.haoshi_target then
+			return "haoshi_flamemap"--有目标时双好施，给完一次半数后超过5会给两次牌。。
 		else
-			table.removeOne(choices, "haoshi_flamemap")--复杂情况不考虑
-		end
+		end]]
 	end
 
 	if n > 4 and table.contains(choices, "haoshi_flamemap") and
