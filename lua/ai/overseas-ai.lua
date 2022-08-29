@@ -256,7 +256,7 @@ sgs.ai_skill_exchange.sidi_put = function(self,pattern,max_num,min_num,expand_pi
     end
     if sgs.Sanguosha:matchExpPattern(pattern,self.player,cards[1]) then--只考虑cards[1]？
         return cards[1]:getEffectiveId()
-      end
+    end
     return {}
 end
 
@@ -1135,8 +1135,9 @@ sgs.ai_skill_playerchosen.dingke = function(self, targets)
     targets = sgs.QList2Table(targets)
     self:sort(targets, "handcard")
     for _, p in ipairs(targets) do
-        if self.player:isFriendWith(p) and not self:needKongcheng(p) then
+        if p:getPhase() == sgs.Player_NotActive and self.player:isFriendWith(p) and not self:needKongcheng(p) then
             if self.player:hasSkill("shengxi") or self.player:getHandcardNum() > 2
+            or (self:needKongcheng() and self.player:getHandcardNum() <= 2)
             or (not self:isWeak() and p:getHandcardNum() < 2) then
                 return p
             end
@@ -1360,7 +1361,99 @@ sgs.ai_skill_use["@@yuancong_usecard"] = function(self, prompt, method)
 end
 
 --程昱
+local shefu_skill = {}
+shefu_skill.name = "shefu"
+table.insert(sgs.ai_skills, shefu_skill)
+shefu_skill.getTurnUseCard = function(self)
+    if self.player:hasUsed("ShefuCard") then return end
+    if self.player:isKongcheng() then return end
 
+    local index = self:getOverflow()
+    if index > 0 or self.player:getHandcardNum() > 2 then
+        local cards = self.player:getHandcards()
+        cards = sgs.QList2Table(cards)
+        self:sortByUseValue(cards, true)
+        if index > 1 then
+            return sgs.Card_Parse("@ShefuCard=" .. cards[index]:getEffectiveId() .."&shefu")
+            --for i = index, 1, -1 do--考虑已有的伏兵？
+            --end
+        else
+            return sgs.Card_Parse("@ShefuCard=" .. cards[1]:getEffectiveId() .."&shefu")
+        end
+    end
+end
+
+sgs.ai_skill_use_func.ShefuCard = function(card, use, self)
+	use.card = card
+end
+
+sgs.ai_use_priority.ShefuCard = 0.3
+
+sgs.ai_skill_exchange.shefu = function(self,pattern,max_num,min_num,expand_pile)
+    local use = self.player:getTag("ShefuUsedata"):toCardUse()
+    local response = self.player:getTag("ShefuUsedata"):toCardResponse()
+
+    if response then
+        Global_room:writeToConsole("设伏response")
+        local card = response.m_card
+        local who = response.m_who
+        if card and who and self:isEnemy(who) and (card:isKindOf("Nullification") or card:isKindOf("Jink")) then
+            for _, id in sgs.qlist(self.player:getPile(expand_pile)) do--"ambush"
+                local c = sgs.Sanguosha:getCard(id)
+                if sgs.Sanguosha:matchExpPattern(pattern,self.player,c) then
+                    return c:getEffectiveId()
+                end
+            end
+        end
+    end
+    if use then
+        Global_room:writeToConsole("设伏use")
+        local card = use.card
+        local from = use.from
+        local to = use.to
+        if card and from and self:isEnemy(from) then--考虑详细的card类型和to目标状态？
+            for _, id in sgs.qlist(self.player:getPile(expand_pile)) do--"ambush"
+                local c = sgs.Sanguosha:getCard(id)
+                if sgs.Sanguosha:matchExpPattern(pattern,self.player,c) then
+                    return c:getEffectiveId()
+                end
+            end
+        end
+    end
+    return {}
+end
+
+sgs.ai_skill_exchange["shefu_remove"] = function(self,pattern,max_num,min_num,expand_pile)
+    local result = {}
+    local ambushcards = {}
+    for _, id in sgs.qlist(self.player:getPile(expand_pile)) do
+        local card = sgs.Sanguosha:getCard(id)
+        table.insert(ambushcards, card)
+    end
+    self:sortByUseValue(ambushcards, true)
+    for _, c in ipairs(ambushcards) do
+        if c:getTypeId() == sgs.Card_TypeEquip then
+            table.insert(result, c)
+        end
+        if #result == min_num then
+            return result
+        end
+    end
+    for _, c in ipairs(ambushcards) do
+        if c:getTypeId() == sgs.Card_TypeTrick then
+            table.insert(result, c)
+        end
+        if #result == min_num then
+            return result
+        end
+    end
+    for _, c in ipairs(ambushcards) do
+        table.insert(result, c)
+        if #result == min_num then
+            return result
+        end
+    end
+end
 
 sgs.ai_skill_invoke.benyu = function(self, data)
 	if not self:willShowForMasochism() then return false end
