@@ -29,6 +29,7 @@ ServerInfoStruct ServerInfo;
 #include <QLabel>
 #include <QListWidget>
 #include <QCheckBox>
+#include <QRegularExpression>
 
 time_t ServerInfoStruct::getCommandTimeout(QSanProtocol::CommandType command, QSanProtocol::ProcessInstanceType instance)
 {
@@ -52,15 +53,16 @@ time_t ServerInfoStruct::getCommandTimeout(QSanProtocol::CommandType command, QS
 
 bool ServerInfoStruct::parse(const QString &str)
 {
-    QRegExp rx("(.*):(@?\\w+):(\\d+):(\\d+):([\\w-]+(?:\\+[\\w-]+)*)?:([RCFAMSVZ]*)");
-    if (!rx.exactMatch(str)) {
+    QRegularExpression rx("(.*):(@?\\w+):(\\d+):(\\d+):([\\w-]+(?:\\+[\\w-]+)*)?:([RCFAMSVZ]*)");
+    QRegularExpressionMatch match = rx.match(str);
+    if (!match.hasMatch()) {
         // older version, just take the player count
         int count = str.split(":").at(1).toInt();
         GameMode = QString("%1p").arg(count, 2, 10, QChar('0'));
         return false;
     }
 
-    QStringList texts = rx.capturedTexts();
+    QStringList texts = match.capturedTexts();
     if (texts.isEmpty()) {
         DuringGame = false;
     } else {

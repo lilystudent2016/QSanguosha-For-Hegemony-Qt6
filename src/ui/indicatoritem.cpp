@@ -23,6 +23,7 @@
 #include <QPainter>
 #include <QGraphicsBlurEffect>
 #include <QSequentialAnimationGroup>
+#include <QParallelAnimationGroup>
 #include <QPropertyAnimation>
 #include <QPauseAnimation>
 #include <QtMath>
@@ -57,7 +58,7 @@ void IndicatorItem::doAnimation()
 
     group->start(QAbstractAnimation::DeleteWhenStopped);
 
-    connect(group, SIGNAL(finished()), this, SLOT(deleteLater()));
+    connect(group, &QParallelAnimationGroup::finished, this, &IndicatorItem::deleteLater);
 }
 
 QPointF IndicatorItem::getFinish() const

@@ -19,7 +19,7 @@
     *********************************************************************/
 
 #include "version.h"
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QStringList>
 
 QSanVersionNumber::QSanVersionNumber(const QString &str)
@@ -36,9 +36,10 @@ QSanVersionNumber::QSanVersionNumber(int major, int minor, int sub, VersionType 
 
 bool QSanVersionNumber::tryParse(const QString &str)
 {
-    QRegExp regexp("(\\d+)\\.(\\d+)\\.(\\d+)\\-([a-z]+)(\\d+)?");
-    if (regexp.exactMatch(str)) {
-        QStringList l = regexp.capturedTexts();
+    QRegularExpression regexp("(\\d+)\\.(\\d+)\\.(\\d+)\\-([a-z]+)(\\d+)?");
+    QRegularExpressionMatch match = regexp.match(str);
+    if (match.hasMatch()) {
+        QStringList l = match.capturedTexts();
         m_major = l[1].toInt();
         m_minor = l[2].toInt();
         m_sub = l[3].toInt();

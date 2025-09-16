@@ -23,7 +23,6 @@
 #include "clientplayer.h"
 
 #include <QTcpSocket>
-#include <QRegExp>
 #include <QStringList>
 #include <QUdpSocket>
 

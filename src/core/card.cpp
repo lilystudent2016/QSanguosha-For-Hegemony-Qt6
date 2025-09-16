@@ -29,6 +29,7 @@
 #include "roomthread.h"
 
 #include <QFile>
+#include <QRegularExpression>
 
 const int Card::S_UNKNOWN_CARD_ID = -1;
 
@@ -514,9 +515,9 @@ const Card *Card::Parse(const QString &card_str)
     QString position = str_list.length() > 1 ? str_list.last() : QString();         //get skill postion info. by weirdouncle
     if (str.startsWith(QChar('@'))) {
         // skill card
-        QRegExp pattern1("@(\\w+)=([^:]+)&(.*)(:.+)?");
-        QRegExp pattern2("@(\\w+)=([^:]+)(:.+)?");
-        QRegExp ex_pattern("@(\\w*)\\[(\\w+):(.+)\\]=([^:]+)&(.*)(:.+)?");
+        QRegularExpression pattern1("@(\\w+)=([^:]+)&(.*)(:.+)?");
+        QRegularExpression pattern2("@(\\w+)=([^:]+)(:.+)?");
+        QRegularExpression ex_pattern("@(\\w*)\\[(\\w+):(.+)\\]=([^:]+)&(.*)(:.+)?");
 
         QStringList texts;
         QString card_name, card_suit, card_number;
@@ -525,19 +526,23 @@ const Card *Card::Parse(const QString &card_str)
         QString show_skill;
         QString user_string;
 
-        if (pattern1.exactMatch(str)) {
-            texts = pattern1.capturedTexts();
+        QRegularExpressionMatch match1 = pattern1.match(str);
+        QRegularExpressionMatch match2 = pattern2.match(str);
+        QRegularExpressionMatch ex_match = ex_pattern.match(str);
+
+        if (match1.hasMatch()) {
+            texts = match1.capturedTexts();
             card_name = texts.at(1);
             subcard_str = texts.at(2);
             show_skill = texts.at(3);
             user_string = texts.at(4);
-        } else if (pattern2.exactMatch(str)) {
-            texts = pattern2.capturedTexts();
+        } else if (match2.hasMatch()) {
+            texts = match2.capturedTexts();
             card_name = texts.at(1);
             subcard_str = texts.at(2);
             user_string = texts.at(3);
-        } else if (ex_pattern.exactMatch(str)) {
-            texts = ex_pattern.capturedTexts();
+        } else if (ex_match.hasMatch()) {
+            texts = ex_match.capturedTexts();
             card_name = texts.at(1);
             card_suit = texts.at(2);
             card_number = texts.at(3);
@@ -611,11 +616,12 @@ const Card *Card::Parse(const QString &card_str)
         new_card->setSkillPosition(position);
         return new_card;
     } else if (str.contains(QChar('='))) {
-        QRegExp pattern("(\\w+):(\\w*)\\[(\\w+):(.+)\\]=(.+)&(.*)");
-        if (!pattern.exactMatch(str))
+        QRegularExpression pattern("(\\w+):(\\w*)\\[(\\w+):(.+)\\]=(.+)&(.*)");
+        QRegularExpressionMatch match = pattern.match(str);
+        if (!match.hasMatch())
             return NULL;
 
-        QStringList texts = pattern.capturedTexts();
+        QStringList texts = match.capturedTexts();
         QString card_name = texts.at(1);
         QString m_skillName = texts.at(2);
         QString suit_string = texts.at(3);

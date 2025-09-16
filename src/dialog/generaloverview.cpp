@@ -20,6 +20,7 @@
 
 #include "generaloverview.h"
 #include "engine.h"
+#include "qaction.h"
 #ifdef Q_OS_IOS
 #include "ui_generaloverview_ios.h"
 #else
@@ -30,7 +31,8 @@
 #include "generalmodel.h"
 #include "skinbank.h"
 #include "stylehelper.h"
-
+#include <QRegularExpression>
+#include <QButtonGroup>
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QAbstractButton>
@@ -494,24 +496,27 @@ void GeneralOverview::addLines(const General *general, const Skill *skill)
         QString pattern = ".+/(" + skill->objectName() + "_" + general->objectName() + ")(\\d?).ogg";
         QStringList sources_copy;
         foreach (QString source, sources) {
-            QRegExp rx(pattern);
-            if (rx.exactMatch(source))
+            QRegularExpression rx(pattern);
+            QRegularExpressionMatch match = rx.match(source);
+            if (match.hasMatch())
                 sources_copy << source;
         }
         if (sources_copy.isEmpty()) {
             pattern = ".+/(" + skill->objectName() + ")(\\d?).ogg";
-            QRegExp rx(pattern);
+            QRegularExpression rx(pattern);
             foreach (QString source, sources) {
-                if (rx.exactMatch(source))
+                QRegularExpressionMatch match = rx.match(source);
+                if (match.hasMatch())
                     sources_copy << source;
             }
         }
         sources = sources_copy;
 
         for (int i = 0; i < sources.length(); i++) {
-            QRegExp rx(pattern);
+            QRegularExpression rx(pattern);
             QString source = sources[i];
-            if (!rx.exactMatch(source)) continue;
+            QRegularExpressionMatch match = rx.match(source);
+            if (!match.hasMatch()) continue;
             QString button_text = skill_name;
             if (sources.length() != 1)
                 button_text.append(QString(" (%1)").arg(i + 1));
@@ -521,7 +526,7 @@ void GeneralOverview::addLines(const General *general, const Skill *skill)
             button_layout->addWidget(button);
 
             const int skinId = all_generals->value(general);
-            QString filename = rx.capturedTexts().at(1) + rx.capturedTexts().at(2);
+            QString filename = match.capturedTexts().at(1) + match.capturedTexts().at(2);
             QString skill_line;
             if (skinId == 0 || usingDefault)
                 skill_line = Sanguosha->translate("$" + filename);
@@ -768,22 +773,24 @@ void GeneralOverview::startSearch(bool include_hidden, const QString &nickname, 
             QString v_nickname = nickname;
             v_nickname.replace("?", ".");
             v_nickname.replace("*", ".*");
-            QRegExp rx(v_nickname);
+            QRegularExpression rx(v_nickname);
+            QRegularExpressionMatch match = rx.match(v_nickname);
 
             QString g_nickname = Sanguosha->translate("#" + general_name);
             if (g_nickname.startsWith("#"))
                 g_nickname = Sanguosha->translate("#" + general_name.split("_").last());
-            if (!rx.exactMatch(g_nickname))
+            if (!match.hasMatch())
                 continue;
         }
         if (!name.isEmpty()) {
             QString v_name = name;
             v_name.replace("?", ".");
             v_name.replace("*", ".*");
-            QRegExp rx(v_name);
+            QRegularExpression rx(v_name);
 
             QString g_name = Sanguosha->translate(general_name);
-            if (!rx.exactMatch(g_name))
+            QRegularExpressionMatch match = rx.match(g_name);
+            if (!match.hasMatch())
                 continue;
         }
         if (!genders.isEmpty()) {

@@ -24,6 +24,7 @@
 #include "clientstruct.h"
 #include "settings.h"
 #include "mainwindow.h"
+#include <QRegularExpression>
 
 #include <QGraphicsPixmapItem>
 #include <QTextItem>
@@ -559,15 +560,17 @@ QString QSanRoomSkin::getPlayerAudioEffectPath(const QString &eventName, const Q
         }
         if (!fileNames.isEmpty()) {
             QStringList sources_copy;
-            QRegExp rx(".+/" + eventName + "_" + general + "(\\d?).ogg");
+            QRegularExpression rx(".+/" + eventName + "_" + general + "(\\d?).ogg");
             foreach (QString source, fileNames) {
-                if (rx.exactMatch(source))
+                QRegularExpressionMatch match = rx.match(source);
+                if (match.hasMatch())
                     sources_copy << source;
             }
             if (sources_copy.isEmpty()) {
-                QRegExp rx(".+/" + eventName + "(\\d?).ogg");
+                QRegularExpression rx(".+/" + eventName + "(\\d?).ogg");
                 foreach (QString source, fileNames) {
-                    if (rx.exactMatch(source))
+                    QRegularExpressionMatch match = rx.match(source);
+                    if (match.hasMatch())
                         sources_copy << source;
                 }
             }

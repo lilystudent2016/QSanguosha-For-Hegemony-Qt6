@@ -20,6 +20,7 @@
 
 #include "lua-wrapper.h"
 #include "util.h"
+#include <QRegularExpression>
 
 LuaTriggerSkill::LuaTriggerSkill(const char *name, Frequency frequency, const char *limit_mark)
     : TriggerSkill(name), can_trigger(0), on_cost(0),
@@ -165,8 +166,8 @@ LuaSkillCard *LuaSkillCard::clone() const
 
 LuaSkillCard *LuaSkillCard::Parse(const QString &str)
 {
-    QRegExp rx("#(\\w+):(.*):(.*)&(.*)");
-    QRegExp e_rx("#(\\w*)\\[(\\w+):(.+)\\]:(.*):(.*)&(.*)");
+    QRegularExpression rx("#(\\w+):(.*):(.*)&(.*)");
+    QRegularExpression e_rx("#(\\w*)\\[(\\w+):(.+)\\]:(.*):(.*)&(.*)");
 
     static QMap<QString, Card::Suit> suit_map;
     if (suit_map.isEmpty()) {
@@ -185,14 +186,17 @@ LuaSkillCard *LuaSkillCard::Parse(const QString &str)
     QString user_string;
     QString show_skill;
 
-    if (rx.exactMatch(str)) {
-        texts = rx.capturedTexts();
+    QRegularExpressionMatch match = rx.match(str);
+    QRegularExpressionMatch e_match = e_rx.match(str);
+    
+    if (match.hasMatch()) {
+        texts = match.capturedTexts();
         name = texts.at(1);
         subcard_str = texts.at(2);
         user_string = texts.at(3);
         show_skill = texts.at(4);
-    } else if (e_rx.exactMatch(str)) {
-        texts = e_rx.capturedTexts();
+    } else if (e_match.hasMatch()) {
+        texts = e_match.capturedTexts();
         name = texts.at(1);
         suit = texts.at(2);
         number = texts.at(3);

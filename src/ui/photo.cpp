@@ -229,12 +229,12 @@ void Photo::showSkillName(const QString &skill_name)
     anim->setEndValue(rect.topLeft());
     anim->setDuration(200);
     _m_skillNameAnim->addAnimation(anim);
-    connect(anim, SIGNAL(finished()), anim, SLOT(deleteLater()));
+    connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
     anim = new QPropertyAnimation(_m_skillNameRegion, "opacity");
     anim->setEndValue(255);
     anim->setDuration(200);
     _m_skillNameAnim->addAnimation(anim);
-    connect(anim, SIGNAL(finished()), anim, SLOT(deleteLater()));
+    connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
     _m_skillNameAnim->start();
     _mutexSkillNameAnim.unlock();
 
@@ -254,12 +254,12 @@ void Photo::hideSkillName()
         anim->setEndValue(G_PHOTO_LAYOUT.m_skillNameArea.topLeft() + QPoint(50, 0));
         anim->setDuration(200);
         _m_skillNameAnim->addAnimation(anim);
-        connect(anim, SIGNAL(finished()), anim, SLOT(deleteLater()));
+        connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
         anim = new QPropertyAnimation(_m_skillNameRegion, "opacity");
         anim->setEndValue(0);
         anim->setDuration(200);
         _m_skillNameAnim->addAnimation(anim);
-        connect(anim, SIGNAL(finished()), anim, SLOT(deleteLater()));
+        connect(anim, &QPropertyAnimation::finished, anim, &QPropertyAnimation::deleteLater);
         _m_skillNameAnim->start();
         _mutexSkillNameAnim.unlock();
     }

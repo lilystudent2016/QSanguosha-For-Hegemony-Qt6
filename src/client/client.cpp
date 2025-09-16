@@ -37,6 +37,7 @@
 #include <QLabel>
 #include <QTextDocument>
 #include <QTextCursor>
+#include <QRegularExpression>
 
 using namespace QSanProtocol;
 
@@ -1001,8 +1002,9 @@ Replayer *Client::getReplayer() const
 
 QString Client::getPlayerName(const QString &str, bool full_name)
 {
-    QRegExp rx("sgs\\d+");
-    if (rx.exactMatch(str)) {
+    QRegularExpression rx("sgs\\d+");
+    QRegularExpressionMatch match = rx.match(str);
+    if (match.hasMatch()) {
         ClientPlayer *player = getPlayer(str);
         if (full_name) {
             QString general_name = player->getGeneralName();
@@ -1075,7 +1077,7 @@ QString Client::setPromptList(const QStringList &texts)
     return prompt;
 }
 
-void Client::commandFormatWarning(const QString &str, const QRegExp &rx, const char *command)
+void Client::commandFormatWarning(const QString &str, const QRegularExpression &rx, const char *command)
 {
     QString text = tr("The argument (%1) of command %2 does not conform the format %3")
         .arg(str).arg(command).arg(rx.pattern());
@@ -1122,9 +1124,10 @@ void Client::askForCardOrUseCard(const QVariant &cardUsage)
         m_isDiscardActionRefusable = true;
 
     QString temp_pattern = _processCardPattern(card_pattern);
-    QRegExp rx("^@@?(\\w+)(-card)?$");
-    if (rx.exactMatch(temp_pattern)) {
-        QString skill_name = rx.capturedTexts().at(1);
+    QRegularExpression rx("^@@?(\\w+)(-card)?$");
+    QRegularExpressionMatch temp_match = rx.match(temp_pattern);
+    if (temp_match.hasMatch()) {
+        QString skill_name = temp_match.capturedTexts().at(1);
         const Skill *skill = Sanguosha->getSkill(skill_name);
         if (skill) {
             QString text = prompt_doc->toHtml();

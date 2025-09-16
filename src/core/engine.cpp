@@ -40,6 +40,7 @@
 #include <QDir>
 #include <QFile>
 #include <QApplication>
+#include <QRegularExpression>
 
 Engine *Sanguosha = NULL;
 
@@ -831,10 +832,10 @@ QString Engine::getModeName(const QString &mode) const
 int Engine::getPlayerCount(const QString &mode) const
 {
     if (modes.contains(mode)) {
-        QRegExp rx("(\\d+)");
-        int index = rx.indexIn(mode);
-        if (index != -1)
-            return rx.capturedTexts().first().toInt();
+        QRegularExpression rx("(\\d+)");
+        QRegularExpressionMatch match = rx.match(mode);
+        if (match.hasMatch())
+            return match.capturedTexts().first().toInt();
     } else {
         // scenario mode
         const Scenario *scenario = getScenario(mode);

@@ -19,6 +19,7 @@
     *********************************************************************/
 
 #include "tile.h"
+#include <QRegularExpression>
 
 #include <QFile>
 #include <QGraphicsSceneMouseEvent>
@@ -59,8 +60,9 @@ void Tile::init()
 
 void Tile::setIcon(QString path)
 {
-    QRegExp fileName("[\\w-.]+");
-    if (fileName.exactMatch(path)) {
+    QRegularExpression fileName("[\\w-.]+");
+    QRegularExpressionMatch match = fileName.match(path);
+    if (match.hasMatch()) {
         path = QString("image/system/button/icon/%1.png").arg(path);
     }
 

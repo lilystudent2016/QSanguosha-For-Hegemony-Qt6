@@ -26,6 +26,7 @@
 
 #include <QFile>
 #include <QTextStream>
+#include <QRegularExpression>
 
 static GeneralSelector *Selector;
 
@@ -84,17 +85,18 @@ QStringList GeneralSelector::selectGenerals(ServerPlayer *player, const QStringL
 
 void GeneralSelector::loadGeneralTable()
 {
-    QRegExp rx("(\\w+)\\s+(\\d+)");
+    QRegularExpression rx("(\\w+)\\s+(\\d+)");
     QFile file("ai-selector/general-value.txt");
     if (file.open(QIODevice::ReadOnly)) {
         QTextStream stream(&file);
         while (!stream.atEnd()) {
             QString line = stream.readLine();
-            if (!rx.exactMatch(line))
+            QRegularExpressionMatch match = rx.match(line);
+            if (!match.hasMatch())
                 continue;
 
             //SAMPLE: huatuo 41
-            QStringList texts = rx.capturedTexts();
+            QStringList texts = match.capturedTexts();
             QString general = texts.at(1);
             int value = texts.at(2).toInt();
 
@@ -109,11 +111,12 @@ void GeneralSelector::loadGeneralTable()
             QTextStream stream(&lua_file);
             while (!stream.atEnd()) {
                 QString line = stream.readLine();
-                if (!rx.exactMatch(line))
+                QRegularExpressionMatch match = rx.match(line);
+                if (!match.hasMatch())
                     continue;
 
                 //SAMPLE: huatuo 41
-                QStringList texts = rx.capturedTexts();
+                QStringList texts = match.capturedTexts();
                 QString general = texts.at(1);
                 int value = texts.at(2).toInt();
 
@@ -127,17 +130,18 @@ void GeneralSelector::loadGeneralTable()
 
 void GeneralSelector::loadPairTable()
 {
-    QRegExp rx("(\\w+)\\s+(\\w+)\\s+(\\d+)\\s+(\\d+)");
+    QRegularExpression rx("(\\w+)\\s+(\\w+)\\s+(\\d+)\\s+(\\d+)");
     QFile file("ai-selector/pair-value.txt");
     if (file.open(QIODevice::ReadOnly)) {
         QTextStream stream(&file);
         while (!stream.atEnd()) {
             QString line = stream.readLine();
-            if (!rx.exactMatch(line))
+            QRegularExpressionMatch match = rx.match(line);
+            if (!match.hasMatch())
                 continue;
 
             //SAMPLE: huangyueying zhangfei                         25 24
-            QStringList texts = rx.capturedTexts();
+            QStringList texts = match.capturedTexts();
             QString first = texts.at(1);
             QString second = texts.at(2);
             int value_f = texts.at(3).toInt();
@@ -157,11 +161,12 @@ void GeneralSelector::loadPairTable()
             QTextStream stream(&lua_file);
             while (!stream.atEnd()) {
                 QString line = stream.readLine();
-                if (!rx.exactMatch(line))
+                QRegularExpressionMatch match = rx.match(line);
+                if (!match.hasMatch())
                     continue;
 
                 //SAMPLE: huangyueying zhangfei                         25 24
-                QStringList texts = rx.capturedTexts();
+                QStringList texts = match.capturedTexts();
                 QString first = texts.at(1);
                 QString second = texts.at(2);
                 int value_f = texts.at(3).toInt();

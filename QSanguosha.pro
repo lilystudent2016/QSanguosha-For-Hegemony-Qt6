@@ -2,12 +2,12 @@
 # Project created by QtCreator 2010-06-13T04:26:52
 # -------------------------------------------------
 TARGET = QSanguosha
-QT += network widgets
-!winrt:QT += declarative
+QT += network widgets core gui
+!winrt:QT += quick
 TEMPLATE = app
 CONFIG += audio
 
-CONFIG += c++11
+CONFIG += c++17
 
 CONFIG += lua
 #CONFIG += lua53

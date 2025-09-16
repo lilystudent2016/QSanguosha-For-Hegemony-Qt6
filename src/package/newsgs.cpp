@@ -30,6 +30,7 @@
 #include "settings.h"
 #include "roomthread.h"
 #include "json.h"
+#include <QRegularExpression>
 
 class Wanggui : public TriggerSkill
 {
@@ -3588,10 +3589,11 @@ private:
     static int GetHanNumFromString(QString str)     //获取汉字个数
     {
        int count = 0;
-       QRegExp regex = QRegExp(QString("^[\u4E00-\u9FA5]{0,}$"));
+       QRegularExpression regex(QString("^[\u4E00-\u9FA5]{0,}$"));
        for(int i = 0; i < str.length(); i++)
        {
-           if(regex.exactMatch(QString(str[i])))
+           QRegularExpressionMatch match = regex.match(QString(str[i]));
+           if(match.hasMatch())
                count++;
        }
        return count;

@@ -33,6 +33,7 @@
 #include "json.h"
 #include "clientstruct.h"
 #include "roomthread.h"
+#include <QRegularExpression>
 
 #include <lua.hpp>
 #include <QStringList>
@@ -1860,9 +1861,10 @@ const Card *Room::askForUseCard(ServerPlayer *player, const QString &pattern, co
         ask_str << prompt;
         ask_str << int(method);
         ask_str << notice_index;
-        QRegExp rx("@@([_A-Za-z]+)(\\d+)?!?");
-        if (rx.exactMatch(pattern)) {
-            QStringList texts = rx.capturedTexts();
+        QRegularExpression rx("@@([_A-Za-z]+)(\\d+)?!?");
+        QRegularExpressionMatch match = rx.match(pattern);
+        if (match.hasMatch()) {
+            QStringList texts = match.capturedTexts();
             if (!getTag(texts.at(1) + player->objectName()).toStringList().isEmpty())
                 ask_str << getTag(texts.at(1) + player->objectName()).toStringList().last();
         }

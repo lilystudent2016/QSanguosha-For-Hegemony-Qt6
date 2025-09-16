@@ -156,7 +156,7 @@ void PlayerCardBox::chooseCard(const QString &reason, const ClientPlayer *player
             progressBarItem = new QGraphicsProxyWidget(this);
             progressBarItem->setWidget(progressBar);
             progressBarItem->setPos(boundingRect().center().x() - progressBarItem->boundingRect().width() / 2, boundingRect().height() - 20);
-            connect(progressBar, SIGNAL(timedOut()), this, SLOT(reply()));
+            connect(progressBar, &TimedProgressBar::timedOut, this, &PlayerCardBox::reply);
         }
         progressBar->setCountdown(QSanProtocol::S_COMMAND_CHOOSE_CARD);
         progressBar->show();
@@ -359,10 +359,10 @@ void PlayerCardBox::arrangeCards(const CardList &cards, const QPoint &topLeft, b
 
 
         if (!is_globalchoose)
-            connect(item, SIGNAL(clicked()), this, SLOT(selectCardItem()));
+            connect(item, &CardItem::clicked, this, &PlayerCardBox::selectCardItem);
         else {
             item->setOpacity(0.9);
-            connect(item, SIGNAL(clicked()), this, SLOT(global_click()));
+            connect(item, &CardItem::clicked, this, &PlayerCardBox::global_click);
         }
         items << item;
         areaItems << item;

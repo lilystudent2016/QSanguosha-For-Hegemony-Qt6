@@ -79,6 +79,7 @@
 #include <QCoreApplication>
 #include <QInputDialog>
 #include <QScrollBar>
+#include <QRegularExpression>
 
 using namespace QSanProtocol;
 
@@ -1863,11 +1864,11 @@ void RoomScene::chooseCard(const ClientPlayer *player, const QString &flags, con
     layout->addLayout(hlayout);
     dialog->setLayout(layout);
 
-    connect(warm_button, SIGNAL(clicked()), ClientInstance, SLOT(onPlayerChooseOrder()));
-    connect(cool_button, SIGNAL(clicked()), ClientInstance, SLOT(onPlayerChooseOrder()));
-    connect(warm_button, SIGNAL(clicked()), dialog, SLOT(accept()));
-    connect(cool_button, SIGNAL(clicked()), dialog, SLOT(accept()));
-    connect(dialog, SIGNAL(rejected()), ClientInstance, SLOT(onPlayerChooseOrder()));
+    connect(warm_button, &QPushButton::clicked, ClientInstance, &Client::onPlayerChooseOrder);
+    connect(cool_button, &QPushButton::clicked, ClientInstance, &Client::onPlayerChooseOrder);
+    connect(warm_button, &QPushButton::clicked, dialog, &QDialog::accept);
+    connect(cool_button, &QPushButton::clicked, dialog, &QDialog::accept);
+    connect(dialog, &QDialog::rejected, ClientInstance, &Client::onPlayerChooseOrder);
     delete m_choiceDialog;
     m_choiceDialog = dialog;
     }*/
@@ -1900,16 +1901,16 @@ if (scheme == "AllRoles")
 button->setIcon(QIcon(QString("image/system/roles/%1.png").arg(role)));
 layout->addWidget(button);
 button->setObjectName(role);
-connect(button, SIGNAL(clicked()), ClientInstance, SLOT(onPlayerChooseRole3v3()));
-connect(button, SIGNAL(clicked()), dialog, SLOT(accept()));
+connect(button, &QCommandLinkButton::clicked, ClientInstance, &Client::onPlayerChooseRole3v3);
+connect(button, &QCommandLinkButton::clicked, dialog, &QDialog::accept);
 }
 
 QCommandLinkButton *abstain_button = new QCommandLinkButton(tr("Abstain"));
-connect(abstain_button, SIGNAL(clicked()), dialog, SLOT(reject()));
+connect(abstain_button, &QCommandLinkButton::clicked, dialog, &QDialog::reject);
 layout->addWidget(abstain_button);
 
 dialog->setObjectName("abstain");
-connect(dialog, SIGNAL(rejected()), ClientInstance, SLOT(onPlayerChooseRole3v3()));
+connect(dialog, &QDialog::rejected, ClientInstance, &Client::onPlayerChooseRole3v3);
 
 dialog->setLayout(layout);
 delete m_choiceDialog;
@@ -2727,12 +2728,13 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
                             QString pattern = Sanguosha->currentRoomState()->getCurrentCardUsePattern();
                             if (pattern.startsWith("@")) continue;
 
-                            QRegExp rx("@@?([_A-Za-z]+)(\\d+)?!?");
+                            QRegularExpression rx("@@?([_A-Za-z]+)(\\d+)?!?");
+                            QRegularExpressionMatch match = rx.match(pattern);
                             CardUseStruct::CardUseReason reason = CardUseStruct::CARD_USE_REASON_UNKNOWN;
                             if ((newStatus & Client::ClientStatusBasicMask) == Client::Responding) {
                                 if (newStatus == Client::RespondingUse) {
                                     reason = CardUseStruct::CARD_USE_REASON_RESPONSE_USE;
-                                } else if (newStatus == Client::Responding || rx.exactMatch(pattern))
+                                } else if (newStatus == Client::Responding || match.hasMatch())
                                     reason = CardUseStruct::CARD_USE_REASON_RESPONSE;
                             } else if (newStatus == Client::Playing) {
                                 reason = CardUseStruct::CARD_USE_REASON_PLAY;
@@ -2754,12 +2756,13 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
         const ViewAsSkill *vsSkill = button->getViewAsSkill();
         if (vsSkill != NULL) {
             QString pattern = Sanguosha->currentRoomState()->getCurrentCardUsePattern();
-            QRegExp rx("@@?([_A-Za-z]+)(\\d+)?!?");
-            CardUseStruct::CardUseReason reason = CardUseStruct::CARD_USE_REASON_UNKNOWN;
-            if ((newStatus & Client::ClientStatusBasicMask) == Client::Responding) {
-                if (newStatus == Client::RespondingUse) {
-                    reason = CardUseStruct::CARD_USE_REASON_RESPONSE_USE;
-                } else if (newStatus == Client::Responding || rx.exactMatch(pattern))
+                    QRegularExpression rx("@@?([_A-Za-z]+)(\\d+)?!?");
+                    QRegularExpressionMatch match = rx.match(pattern);
+                    CardUseStruct::CardUseReason reason = CardUseStruct::CARD_USE_REASON_UNKNOWN;
+                    if ((newStatus & Client::ClientStatusBasicMask) == Client::Responding) {
+                        if (newStatus == Client::RespondingUse) {
+                            reason = CardUseStruct::CARD_USE_REASON_RESPONSE_USE;
+                        } else if (newStatus == Client::Responding || match.hasMatch())
                     reason = CardUseStruct::CARD_USE_REASON_RESPONSE;
             } else if (newStatus == Client::Playing) {
                 reason = CardUseStruct::CARD_USE_REASON_PLAY;
@@ -2830,11 +2833,12 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
                     break;
                 }
                 case Client::RespondingUse: {
-                    QRegExp promptRegExp("@@?([_A-Za-z]+)");
+                    QRegularExpression promptRegExp("@@?([_A-Za-z]+)");
                     QString prompt = Sanguosha->currentRoomState()->getCurrentCardResponsePrompt();
                     Sanguosha->currentRoomState()->setCurrentCardResponsePrompt(QString());
-                    if (promptRegExp.exactMatch(prompt))
-                        dashboard->highlightEquip(promptRegExp.capturedTexts().at(1), false);
+                    QRegularExpressionMatch match = promptRegExp.match(prompt);
+                    if (match.hasMatch())
+                        dashboard->highlightEquip(match.capturedTexts().at(1), false);
                 }
                 default:
                     break;
@@ -2862,9 +2866,10 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
             discard_button->setEnabled(false);
 
             QString pattern = Sanguosha->currentRoomState()->getCurrentCardUsePattern();
-            QRegExp rx("@@?([_A-Za-z]+)(\\d+)?!?");
-            if (rx.exactMatch(pattern)) {
-                QString skill_name = rx.capturedTexts().at(1);
+            QRegularExpression rx("@@?([_A-Za-z]+)(\\d+)?!?");
+            QRegularExpressionMatch match = rx.match(pattern);
+            if (match.hasMatch()) {
+                QString skill_name = match.capturedTexts().at(1);
                 const ViewAsSkill *skill = Sanguosha->getViewAsSkill(skill_name);
                 if (skill) {
                     CardUseStruct::CardUseReason reason = CardUseStruct::CARD_USE_REASON_RESPONSE;
@@ -2895,10 +2900,11 @@ void RoomScene::updateStatus(Client::Status oldStatus, Client::Status newStatus)
                 else
                     response_skill->setRequest(Card::MethodResponse);
 
-                QRegExp promptRegExp("@@?([_A-Za-z]+)");
+                QRegularExpression promptRegExp("@@?([_A-Za-z]+)");
                 QString prompt = Sanguosha->currentRoomState()->getCurrentCardResponsePrompt();
-                if (promptRegExp.exactMatch(prompt))
-                    dashboard->highlightEquip(promptRegExp.capturedTexts().at(1), true);
+                QRegularExpressionMatch match = promptRegExp.match(prompt);
+                if (match.hasMatch())
+                    dashboard->highlightEquip(match.capturedTexts().at(1), true);
 
                 dashboard->startPending(response_skill);
                 if (Config.EnableIntellectualSelection && !pattern.startsWith("."))
@@ -3220,12 +3226,13 @@ void RoomScene::onHuashenActivated()
 
                 if (vsSkill != NULL) {
                     QString pattern = Sanguosha->currentRoomState()->getCurrentCardUsePattern();
-                    QRegExp rx("@@?([_A-Za-z]+)(\\d+)?!?");
+                    QRegularExpression rx("@@?([_A-Za-z]+)(\\d+)?!?");
+                    QRegularExpressionMatch match = rx.match(pattern);
                     CardUseStruct::CardUseReason reason = CardUseStruct::CARD_USE_REASON_UNKNOWN;
                     if ((newStatus & Client::ClientStatusBasicMask) == Client::Responding) {
                         if (newStatus == Client::RespondingUse) {
                             reason = CardUseStruct::CARD_USE_REASON_RESPONSE_USE;
-                        } else if (newStatus == Client::Responding || rx.exactMatch(pattern))
+                        } else if (newStatus == Client::Responding || match.hasMatch())
                             reason = CardUseStruct::CARD_USE_REASON_RESPONSE;
                     } else if (newStatus == Client::Playing) {
                         reason = CardUseStruct::CARD_USE_REASON_PLAY;

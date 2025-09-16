@@ -124,8 +124,8 @@ QWidget *ServerDialog::createBasicTab()
     timeout_slider = new QSlider(Qt::Horizontal);
     timeout_slider->setRange(5, 60);
     timeout_slider->setValue(Config.OperationTimeout);
-    QObject::connect(timeout_slider, SIGNAL(valueChanged(int)), timeout_spinbox, SLOT(setValue(int)));
-    QObject::connect(timeout_spinbox, SIGNAL(valueChanged(int)), timeout_slider, SLOT(setValue(int)));
+    QObject::connect(timeout_slider, &QSlider::valueChanged, timeout_spinbox, QOverload<int>::of(&QSpinBox::setValue));
+    QObject::connect(timeout_spinbox, QOverload<int>::of(&QSpinBox::valueChanged), timeout_slider, &QSlider::setValue);
     lay->addWidget(timeout_slider);
 #endif
     lay->addWidget(nolimit_checkbox);
@@ -472,8 +472,8 @@ QWidget *ServerDialog::createAiTab()
     ai_deley_slider = new QSlider(Qt::Horizontal);
     ai_deley_slider->setRange(0, 5000);
     ai_deley_slider->setValue(Config.OriginAIDelay);
-    QObject::connect(ai_deley_slider, SIGNAL(valueChanged(int)), ai_delay_spinbox, SLOT(setValue(int)));
-    QObject::connect(ai_delay_spinbox, SIGNAL(valueChanged(int)), ai_deley_slider, SLOT(setValue(int)));
+    QObject::connect(ai_deley_slider, &QSlider::valueChanged, ai_delay_spinbox, QOverload<int>::of(&QSpinBox::setValue));
+    QObject::connect(ai_delay_spinbox, QOverload<int>::of(&QSpinBox::valueChanged), ai_deley_slider, &QSlider::setValue);
 
     ai_delay_altered_checkbox = new QCheckBox(tr("Alter AI Delay After Death"));
     ai_delay_altered_checkbox->setChecked(Config.AlterAIDelayAD);
@@ -494,8 +494,8 @@ QWidget *ServerDialog::createAiTab()
     ai_delay_ad_slider = new QSlider(Qt::Horizontal);
     ai_delay_ad_slider->setRange(0, 5000);
     ai_delay_ad_slider->setValue(Config.AIDelayAD);
-    QObject::connect(ai_delay_ad_slider, SIGNAL(valueChanged(int)), ai_delay_ad_spinbox, SLOT(setValue(int)));
-    QObject::connect(ai_delay_ad_spinbox, SIGNAL(valueChanged(int)), ai_delay_ad_slider, SLOT(setValue(int)));
+    QObject::connect(ai_delay_ad_slider, &QSlider::valueChanged, ai_delay_ad_spinbox, QOverload<int>::of(&QSpinBox::setValue));
+    QObject::connect(ai_delay_ad_spinbox, QOverload<int>::of(&QSpinBox::valueChanged), ai_delay_ad_slider, &QSlider::setValue);
 
     layout->addLayout(HLay(forbid_adding_robot_checkbox, ai_chat_checkbox));
     layout->addLayout(HLay(new QLabel(tr("AI delay")), ai_delay_spinbox));

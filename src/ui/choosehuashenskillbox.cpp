@@ -27,6 +27,7 @@
 #include "timedprogressbar.h"
 #include "stylehelper.h"
 #include "roomscene.h"
+#include <QRegularExpression>
 
 #include <QGraphicsSceneMouseEvent>
 #include <QPropertyAnimation>
@@ -165,8 +166,10 @@ bool HuashenSkillButton::isPreferentialSkillOf(const HuashenSkillButton *other) 
     if (this == other)
         return true;
 
-    static QRegExp rx("([_A-Za-z]+)->sgs\\d+&\\d+");
-    if (!rx.exactMatch(this->m_skillStr) || !rx.exactMatch(other->m_skillStr))
+    static QRegularExpression rx("([_A-Za-z]+)->sgs\\d+&\\d+");
+    QRegularExpressionMatch thisMatch = rx.match(this->m_skillStr);
+    QRegularExpressionMatch otherMatch = rx.match(other->m_skillStr);
+    if (!thisMatch.hasMatch() || !otherMatch.hasMatch())
         return false;
 
     QString thisName = this->m_skillStr.split("->").first();
